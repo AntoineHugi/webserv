@@ -1,6 +1,6 @@
 #include "service.hpp"
 
-Service::Service() {}
+Service::Service():servers() {}
 
 Service::Service(const Service& other) 
 {

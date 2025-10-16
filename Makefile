@@ -9,7 +9,7 @@ CPPFLAGS += -Wall -Wextra -Werror -std=c++98 -MMD -MP
 SRCDIR := srcs
 
 SRCS = $(addprefix $(SRCDIR)/, \
-		main.cpp \
+		main.cpp parser.cpp server.cpp service.cpp \
 	)
 
 OBJDIR := build

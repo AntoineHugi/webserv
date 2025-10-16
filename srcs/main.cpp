@@ -3,20 +3,16 @@
 #include "service.hpp"
 #include <iostream>
 
-void	parse_config(char *arg)
-{
-
-}
-
 int	main(int argc, char **argv)
 {
 	if (argc == 2)
 	{
 		Service	service;
-		if (!Parser::open_config(argv[1], &service))
+		if (!Parser::open_config_file(argv[1], &service))
 			std::cout << "config file error" << std::endl;
 		else
 		{
+			std::cout << service.servers[0].get_name() << std::endl;
 			// oepning up the sockets, binding etc
 		}
 

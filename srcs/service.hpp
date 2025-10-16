@@ -2,15 +2,16 @@
 # define SERVICE_H
 
 # include <string>
+# include <vector>
 # include "server.hpp"
 
 class Service
 {
 	private:
-		Server** servers;
-		int**	fds;
 	
 	public:
+		std::vector<Server> servers;
+
 		Service();
 		Service(const Service& other);
 		Service& operator=(const Service& other);
