@@ -11,7 +11,6 @@ Server::Server(const Server& other)
 	this->_index = other._index;
 	this->_error_page = other._error_page;
 	this->_client_max_body_size = other._client_max_body_size;
-
 }
 
 Server& Server::operator=(const Server& other)

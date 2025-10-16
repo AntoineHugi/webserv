@@ -12,10 +12,9 @@ int	main(int argc, char **argv)
 			std::cout << "config file error" << std::endl;
 		else
 		{
-			std::cout << service.servers[0].get_name() << std::endl;
-			// oepning up the sockets, binding etc
+			std::cout << service.servers[0].get_port() << std::endl;
+			// opening up the sockets, binding etc
 		}
-
 	}
 	else
 	{
