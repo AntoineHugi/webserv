@@ -2,6 +2,8 @@
 # define SERVER_H
 
 # include <string>
+# include <map>
+# include <vector>
 
 class Server
 {
@@ -10,10 +12,11 @@ class Server
 		int _port;
 		std::string _host;
 		std::string _root;
-		std::string _index;
+		std::vector <std::string> _index;
 		std::string _error_page;
-		int	_client_max_body_size;
-	
+		int _client_max_body_size;
+		std::map <std::string, std::map<std::string, std::string> > CGI;
+
 	public:
 		Server();
 		Server(const Server& other);
@@ -27,8 +30,8 @@ class Server
 		std::string	get_host();
 		void	set_root(std::string root);
 		std::string	get_root();
-		void	set_index(std::string index);
-		std::string	get_index();
+		void	set_index(std::vector <std::string> index);
+		std::vector <std::string>	get_index();
 		void	set_error_page(std::string page);
 		std::string	get_error_page();
 		void	set_client_max_body_size(int max);

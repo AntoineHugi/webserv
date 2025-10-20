@@ -13,6 +13,7 @@ int	main(int argc, char **argv)
 		else
 		{
 			std::cout << service.servers[0].get_port() << std::endl;
+			std::cout << service.servers[1].get_port() << std::endl;
 			// opening up the sockets, binding etc
 		}
 	}
