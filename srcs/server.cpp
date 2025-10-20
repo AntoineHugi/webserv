@@ -1,6 +1,6 @@
 #include "server.hpp"
 
-Server::Server():_name(""), _port(-1), _host(""), _root(""), _index(""), _error_page(""), _client_max_body_size(-1) {}
+Server::Server():_name(""), _port(-1), _host(""), _root(""), _index(), _error_page(""), _client_max_body_size(-1) {}
 
 Server::Server(const Server& other) 
 {
@@ -15,10 +15,17 @@ Server::Server(const Server& other)
 
 Server& Server::operator=(const Server& other)
 {
-	(void)other;
+	if (this != &other)
+	{
+		this->_name = other._name;
+		this->_port = other._port;
+		this->_host = other._host;
+		this->_root = other._root;
+		this->_index = other._index;
+		this->_error_page = other._error_page;
+		this->_client_max_body_size = other._client_max_body_size;
+	}
 	return (*this);
-
-	
 }
 
 Server::~Server() {}
@@ -39,9 +46,9 @@ void	Server::set_root(std::string root) { this->_root = root; }
 
 std::string	Server::get_root() { return (this->_root); }
 
-void	Server::set_index(std::string index) { this->_index = index; }
+void	Server::set_index(std::vector <std::string> index) { this->_index = index; }
 
-std::string	Server::get_index() { return (this->_index); }
+std::vector <std::string>	Server::get_index() { return (this->_index); }
 
 void	Server::set_error_page(std::string page) { this->_error_page = page; }
 
