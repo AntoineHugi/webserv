@@ -2,6 +2,7 @@
 # define SERVER_H
 
 # include <string>
+# include <vector>
 
 class Server
 {
@@ -13,26 +14,43 @@ class Server
 		std::string _index;
 		std::string _error_page;
 		int	_client_max_body_size;
+		int	_sock;
+		std::vector<int> _clients;
 	
 	public:
 		Server();
 		Server(const Server& other);
 		Server& operator=(const Server& other);
 		~Server();
-		void	set_name(std::string name);
+
+		// Getters
 		std::string	get_name();
-		void	set_port(int port);
 		int	get_port();
-		void	set_host(std::string host);
+		int	get_sock();
 		std::string	get_host();
-		void	set_root(std::string root);
 		std::string	get_root();
-		void	set_index(std::string index);
 		std::string	get_index();
-		void	set_error_page(std::string page);
 		std::string	get_error_page();
-		void	set_client_max_body_size(int max);
 		int	get_client_max_body_size();
+
+		// // Setters
+		void	set_name(std::string name);
+		void	set_port(int port);
+		void	set_sock(int sock);
+		void	set_host(std::string host);
+		void	set_root(std::string root);
+		void	set_index(std::string index);
+		void	set_error_page(std::string page);
+		void	set_client_max_body_size(int max);
+		
+		void	set_server();
+
+		void create_listening_socket();
+		void accept_new_client();
+		// void handle_client_read(Client& client);
+		// void handle_client_write(Client& client);
+
+
 };
 
 #endif

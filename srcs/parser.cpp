@@ -68,6 +68,7 @@ bool	Parser::parse_file(std::string config, Service* service)
 				return (false);
 			service->servers.push_back(server);
 		}
+		--i;
 	}
 	return (true);
 }

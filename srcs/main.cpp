@@ -5,6 +5,7 @@
 
 int	main(int argc, char **argv)
 {
+	long unsigned int i = 0;
 	if (argc == 2)
 	{
 		Service	service;
@@ -12,9 +13,14 @@ int	main(int argc, char **argv)
 			std::cout << "config file error" << std::endl;
 		else
 		{
-			std::cout << service.servers[0].get_port() << std::endl;
-			// opening up the sockets, binding etc
+			while(i < service.servers.size())
+			{
+				service.servers[i].set_server();
+				std::cout << "Server: " << i << " starting... "<< std::endl;
+				i++;
+			}
 		}
+		service.poll_service();
 	}
 	else
 	{
