@@ -84,6 +84,12 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 		Server server;
 		while (i < tokens.size() && tokens[i] != "}")
 		{
+			if (tokens[i] == ";" || tokens[i] == "{")
+			{
+				--i;
+				std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+				return (false);
+			}
 			if (tokens[i] == "location")
 			{
 				++i;
@@ -118,7 +124,7 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 					std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
 					return (false);
 				}
-				if (!assign_vector_keyval(&server, key, values))
+				if (!assign_vector_keyval_server(&server, key, values))
 					return (false);
 				++i;
 			}
@@ -140,7 +146,7 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 					std::cout << "Config file error: expected ';' after " << tokens[i] << std::endl;
 					return (false);
 				}
-				if (!assign_single_keyval(&server, key, value))
+				if (!assign_single_keyval_server(&server, key, value))
 					return (false);
 				++i;
 			}
@@ -156,35 +162,25 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 			return (false);
 		service->servers.push_back(server);
 	}
+	if (i < tokens.size())
+	{
+		std::cout << "Config file error: unexpected token: " << tokens[i] << std::endl;
+		return (false);
+	}
 	return (true);
 }
 
 bool Parser::parse_location(Server* server, std::vector <std::string> tokens, size_t* i)
 {
-	bool case_sensitive = true;
+	Route route;
 
-	if (tokens[*i] == "~")
-		++(*i);
-	else if (tokens[*i] == "~*")
-	{
-		case_sensitive = false;
-		++(*i);
-	}
 	if (*i >= tokens.size())
 	{
 		--(*i);
 		std::cout << "Config file error: unexpected element after " << tokens[*i] << std::endl;
 		return (false);
 	}
-	std::string cgi_key;
-	if (case_sensitive)
-		cgi_key = tokens[*i];
-	else
-	{
-		cgi_key = tokens[*i];
-		for (size_t j = 0; j < cgi_key.size(); j++)
-			cgi_key[j] = static_cast<char>(std::tolower(static_cast<unsigned char>(cgi_key[j])));
-	}
+	route.set_path(tokens[*i]);
 	++(*i);
 	if (*i >= tokens.size() || tokens[*i] != "{")
 	{
@@ -193,7 +189,6 @@ bool Parser::parse_location(Server* server, std::vector <std::string> tokens, si
 		return (false);
 	}
 	++(*i);
-	std::map<std::string, std::string> cgi_map;
 	while (*i < tokens.size() && tokens[*i] != "}")
 	{
 		if (tokens[*i] == ";" || tokens[*i] == "{")
@@ -202,24 +197,55 @@ bool Parser::parse_location(Server* server, std::vector <std::string> tokens, si
 			std::cout << "Config file error: unexpected element after " << tokens[*i] << std::endl;
 			return (false);
 		}
-		std::string key = tokens[*i];
-		++(*i);
-		if (*i >= tokens.size() || tokens[*i] == ";" || tokens[*i] == "{")
+		if (tokens[*i] == "methods")
 		{
-			--(*i);
-			std::cout << "Config file error: unexpected element after " << tokens[*i] << std::endl;
-			return (false);
-		}
-		std::string value = tokens[*i];
-		++(*i);
-		if (*i >= tokens.size() || tokens[*i] != ";")
-		{
-			--(*i);
-			std::cout << "Config file error: expecting ';' after " << tokens[*i] << std::endl;
-			return (false);
-		}
-		cgi_map.insert(std::make_pair(key, value));
+			std::string key = tokens[*i];
 			++(*i);
+			if (*i >= tokens.size() || tokens[*i] == ";" || tokens[*i] == "{")
+			{
+				--(*i);
+				std::cout << "Config file error: unexpected element after " << tokens[*i] << std::endl;
+				return (false);
+			}
+			std::vector<std::string> values;
+			values.push_back(tokens[*i]);
+			++(*i);
+			while (*i < tokens.size() && tokens[*i] != ";")
+			{
+				values.push_back(tokens[*i]);
+				++(*i);
+			}
+			if (*i >= tokens.size() || tokens[*i] != ";")
+			{
+				--(*i);
+				std::cout << "Config file error: expecting ';' after " << tokens[*i] << std::endl;
+				return (false);
+			}
+			if (!assign_vector_keyval_route(&route, key, values))
+				return (false);
+		}
+		else
+		{
+			std::string key = tokens[*i];
+			++(*i);
+			if (*i >= tokens.size() || tokens[*i] == ";" || tokens[*i] == "{")
+			{
+				--(*i);
+				std::cout << "Config file error: unexpected element after " << tokens[*i] << std::endl;
+				return (false);
+			}
+			std::string value = tokens[*i];
+			++(*i);
+			if (*i >= tokens.size() || tokens[*i] != ";")
+			{
+				--(*i);
+				std::cout << "Config file error: expecting ';' after " << tokens[*i] << std::endl;
+				return (false);
+			}
+			if (!assign_single_keyval_route(&route, key, value))
+				return (false);
+		}
+		++(*i);
 	}
 	if (*i >= tokens.size() || tokens[*i] != "}")
 	{
@@ -227,16 +253,12 @@ bool Parser::parse_location(Server* server, std::vector <std::string> tokens, si
 		std::cout << "Config file error: expecting '}' after " << tokens[*i] << std::endl;
 		return (false);
 	}
-	if (cgi_map.size() == 0)
-	{
-		std::cout << "Config file error: CGI mapping empty " << std::endl;
-		return (false);
-	}
-	server->insert_CGI(cgi_key, cgi_map);
+	server->add_route(route);
+	++(*i);
 	return (true);
 }
 
-bool Parser::assign_single_keyval(Server* server, std::string& key, std::string& value)
+bool Parser::assign_single_keyval_server(Server* server, std::string& key, std::string& value)
 {
 	std::string fields[6] = {"server_name", "listen", "host", "root", "error_page", "client_max_body_size"};
 	int field = -1;
@@ -303,7 +325,7 @@ bool Parser::assign_single_keyval(Server* server, std::string& key, std::string&
 	return (true);
 }
 
-bool Parser::assign_vector_keyval(Server* server, std::string& key, std::vector <std::string> values)
+bool Parser::assign_vector_keyval_server(Server* server, std::string& key, std::vector <std::string> values)
 {
 	std::string fields[1] = {"index"};
 	int field = -1;
@@ -365,6 +387,75 @@ bool Parser::check_server(Server* server)
 	{
 		std::cout << "Config file error: max client body size missing" << std::endl;
 		return (false);
+	}
+	return (true);
+}
+
+bool Parser::assign_single_keyval_route(Route* route, std::string& key, std::string& value)
+{
+	std::string fields[3] = {"path", "root", "autoindex"};
+	int field = -1;
+
+	for (int i = 0; i < 3; i++)
+	{
+		if (key == fields[i])
+			field = i;
+	}
+	switch (field)
+	{
+		case 0:
+			if (!route->get_path().empty())
+			{
+				std::cout << "Config file error: duplicate location" << std::endl;
+				return (false);
+			}
+			route->set_path(value);
+			break ;
+		case 1:
+			if (route->get_root().empty() -1)
+			{
+				std::cout << "Config file error: duplicate root line in location" << std::endl;
+				return (false);
+			}
+			route->set_root(value);
+			break ;
+		case 2:
+			if (!route->get_autoindex().empty())
+			{
+				std::cout << "Config file error: duplicate autoindex line in location" << std::endl;
+				return (false);
+			}
+			route->set_autoindex(value);
+			break ;
+		default:
+				std::cout << "Config file error: location field not valid" << std::endl;
+				return (false);
+	}
+	return (true);
+}
+
+bool	Parser::assign_vector_keyval_route(Route* route, std::string& key, std::vector <std::string> values)
+{
+	std::string fields[1] = {"methods"};
+	int field = -1;
+
+	for (int i = 0; i < 1; i++)
+	{
+		if (key == fields[i])
+			field = i;
+	}
+	switch (field)
+	{
+		case 0:
+			if (!route->get_methode().empty())
+			{
+				std::cout << "Config file error: duplicate methode line in location" << std::endl;
+				return (false);
+			}
+			route->set_methode(values);
+			break ;
+		default:
+			return (false);
 	}
 	return (true);
 }
