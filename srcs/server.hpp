@@ -4,6 +4,7 @@
 # include <string>
 # include <map>
 # include <vector>
+# include <algorithm>
 
 class Server
 {
@@ -15,27 +16,29 @@ class Server
 		std::vector <std::string> _index;
 		std::string _error_page;
 		int _client_max_body_size;
-		std::map <std::string, std::map<std::string, std::string> > CGI;
+		std::map <std::string, std::map<std::string, std::string> > _CGI;
 
 	public:
 		Server();
 		Server(const Server& other);
 		Server& operator=(const Server& other);
 		~Server();
-		void	set_name(std::string name);
+		void	set_name(std::string& name);
 		std::string	get_name();
 		void	set_port(int port);
 		int	get_port();
-		void	set_host(std::string host);
+		void	set_host(std::string& host);
 		std::string	get_host();
-		void	set_root(std::string root);
+		void	set_root(std::string& root);
 		std::string	get_root();
 		void	set_index(std::vector <std::string> index);
 		std::vector <std::string>	get_index();
-		void	set_error_page(std::string page);
+		void	set_error_page(std::string& page);
 		std::string	get_error_page();
 		void	set_client_max_body_size(int max);
 		int	get_client_max_body_size();
+		void	insert_CGI(std::string& key, std::map<std::string, std::string> value);
+		std::map <std::string, std::map<std::string, std::string> >	get_CGI();
 };
 
 #endif

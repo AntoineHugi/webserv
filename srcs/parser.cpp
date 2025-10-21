@@ -1,5 +1,34 @@
 #include "parser.hpp"
 
+std::vector<std::string> Parser::tokenise(std::string& str)
+{
+	std::vector<std::string> tokens;
+	std::istringstream iss(str);
+	std::string word;
+
+	while (iss >> word) {
+		std::string current;
+
+		for (size_t i = 0; i < word.size(); ++i)
+		{
+			if (word[i] == '{' || word[i] == '}' || word[i] == ';') 
+			{
+				if (!current.empty()) 
+				{
+					tokens.push_back(current);
+					current.clear();
+				}
+				tokens.push_back(std::string(1, word[i]));
+			}
+			else
+				current += word[i];
+		}
+		if (!current.empty())
+			tokens.push_back(current);
+	}
+	return (tokens);
+}
+
 bool	Parser::open_config_file(char *arg, Service* service)
 {
 	std::string filename = arg;
@@ -37,143 +66,117 @@ bool	Parser::open_config_file(char *arg, Service* service)
 bool	Parser::parse_config_file(std::string config, Service* service)
 {
 	std::vector <std::string> tokens = Parser::tokenise(config);
+	size_t i = 0;
 
-	for (size_t i = 0; i < tokens.size(); i++)
+	while (i < tokens.size() && tokens[i] == "server")
 	{
-		while (i < tokens.size() && tokens[i] == "server")
+		++i;
+		if (i >= tokens.size() || tokens[i] != "{")
+			return (false);
+		++i;
+		Server server;
+		while (i < tokens.size() && tokens[i] != "}")
 		{
-			++i;
-			if (i >= tokens.size() || tokens[i] != "{")
-				return (false);
-			++i;
-			Server server;
-			while (i < tokens.size() && tokens[i] != "}")
+			if (tokens[i] == "location")
 			{
-				if (tokens[i] == "location")
-				{
-					++i;
-					if (i >= tokens.size() || tokens[i] == ";")
-						return (false);
-					std::map <std::string, std::map<std::string, std::string> > CGI;
-					bool case_sensitive = true;
-					if (tokens[i] == "~")
-						++i;
-					else if (tokens[i] == "~*")
-					{
-						case_sensitive = false;
-						++i;
-					}
-					if (i >= tokens.size())
-						return (false);
-					std::string cgi_key;
-					if (case_sensitive)
-						cgi_key = tokens[i];
-					else
-					{
-						cgi_key = tokens[i];
-						for (size_t j = 0; j < cgi_key.size(); j++)
-							cgi_key[j] = static_cast<char>(std::tolower(static_cast<unsigned char>(cgi_key[j])));
-					}
-					++i;
-					if (i >= tokens.size() || tokens[i] != "{")
-						return (false);
-					++i;
-					std::map<std::string, std::string> cgi_map;
-					while (i < tokens.size() && tokens[i] != "}")
-					{
-						if (tokens[i] == ";" || tokens[i] == "{")
-							return (false);
-						std::string key = tokens[i];
-						++i;
-						if (i >= tokens.size() || tokens[i] == ";" || tokens[i] == "{")
-							return (false);
-						std::string value = tokens[i];
-						i++;
-						if (i >= tokens.size() || tokens[i] != ";")
-							return (false);
-						cgi_map.insert(std::make_pair(key, value));
-						++i;
-					}
-					if (i >= tokens.size() || cgi_map.size() == 0)
-						return (false);
-					if (tokens[i] != "}")
-						return (false);
-					CGI.insert(std::make_pair(cgi_key, cgi_map));
-				}
-				else if (tokens[i] == "index")
-				{
-					std::string key = tokens[i];
-					++i;
-					if (tokens[i] == ";")
-						return (false);
-					std::vector <std::string> values;
-					while (tokens[i] != ";" && i < tokens.size())
-					{
-						values.push_back(tokens[i]);
-						++i;
-					}
-					if (i >= tokens.size())
-						return (false);
-					if (!Parser::assign_vector_keyval(&server, key, values))
-						return (false);
-					++i;
-				}
-				else
-				{
-					std::string key = tokens[i];
-					++i;
-					if (i >= tokens.size() || tokens[i] == ";")
-						return (false);
-					std::string value = tokens[i];
-					i++;
-					if (i >= tokens.size() || tokens[i] != ";")
-						return (false);
-					if (!Parser::assign_single_keyval(&server, key, value))
-						return (false);
-					++i;
-				}
+				++i;
+				if (i >= tokens.size() || tokens[i] == ";")
+					return (false);
+				if (!parse_location(&server, tokens, &i))
+					return (false);
 			}
-			if (tokens[i] != "}")
-				return (false);
-			++i;
-			if (!Parser::check_server(&server))
-				return (false);
-			service->servers.push_back(server);
+			else if (tokens[i] == "index")
+			{
+				std::string key = tokens[i];
+				++i;
+				if (tokens[i] == ";")
+					return (false);
+				std::vector <std::string> values;
+				while (tokens[i] != ";" && i < tokens.size())
+				{
+					values.push_back(tokens[i]);
+					++i;
+				}
+				if (i >= tokens.size())
+					return (false);
+				if (!assign_vector_keyval(&server, key, values))
+					return (false);
+				++i;
+			}
+			else
+			{
+				std::string key = tokens[i];
+				++i;
+				if (i >= tokens.size() || tokens[i] == ";")
+					return (false);
+				std::string value = tokens[i];
+				++i;
+				if (i >= tokens.size() || tokens[i] != ";")
+					return (false);
+				if (!assign_single_keyval(&server, key, value))
+					return (false);
+				++i;
+			}
 		}
+		if (tokens[i] != "}")
+			return (false);
+		++i;
+		if (!check_server(&server))
+			return (false);
+		service->servers.push_back(server);
 	}
 	return (true);
 }
 
-std::vector<std::string> Parser::tokenise(std::string& str)
+bool Parser::parse_location(Server* server, std::vector <std::string> tokens, size_t* i)
 {
-	std::vector<std::string> tokens;
-	std::istringstream iss(str);
-	std::string word;
+	bool case_sensitive = true;
 
-	while (iss >> word) {
-		std::string current;
-
-		for (size_t i = 0; i < word.size(); ++i)
-		{
-			if (word[i] == '{' || word[i] == '}' || word[i] == ';') 
-			{
-				if (!current.empty()) 
-				{
-					tokens.push_back(current);
-					current.clear();
-				}
-				tokens.push_back(std::string(1, word[i]));
-			}
-			else
-				current += word[i];
-		}
-		if (!current.empty())
-			tokens.push_back(current);
+	if (tokens[*i] == "~")
+		++(*i);
+	else if (tokens[*i] == "~*")
+	{
+		case_sensitive = false;
+		++(*i);
 	}
-	return (tokens);
+	if (*i >= tokens.size())
+		return (false);
+	std::string cgi_key;
+	if (case_sensitive)
+		cgi_key = tokens[*i];
+	else
+	{
+		cgi_key = tokens[*i];
+		for (size_t j = 0; j < cgi_key.size(); j++)
+			cgi_key[j] = static_cast<char>(std::tolower(static_cast<unsigned char>(cgi_key[j])));
+	}
+	++(*i);
+	if (*i >= tokens.size() || tokens[*i] != "{")
+		return (false);
+	++(*i);
+	std::map<std::string, std::string> cgi_map;
+	while (*i < tokens.size() && tokens[*i] != "}")
+	{
+		if (tokens[*i] == ";" || tokens[*i] == "{")
+			return (false);
+		std::string key = tokens[*i];
+		++(*i);
+		if (*i >= tokens.size() || tokens[*i] == ";" || tokens[*i] == "{")
+			return (false);
+		std::string value = tokens[*i];
+		++(*i);
+		if (*i >= tokens.size() || tokens[*i] != ";")
+			return (false);
+		cgi_map.insert(std::make_pair(key, value));
+			++(*i);
+	}
+	if (*i >= tokens.size() || cgi_map.size() == 0)
+		return (false);
+	server->insert_CGI(cgi_key, cgi_map);
+	return (true);
 }
 
-bool Parser::assign_single_keyval(Server* server, std::string& key, std::string value)
+bool Parser::assign_single_keyval(Server* server, std::string& key, std::string& value)
 {
 	std::string fields[6] = {"server_name", "listen", "host", "root", "error_page", "client_max_body_size"};
 	int field = -1;
