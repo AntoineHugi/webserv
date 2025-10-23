@@ -189,6 +189,11 @@ bool Parser::parse_location(Server* server, std::vector <std::string> tokens, si
 		return (false);
 	}
 	++(*i);
+	if (*i >= tokens.size() || tokens[*i] == "}")
+	{
+		std::cout << "Config file error: location block empty " << std::endl;
+		return (false);
+	}
 	while (*i < tokens.size() && tokens[*i] != "}")
 	{
 		if (tokens[*i] == ";" || tokens[*i] == "{")
@@ -393,10 +398,10 @@ bool Parser::check_server(Server* server)
 
 bool Parser::assign_single_keyval_route(Route* route, std::string& key, std::string& value)
 {
-	std::string fields[3] = {"path", "root", "autoindex"};
+	std::string fields[5] = {"path", "root", "autoindex", "deny", "cgi_path"};
 	int field = -1;
 
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 5; i++)
 	{
 		if (key == fields[i])
 			field = i;
@@ -426,6 +431,22 @@ bool Parser::assign_single_keyval_route(Route* route, std::string& key, std::str
 				return (false);
 			}
 			route->set_autoindex(value);
+			break ;
+		case 3:
+			if (!route->get_deny().empty())
+			{
+				std::cout << "Config file error: duplicate deny line in location" << std::endl;
+				return (false);
+			}
+			route->set_deny(value);
+			break ;
+		case 4:
+			if (!route->get_cgi_path().empty())
+			{
+				std::cout << "Config file error: duplicate cgi path line in location" << std::endl;
+				return (false);
+			}
+			route->set_cgi_path(value);
 			break ;
 		default:
 				std::cout << "Config file error: location field not valid" << std::endl;
