@@ -2,6 +2,7 @@
 # define SERVER_H
 
 # include <string>
+# include <cctype>
 # include <map>
 # include <vector>
 # include <algorithm>
@@ -25,13 +26,13 @@ class Server
 		Server& operator=(const Server& other);
 		~Server();
 
-		void	set_name(std::string& name);
-		void	set_port(int port);
-		void	set_host(std::string& host);
-		void	set_root(std::string& root);
-		void	set_index(std::vector <std::string> index);
-		void	set_error_page(std::string& page);
-		void	set_client_max_body_size(int max);
+		void	set_name(const std::string& name);
+		void	set_port(const std::string& port);
+		void	set_host(const std::string& host);
+		void	set_root(const std::string& root);
+		void	set_index(const std::vector <std::string> index);
+		void	set_error_page(const std::string& page);
+		void	set_client_max_body_size(const std::string& max);
 		void	add_route(Route route);
 
 		std::string	get_name();

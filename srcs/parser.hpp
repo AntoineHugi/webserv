@@ -5,10 +5,6 @@
 # include "server.hpp"
 # include <iostream>
 # include <fstream>
-# include <string>
-# include <cctype>
-# include <algorithm>
-# include <vector>
 # include <sstream>
 
 class Parser
