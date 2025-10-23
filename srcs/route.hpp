@@ -8,6 +8,7 @@
 
 class Route
 {
+	// could add : index, redirect, upload_dir
 	private:
 		std::string	_path;
 		std::string	_root;
