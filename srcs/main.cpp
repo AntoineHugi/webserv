@@ -9,7 +9,7 @@ int	main(int argc, char **argv)
 	{
 		Service	service;
 		if (!Parser::open_config_file(argv[1], &service))
-			std::cout << "config file error" << std::endl;
+			return (1);
 		else
 		{
 			std::cout << service.servers[0].get_port() << std::endl;
