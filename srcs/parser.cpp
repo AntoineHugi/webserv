@@ -289,7 +289,12 @@ bool Parser::assign_single_keyval_server(Server* server, std::string& key, std::
 				std::cout << "Config file error: duplicate port" << std::endl;
 				return (false);
 			}
-			server->set_port(atoi(value.c_str()));
+			try {
+				server->set_port(value);
+			} catch (const std::exception& e) {
+				std::cout << "Config file error: " << e.what() << std::endl;
+				return (false);
+			}
 			break ;
 		case 2:
 			if (!server->get_host().empty())
@@ -321,7 +326,12 @@ bool Parser::assign_single_keyval_server(Server* server, std::string& key, std::
 				std::cout << "Config file error: duplicate max body size" << std::endl;
 				return (false);
 			}
-			server->set_client_max_body_size(atoi(value.c_str()));
+			try {
+				server->set_client_max_body_size(value);
+			} catch (const std::exception& e) {
+				std::cout << "Config file error: " << e.what() << std::endl;
+				return (false);
+			}
 			break;
 		default:
 				std::cout << "Config file error: field not valid" << std::endl;
@@ -398,10 +408,10 @@ bool Parser::check_server(Server* server)
 
 bool Parser::assign_single_keyval_route(Route* route, std::string& key, std::string& value)
 {
-	std::string fields[5] = {"path", "root", "autoindex", "deny", "cgi_path"};
+	std::string fields[4] = {"path", "root", "autoindex", "cgi_path"};
 	int field = -1;
 
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < 4; i++)
 	{
 		if (key == fields[i])
 			field = i;
@@ -430,17 +440,14 @@ bool Parser::assign_single_keyval_route(Route* route, std::string& key, std::str
 				std::cout << "Config file error: duplicate autoindex line in location" << std::endl;
 				return (false);
 			}
-			route->set_autoindex(value);
-			break ;
-		case 3:
-			if (!route->get_deny().empty())
-			{
-				std::cout << "Config file error: duplicate deny line in location" << std::endl;
+			try {
+				route->set_autoindex(value);
+			} catch (const std::exception& e) {
+				std::cout << "Config file error: " << e.what() << std::endl;
 				return (false);
 			}
-			route->set_deny(value);
 			break ;
-		case 4:
+		case 3:
 			if (!route->get_cgi_path().empty())
 			{
 				std::cout << "Config file error: duplicate cgi path line in location" << std::endl;
@@ -468,12 +475,17 @@ bool	Parser::assign_vector_keyval_route(Route* route, std::string& key, std::vec
 	switch (field)
 	{
 		case 0:
-			if (!route->get_methode().empty())
+			if (!route->get_methods().empty())
 			{
-				std::cout << "Config file error: duplicate methode line in location" << std::endl;
+				std::cout << "Config file error: duplicate methods line in location" << std::endl;
 				return (false);
 			}
-			route->set_methode(values);
+			try {
+				route->set_methods(values);
+			} catch (const std::exception& e) {
+				std::cout << "Config file error: " << e.what() << std::endl;
+				return (false);
+			}
 			break ;
 		default:
 			return (false);
