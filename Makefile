@@ -9,7 +9,7 @@ CPPFLAGS += -Wall -Wextra -Werror -std=c++98 -MMD -MP
 SRCDIR := srcs
 
 SRCS = $(addprefix $(SRCDIR)/, \
-		main.cpp parser.cpp server.cpp service.cpp \
+		main.cpp parser.cpp route.cpp server.cpp service.cpp client.cpp\
 	)
 
 OBJDIR := build
@@ -32,7 +32,7 @@ $(OBJDIR)/%.o: %.cpp
 
 -include $(DEPS)
 
-clean: 	
+clean:
 	@$(RM) $(OBJS) $(DEPS)
 	@rm -rf $(OBJDIR)
 	@echo "Cleaned object and dependancie files"

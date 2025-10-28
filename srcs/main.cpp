@@ -10,7 +10,7 @@ int	main(int argc, char **argv)
 	{
 		Service	service;
 		if (!Parser::open_config_file(argv[1], &service))
-			std::cout << "config file error" << std::endl;
+			return (1);
 		else
 		{
 			while(i < service.servers.size())
@@ -19,6 +19,9 @@ int	main(int argc, char **argv)
 				std::cout << "Server: " << i << " starting... "<< std::endl;
 				i++;
 			}
+			std::cout << service.servers[0].get_port() << std::endl;
+			std::cout << service.servers[1].get_port() << std::endl;
+			// opening up the sockets, binding etc
 		}
 		service.poll_service();
 	}

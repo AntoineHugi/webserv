@@ -4,13 +4,15 @@
 # include <string>
 # include <vector>
 # include "server.hpp"
+# include "client.hpp"
 
 class Service
 {
 	private:
-	
+
 	public:
 		std::vector<Server> servers;
+		std::map<int, Client> clients;
 		Service();
 		Service(const Service& other);
 		Service& operator=(const Service& other);
