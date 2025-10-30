@@ -12,9 +12,11 @@ class Request
 		std::string _request_data;
 		std::string _header;
 		std::string _body;
-		size_t _content_length = 0;
-		bool _header_parsed = false;
-		bool _work_request = false;
+		size_t _content_length;
+		bool _header_parsed;
+		bool _work_request;
+		int _status_code;
+		int _inORout;
 
 		Request();
 		Request(const Request& other);

@@ -36,59 +36,61 @@ Service::~Service() {}
 
 
 
-void fill_request_data(std::vector<struct pollfd> &poll_fds, std::map<int, Request> &clients, size_t i)
+int fill_request_data(int fd, Request &req)
 {
 	std::cout << "\033[33mClient is sending data \033[0m" << std::endl;
-
-	// char buffer[80]; // test to trigger 431 error
-	char buffer[8192];
-
-	// recv(fd, buffer, length, flags)
-	int bytes_read = recv(poll_fds[i].fd, buffer, sizeof(buffer) - 1, 0);
+	char buffer[80]; // char buffer[8192];
+	int bytes_read = recv(fd, buffer, sizeof(buffer) - 1, 0);
 
 	if (bytes_read > 0)
 	{
-		// if (this->clients[poll_fds[i].fd]._request_data.size() + bytes_read > 160) // test to trigger 431 error
-		if (clients[poll_fds[i].fd]._request_data.size() + bytes_read > 16384 || clients[poll_fds[i].fd]._request_data.size() < clients[poll_fds[i].fd]._content_length)
+		req._request_data.append(buffer, bytes_read);
+		if (!req._header_parsed)
 		{
-			close(poll_fds[i].fd);
-			poll_fds.erase(poll_fds.begin() + i);
-			clients.erase(poll_fds[i].fd);
-			std::cout << "Client " << poll_fds[i].fd << " disconnected -431 Request Header Fields Too Large." << std::endl;
-			// TODO: Send response 431 Request Header Fields Too Large
-			return;
+			std::cout << "\033[31m  Header not parsed \033[0m"<<std::endl;
+			if (req._request_data.size() > 16384)
+			{
+				req._status_code = 431;
+				return 1;
+			}
+
+			if(req._request_data.find("\r\n\r\n") != std::string::npos)
+			{
+				req._header = req._request_data.substr(0, req._request_data.find("\r\n\r\n") + 4);
+				std::cout << "\033[34mHeader: '" << req._header << "----\n" << "'\033[0m"<<std::endl;
+				// parse_header();
+				std::cout << "\033[35m  Header parsed \033[0m"<<std::endl;
+
+				if (req._content_length > 300)  // e.g., 1 GB limit
+				{
+				   req._status_code = 431;
+						return 1;
+				}
+				// REMOVE THIS AFTER PARSE HEADER IS DONE
+				req._content_length = 323;
+				req._header_parsed = true;
+			}
 		}
 
-		clients[poll_fds[i].fd]._request_data.append(buffer, bytes_read);
-		if(!clients[poll_fds[i].fd]._header_parsed && clients[poll_fds[i].fd]._request_data.find("\r\n\r\n") != std::string::npos)
+		if(req._header_parsed && req._content_length > 0)
 		{
-			std::cout << "Full request received from client " << poll_fds[i].fd << ":\n-----\n" << clients[poll_fds[i].fd]._request_data << "----\n" << std::endl;
-			clients[poll_fds[i].fd]._header_parsed = true;
-			// parse_header();
+			if (req._request_data.size() >= req._header.size() + req._content_length)
+			{
+				req._body = req._request_data.substr(req._header.size(), req._content_length);
+				std::cout << "\033[35mBody: '" << req._body << "----\n" << "'\033[0m"<<std::endl;
+				// parse_body();
+				// REMOVE THIS AFTER PARSE BODY IS DONE
+				req._work_request = true;
+			}
 		}
-		{
-			clients[poll_fds[i].fd]._header = clients[poll_fds[i].fd]._request_data.substr(0, clients[poll_fds[i].fd]._request_data.find("\r\n\r\n") + 4);
-			std::cout << "\033[34mHeader: '" << clients[poll_fds[i].fd]._header << "----\n" << "'\033[0m"<<std::endl;
-			// parse_header();
-		}
-
-		if(clients[poll_fds[i].fd]._header_parsed && clients[poll_fds[i].fd]._request_data.size() == clients[poll_fds[i].fd]._header.size() + clients[poll_fds[i].fd]._content_length)
-		{
-			clients[poll_fds[i].fd]._body = clients[poll_fds[i].fd]._request_data.substr(clients[poll_fds[i].fd]._header.size(), clients[poll_fds[i].fd]._content_length);
-			std::cout << "\033[35mBody: '" << clients[poll_fds[i].fd]._body << "----\n" << "'\033[0m"<<std::endl;
-			// parse_body();
-		}
-
 	}
 	else
 	{
-		close(poll_fds[i].fd);
-		poll_fds.erase(poll_fds.begin() + i);
-		clients.erase(poll_fds[i].fd);
-		std::cout << "Client " << poll_fds[i].fd << " nothing else to read or failure in reading." << std::endl;
-		// TODO: Send response 431 Request Header Fields Too Large
-		return;
+		std::cout << "Client " << fd << " nothing else to read or failure in reading." << std::endl;
+		req._status_code = 431;
+		return 1;
 	}
+	return 0;
 }
 
 void add_client_to_polls(std::vector<struct pollfd> &poll_fds, std::vector<struct pollfd> &server_fds, std::map<int, Request> &clients, size_t i)
@@ -151,74 +153,25 @@ void Service::poll_service()
 				add_client_to_polls(poll_fds, server_fds, this->clients, i);
 			else
 			{
-				fill_request_data();
-				close(poll_fds[i].fd);
-				poll_fds.erase(poll_fds.begin() + i);
-				clients.erase(poll_fds[i].fd);
-				std::cout << "Client " << poll_fds[i].fd << " disconnected after request." << std::endl;
-
-
-				std::cout << "\033[33mClient is sending data \033[0m" << std::endl;
-
-
-				// char buffer[80]; // test to trigger 431 error
-				char buffer[8192];
-
-				// recv(fd, buffer, length, flags)
-				int bytes_read = recv(poll_fds[i].fd, buffer, sizeof(buffer) - 1, 0);
-
-				if (bytes_read > 0)
-				{
-					// if (this->clients[poll_fds[i].fd]._request_data.size() + bytes_read > 160) // test to trigger 431 error
-					if (this->clients[poll_fds[i].fd]._request_data.size() + bytes_read > 16384)
-					{
-						close(poll_fds[i].fd);
-						poll_fds.erase(poll_fds.begin() + i);
-						this->clients.erase(poll_fds[i].fd);
-						std::cout << "Client " << poll_fds[i].fd << " disconnected -431 Request Header Fields Too Large." << std::endl;
-						// TODO: Send response 431 Request Header Fields Too Large
-						continue;
-					}
-
-					this->clients[poll_fds[i].fd]._request_data.append(buffer, bytes_read);
-					if(this->clients[poll_fds[i].fd]._request_data.find("\r\n\r\n") != std::string::npos)
-					{
-						std::cout << "Full request received from client " << poll_fds[i].fd << ":\n-----\n" << this->clients[poll_fds[i].fd]._request_data << "----\n" << std::endl;
-						// parse_header();
-
-						// Here you would normally process the request and send a response
-						// For now, we just close the connection
-						this->clients[poll_fds[i].fd]._header = this->clients[poll_fds[i].fd]._request_data.substr(0, this->clients[poll_fds[i].fd]._request_data.find("\r\n\r\n") + 4);
-						std::cout << "\033[34mHeader: '" << this->clients[poll_fds[i].fd]._header << "----\n" << "'\033[0m"<<std::endl;
-						close(poll_fds[i].fd);
-						poll_fds.erase(poll_fds.begin() + i);
-						this->clients.erase(poll_fds[i].fd);
-						std::cout << "Client " << poll_fds[i].fd << " disconnected after request." << std::endl;
-					}
-				}
-				else
+				if(fill_request_data(poll_fds[i].fd, this->clients[poll_fds[i].fd]))
 				{
 					close(poll_fds[i].fd);
 					poll_fds.erase(poll_fds.begin() + i);
-					this->clients.erase(poll_fds[i].fd);
-					std::cout << "Client " << poll_fds[i].fd << " nothing else to read or failure in reading." << std::endl;
-					// TODO: Send response 431 Request Header Fields Too Large
+					clients.erase(poll_fds[i].fd);
+					std::cout << "Client " << poll_fds[i].fd << " disconnected, show status here: "<< clients[poll_fds[i].fd]._status_code <<" ." << std::endl;
 					continue;
 				}
-
+				if (this->clients[poll_fds[i].fd]._work_request == true)
+				{
+					// Process the request here (not implemented in this snippet)
+					// After processing, close the connection
+					close(poll_fds[i].fd);
+					poll_fds.erase(poll_fds.begin() + i);
+					clients.erase(poll_fds[i].fd);
+					std::cout << "Client " << poll_fds[i].fd << " SHOULD RECEIVE RESPONSE - NOT CODED YET ." << std::endl;
+					continue;
+				}
 			}
 		}
-
-		//check each fd and see if there's any new data in it
-		// if there is, decide:
-			// is it a server fd? ==> that means a new client has made a connection
-				// 'accept' the connection and add the new fd to the pollfd vector
-			// else ==> a client that was already connected is sending the data
-				// read the information with 'recv' and save the bytes read
-				// we need to create a buffer to keep reading in the next iteration
-				// thus, might be interesting creating a Client class, or at least a struct with some information of the current reading state
-				// after everything was read ==> prepare http answer => answer the client with 'send' ==> close the client's connection and remove it from the fds vector
-		// If there is nothing new, just continue the loop
-
 	}
 }
