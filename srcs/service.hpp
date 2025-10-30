@@ -4,7 +4,7 @@
 # include <string>
 # include <vector>
 # include "server.hpp"
-# include "client.hpp"
+# include "request.hpp"
 
 class Service
 {
@@ -12,7 +12,7 @@ class Service
 
 	public:
 		std::vector<Server> servers;
-		std::map<int, Client> clients;
+		std::map<int, Request> clients;
 		Service();
 		Service(const Service& other);
 		Service& operator=(const Service& other);
