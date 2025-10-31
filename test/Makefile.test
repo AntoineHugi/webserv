@@ -1,0 +1,42 @@
+# Test Client Makefile
+
+TEST_CLIENT = test_client
+STRESS_TEST = stress_test
+
+CPPC = c++
+
+RM = rm -f
+
+CPPFLAGS = -Wall -Wextra -Werror -std=c++98
+
+TEST_SRCS = test_client.cpp
+STRESS_SRCS = stress_test.cpp
+
+TEST_OBJS = $(TEST_SRCS:.cpp=.o)
+STRESS_OBJS = $(STRESS_SRCS:.cpp=.o)
+
+all: $(TEST_CLIENT) $(STRESS_TEST)
+
+$(TEST_CLIENT): $(TEST_OBJS)
+	@$(CPPC) $(CPPFLAGS) $(TEST_OBJS) -o $(TEST_CLIENT)
+	@echo "Created test client:" $(TEST_CLIENT)
+
+$(STRESS_TEST): $(STRESS_OBJS)
+	@$(CPPC) $(CPPFLAGS) $(STRESS_OBJS) -o $(STRESS_TEST)
+	@echo "Created stress test:" $(STRESS_TEST)
+
+%.o: %.cpp
+	@$(CPPC) $(CPPFLAGS) -c $< -o $@
+	@echo "Compiling $< -> $@"
+
+clean:
+	@$(RM) $(TEST_OBJS) $(STRESS_OBJS)
+	@echo "Cleaned object files"
+
+fclean: clean
+	@$(RM) $(TEST_CLIENT) $(STRESS_TEST)
+	@echo "Removed executables"
+
+re: fclean all
+
+.PHONY: all clean fclean re

@@ -6,6 +6,7 @@
 # include <cctype>
 # include <map>
 # include <vector>
+# include <iostream>
 # include <algorithm>
 # include "route.hpp"
 
@@ -20,7 +21,6 @@ class Server
 		std::string _error_page;
 		int _client_max_body_size;
 		int	_sock;
-		std::vector<int> _clients;
 		std::vector <Route> _routes;
 
 	public:

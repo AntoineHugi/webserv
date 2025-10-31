@@ -5,6 +5,8 @@
 # include <vector>
 # include "server.hpp"
 # include "request.hpp"
+# include <iostream>
+
 
 class Service
 {

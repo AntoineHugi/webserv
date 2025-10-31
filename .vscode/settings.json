@@ -49,6 +49,7 @@
 		"span": "cpp",
 		"sstream": "cpp",
 		"cinttypes": "cpp",
-		"map": "cpp"
+		"map": "cpp",
+		"cstring": "cpp"
 	}
 }

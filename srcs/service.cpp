@@ -1,7 +1,12 @@
 #include <iostream>
 #include "service.hpp"
+#include "request_in.cpp"
 #include <sys/socket.h>
+#include <cerrno>
 #include <poll.h>
+#include <cstring>
+#include <stdio.h>
+#include <errno.h>
 
 Service::Service(): servers() {}
 
@@ -20,79 +25,6 @@ Service::~Service() {}
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-int fill_request_data(int fd, Request &req)
-{
-	std::cout << "\033[33mClient is sending data \033[0m" << std::endl;
-	char buffer[80]; // char buffer[8192];
-	int bytes_read = recv(fd, buffer, sizeof(buffer) - 1, 0);
-
-	if (bytes_read > 0)
-	{
-		req._request_data.append(buffer, bytes_read);
-		if (!req._header_parsed)
-		{
-			std::cout << "\033[31m  Header not parsed \033[0m"<<std::endl;
-			if (req._request_data.size() > 16384)
-			{
-				req._status_code = 431;
-				return 1;
-			}
-
-			if(req._request_data.find("\r\n\r\n") != std::string::npos)
-			{
-				req._header = req._request_data.substr(0, req._request_data.find("\r\n\r\n") + 4);
-				std::cout << "\033[34mHeader: '" << req._header << "----\n" << "'\033[0m"<<std::endl;
-				// parse_header();
-				std::cout << "\033[35m  Header parsed \033[0m"<<std::endl;
-
-				if (req._content_length > 300)  // e.g., 1 GB limit
-				{
-				   req._status_code = 431;
-						return 1;
-				}
-				// REMOVE THIS AFTER PARSE HEADER IS DONE
-				req._content_length = 323;
-				req._header_parsed = true;
-			}
-		}
-
-		if(req._header_parsed && req._content_length > 0)
-		{
-			if (req._request_data.size() >= req._header.size() + req._content_length)
-			{
-				req._body = req._request_data.substr(req._header.size(), req._content_length);
-				std::cout << "\033[35mBody: '" << req._body << "----\n" << "'\033[0m"<<std::endl;
-				// parse_body();
-				// REMOVE THIS AFTER PARSE BODY IS DONE
-				req._work_request = true;
-			}
-		}
-	}
-	else
-	{
-		std::cout << "Client " << fd << " nothing else to read or failure in reading." << std::endl;
-		req._status_code = 431;
-		return 1;
-	}
-	return 0;
-}
-
 void add_client_to_polls(std::vector<struct pollfd> &poll_fds, std::vector<struct pollfd> &server_fds, std::map<int, Request> &clients, size_t i)
 {
 	std::cout << "\033[32m New connection! \033[0m" << std::endl;
@@ -106,7 +38,7 @@ void add_client_to_polls(std::vector<struct pollfd> &poll_fds, std::vector<struc
 			client_pfd.events = POLLIN;  // Wait for data from client
 			client_pfd.revents = 0;
 			poll_fds.push_back(client_pfd);
-			clients[client_fd] = Request();
+			clients.insert(std::pair<int, Request>(client_fd, Request()));
 			std::cout << "\033[32m Client " << client_fd << " connected. Total clients: " << (poll_fds.size() - server_fds.size()) << "\033[0m" << std::endl;
 	}
 }
@@ -123,7 +55,6 @@ void set_polls(std::vector<struct pollfd> &poll_fds, std::vector<struct pollfd> 
 	}
 }
 
-
 void Service::poll_service()
 {
 	std::vector<struct pollfd> poll_fds;
@@ -133,44 +64,45 @@ void Service::poll_service()
 	while(true)
 	{
 		// poll(pointet to the first elemnt type struct pollfd, number of fds, timeout)
-		poll(poll_fds.data(), poll_fds.size(), -1);
-		int new_client = 0;
-
-		for (size_t i = 0; i < poll_fds.size(); i++)
+		int ret = poll(poll_fds.data(), poll_fds.size(), 60000);
+		if (ret < 0) {
+				if (errno == EINTR) continue;  // Interrupted, retry
+				perror("poll failed");
+				break;
+		}
+		for (int i = poll_fds.size() - 1; i >= 0; i--)
 		{
+			bool new_client = false;
 			if (poll_fds[i].revents == 0)
 				continue;
 			for (size_t j = 0; j < server_fds.size(); j++)
 			{
 				if (poll_fds[i].fd == server_fds[j].fd)
 				{
-					new_client = 1;
+					new_client = true;
 					break;
 				}
 			}
-
 			if (new_client)
 				add_client_to_polls(poll_fds, server_fds, this->clients, i);
 			else
 			{
-				if(fill_request_data(poll_fds[i].fd, this->clients[poll_fds[i].fd]))
-				{
-					close(poll_fds[i].fd);
-					poll_fds.erase(poll_fds.begin() + i);
-					clients.erase(poll_fds[i].fd);
-					std::cout << "Client " << poll_fds[i].fd << " disconnected, show status here: "<< clients[poll_fds[i].fd]._status_code <<" ." << std::endl;
-					continue;
-				}
-				if (this->clients[poll_fds[i].fd]._work_request == true)
-				{
-					// Process the request here (not implemented in this snippet)
-					// After processing, close the connection
-					close(poll_fds[i].fd);
-					poll_fds.erase(poll_fds.begin() + i);
-					clients.erase(poll_fds[i].fd);
-					std::cout << "Client " << poll_fds[i].fd << " SHOULD RECEIVE RESPONSE - NOT CODED YET ." << std::endl;
-					continue;
-				}
+					// Check for errors/hangup first
+					std::cout << "Handling event for client fd: " << poll_fds[i].fd << std::endl;
+					std::cout << " with poll_fds[i].revents: " << poll_fds[i].revents << std::endl;
+					std::cout << " with clients[poll_fds[i].fd]._inORout: " << this->clients[poll_fds[i].fd]._inORout << std::endl;
+					if (poll_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
+					{
+							handle_disconnect(this->clients, poll_fds, i);
+							continue;
+					}
+					if (poll_fds[i].revents & POLLIN)
+					{
+						std::cout << "===========>>  Client will send request" << std::endl;
+						handle_read(this->clients, poll_fds, i);
+					}
+					if (i < (int)poll_fds.size() && (poll_fds[i].revents & POLLOUT))
+							handle_write(this->clients, poll_fds, i);
 			}
 		}
 	}

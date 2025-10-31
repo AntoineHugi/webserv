@@ -3,6 +3,8 @@
 
 # include <string>
 # include <vector>
+# include <map>
+# include <iostream>
 
 class Request
 {
@@ -16,13 +18,22 @@ class Request
 		bool _header_parsed;
 		bool _work_request;
 		int _status_code;
-		int _inORout;
+		bool _inORout;
+		bool _should_keep_alive;
+		std::map<std::string, std::string> _header_kv;
 
 		Request();
 		Request(const Request& other);
 		Request& operator=(const Request& other);
 		~Request();
 
+
 };
+
+	void parse_header(Request &req);
+	void parse_body(Request &req);
+	void process_request(Request &req);
+	void flush_request_data(Request &req);
+	std::string format_response(Request &req);
 
 #endif

@@ -8,7 +8,7 @@
 #include <netinet/in.h> // for htons
 
 
-Server::Server():_name(""), _port(-1), _host(""), _root(""), _index(), _error_page(""), _client_max_body_size(-1), _sock(-1), _clients() {}
+Server::Server():_name(""), _port(-1), _host(""), _root(""), _index(), _error_page(""), _client_max_body_size(-1), _sock(-1) {}
 
 Server::~Server() {
 
@@ -42,8 +42,6 @@ Server& Server::operator=(const Server& other)
 	}
 	return (*this);
 }
-
-
 
 std::string	Server::get_name() { return (this->_name); }
 int	Server::get_port() { return (this->_port); }
