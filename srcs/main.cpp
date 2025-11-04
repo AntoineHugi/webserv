@@ -1,4 +1,4 @@
-#include "parser.hpp"
+#include "parserConfig.hpp"
 #include "server.hpp"
 #include "service.hpp"
 #include <iostream>
@@ -19,9 +19,6 @@ int	main(int argc, char **argv)
 				std::cout << "Server: " << i << " starting... "<< std::endl;
 				i++;
 			}
-			std::cout << service.servers[0].get_port() << std::endl;
-			std::cout << service.servers[1].get_port() << std::endl;
-			// opening up the sockets, binding etc
 		}
 		service.poll_service();
 	}

@@ -3,10 +3,11 @@
 
 # include <string>
 # include <vector>
-# include "server.hpp"
-# include "request.hpp"
 # include <iostream>
+# include "server.hpp"
+# include "client.hpp"
 
+// create a client class, which would have its request and respons objects, also status code, ...
 
 class Service
 {
@@ -14,13 +15,15 @@ class Service
 
 	public:
 		std::vector<Server> servers;
-		std::map<int, Request> clients;
+		std::map<int, Client> clients;
 		Service();
 		Service(const Service& other);
 		Service& operator=(const Service& other);
 		~Service();
 
 		void poll_service();
+		void	handle_connection(std::vector<struct pollfd> &poll_fds, const size_t& i);
+		void	handle_disconnection(std::vector<struct pollfd> &poll_fds, const size_t& i);
 };
 
 // struct pollfd {

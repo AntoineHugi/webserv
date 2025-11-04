@@ -32,7 +32,6 @@ std::vector <std::string>	Route::get_methods() const { return (this->_methods); 
 std::string	Route::get_autoindex() const { return (this->_autoindex); }
 std::string	Route::get_cgi_path() const { return (this->_cgi_path); }
 
-
 void	Route::set_path(const std::string& path) { this->_path = path; }
 void	Route::set_root(const std::string& root) { this->_root = root; }
 

@@ -1,4 +1,4 @@
-#include "parser.hpp"
+#include "parserConfig.hpp"
 
 std::vector<std::string> Parser::tokenise(std::string& str)
 {
@@ -179,6 +179,14 @@ bool Parser::parse_location(Server* server, std::vector <std::string> tokens, si
 		--(*i);
 		std::cout << "Config file error: unexpected element after " << tokens[*i] << std::endl;
 		return (false);
+	}
+	for (size_t j = 0; j < server->get_routes().size(); j++)
+	{
+		if (server->get_routes()[j].get_path() == tokens[*i])
+		{
+			std::cout << "Config file error: duplicate route." << std::endl;
+			return (false);
+		}
 	}
 	route.set_path(tokens[*i]);
 	++(*i);

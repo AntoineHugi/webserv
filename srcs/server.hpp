@@ -10,6 +10,8 @@
 # include <algorithm>
 # include "route.hpp"
 
+class Client;
+
 class Server
 {
 	private:
@@ -40,7 +42,7 @@ class Server
 		int	get_client_max_body_size();
 		std::vector <Route>	get_routes();
 
-		// // Setters
+		// Setters
 		void	set_name(const std::string& name);
 		void	set_port(const std::string& port);
 		void	set_sock(int sock);
@@ -53,6 +55,7 @@ class Server
 
 		void	set_server();
 
+		//int	croupier(Client client);
 		void create_listening_socket();
 		void accept_new_client();
 		// void handle_client_read(Client& client);
