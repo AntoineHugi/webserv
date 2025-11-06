@@ -1,12 +1,5 @@
 #include "server.hpp"
-#include <iostream>
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/socket.h> // for socket handling
-#include <fcntl.h> // for file descriptor handling
-#include <cstring> //
-#include <netinet/in.h> // for htons
-
+#include "client.hpp"
 
 Server::Server():_name(""), _port(-1), _host(""), _root(""), _index(), _error_page(""), _client_max_body_size(-1), _sock(-1) {}
 
@@ -80,7 +73,6 @@ void	Server::set_client_max_body_size(const std::string& max)
 }
 void	Server::add_route(Route route) { this->_routes.push_back(route); }
 
-
 void Server::set_server(){
 
 	this->set_sock(socket(AF_INET, SOCK_STREAM, 0));
@@ -110,15 +102,119 @@ void Server::set_server(){
 	server_addr.sin_family = AF_INET; // IPv4
 	server_addr.sin_addr.s_addr = INADDR_ANY; // Any interface
 	server_addr.sin_port = htons(this->get_port()); // Port 8080
-    check = bind(this->get_sock(), (struct sockaddr *)&server_addr, sizeof(server_addr));
-    if (check < 0) {
+	check = bind(this->get_sock(), (struct sockaddr *)&server_addr, sizeof(server_addr));
+	if (check < 0) {
 		perror("Bind failed");
 		return; // TODO: throw correct error
-    }
+	}
 	check = listen(this->get_sock(), 128);
 	if (check < 0) {
 		perror("Listen failed");
 		return; // TODO: throw correct error
-    }
+	}
 	std::cout << "Server listening on port " << this->get_port() << std::endl;
+}
+
+bool	Server::validateRequest(Client& client)
+{
+	std::string uri;
+	std::map<std::string, std::string>::iterator mit = client._request._header_kv.find("URI");
+	if (mit != client._request._header_kv.end()) 
+		uri = mit->second;
+	else
+	{
+		client._status_code = 500;
+		return (false);
+	}
+	int index = -1;
+	std::string matchedPath;
+	std::vector<Route>::iterator vit = _routes.begin();
+	for (size_t i = 0; i < this->_routes.size(); ++i)
+	{
+		if (uri.compare(0, this->_routes[i].get_path().size(), this->_routes[i].get_path()) == 0) 
+		{
+			if (this->_routes[i].get_path().size() > matchedPath.size())
+			{
+				matchedPath = this->_routes[i].get_path();
+				index = i;
+			}
+		}
+	}
+	if (matchedPath.empty() || index == -1)
+	{
+		client._status_code = 404;
+		return (false);
+	}
+	if (!this->_routes[index].get_root().empty())
+		client._request._fullPathURI = this->_routes[index].get_root() + uri.substr(matchedPath.size());
+	else
+		client._request._fullPathURI = this->_root + uri.substr(matchedPath.size());
+	struct stat st;
+	if (stat(client._request._fullPathURI.c_str(), &st) != 0)
+	{
+		client._status_code = 404;
+		return (false);
+	}
+	std::string method;
+	std::map<std::string, std::string>::iterator it = client._request._header_kv.find("Method");
+	if (it != client._request._header_kv.end()) 
+		method = it->second;
+	else
+		return (false);
+	for (size_t j = 0; j < this->_routes[index].get_methods().size(); ++j)
+	{
+		if (method == this->_routes[index].get_methods()[j])
+			return (true);
+	}
+	client._status_code = 405;
+	//client._response.addHeaderAllowed(_routes[i]); // we'll need to add the allowed methods in the response header: "Allow: GET, POST" for example
+	return (false);
+}
+
+void	Server::processRequest(Client& client)
+{
+	std::string methods[3] = {"GET", "POST", "DELETE"};
+	int field = -1;
+	for (int i = 0; i < 3; i++)
+	{
+		if (client._request._header_kv["Method"] == methods[i])
+			field = i;
+	}
+	switch (field)
+	{
+		case 0:
+			this->handleGet(client);
+			break;
+		case 1:
+			this->handlePost(client);
+			break;
+		case 2:
+			this->handleDelete(client);
+			break;
+		default:
+			std::cout << "Error processing request" << std::endl;
+			client._status_code = 500;
+			return;
+	}
+}
+
+void	Server::handleGet(Client& client)
+{
+
+}
+
+void	Server::handlePost(Client& client)
+{
+
+}
+
+void	Server::handleDelete(Client& client)
+{
+
+}
+
+bool fileExists(const std::string &path)
+{
+	struct stat st;
+	return (stat(path.c_str(), &st) == 0);
 }

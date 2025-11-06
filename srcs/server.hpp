@@ -8,6 +8,14 @@
 # include <vector>
 # include <iostream>
 # include <algorithm>
+# include <iostream>
+# include <stdio.h>
+# include <unistd.h>
+# include <sys/socket.h>
+# include <fcntl.h>
+# include <cstring>
+# include <netinet/in.h>
+# include <sys/stat.h>
 # include "route.hpp"
 
 class Client;
@@ -56,6 +64,12 @@ class Server
 		void	set_server();
 
 		//int	croupier(Client client);
+		bool	validateRequest(Client& client);
+		void	processRequest(Client& client);
+		void	handleGet(Client& client);
+		void	handlePost(Client& client);
+		void	handleDelete(Client& client);
+
 		void create_listening_socket();
 		void accept_new_client();
 		// void handle_client_read(Client& client);
@@ -64,5 +78,7 @@ class Server
 
 
 };
+
+bool fileExists(const std::string &path);
 
 #endif

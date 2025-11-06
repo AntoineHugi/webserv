@@ -16,6 +16,7 @@ class Request
 		std::string _body;
 		std::map<std::string, std::string> _header_kv;
 		size_t _content_length;
+		std::string _fullPathURI;
 
 		Request();
 		Request(const Request& other);

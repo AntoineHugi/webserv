@@ -182,13 +182,13 @@ bool Parser::parse_location(Server* server, std::vector <std::string> tokens, si
 	}
 	for (size_t j = 0; j < server->get_routes().size(); j++)
 	{
-		if (server->get_routes()[j].get_path() == tokens[*i])
+		if (server->get_routes()[j].get_path() == (server->get_root() + tokens[*i]))
 		{
 			std::cout << "Config file error: duplicate route." << std::endl;
 			return (false);
 		}
 	}
-	route.set_path(tokens[*i]);
+	route.set_path(server->get_root() + tokens[*i]);
 	++(*i);
 	if (*i >= tokens.size() || tokens[*i] != "{")
 	{
@@ -416,10 +416,10 @@ bool Parser::check_server(Server* server)
 
 bool Parser::assign_single_keyval_route(Route* route, std::string& key, std::string& value)
 {
-	std::string fields[4] = {"path", "root", "autoindex", "cgi_path"};
+	std::string fields[3] = {"root", "autoindex", "cgi_path"};
 	int field = -1;
 
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 3; i++)
 	{
 		if (key == fields[i])
 			field = i;
@@ -427,14 +427,6 @@ bool Parser::assign_single_keyval_route(Route* route, std::string& key, std::str
 	switch (field)
 	{
 		case 0:
-			if (!route->get_path().empty())
-			{
-				std::cout << "Config file error: duplicate location" << std::endl;
-				return (false);
-			}
-			route->set_path(value);
-			break ;
-		case 1:
 			if (route->get_root().empty() -1)
 			{
 				std::cout << "Config file error: duplicate root line in location" << std::endl;
@@ -442,7 +434,7 @@ bool Parser::assign_single_keyval_route(Route* route, std::string& key, std::str
 			}
 			route->set_root(value);
 			break ;
-		case 2:
+		case 1:
 			if (!route->get_autoindex().empty())
 			{
 				std::cout << "Config file error: duplicate autoindex line in location" << std::endl;
@@ -455,7 +447,7 @@ bool Parser::assign_single_keyval_route(Route* route, std::string& key, std::str
 				return (false);
 			}
 			break ;
-		case 3:
+		case 2:
 			if (!route->get_cgi_path().empty())
 			{
 				std::cout << "Config file error: duplicate cgi path line in location" << std::endl;

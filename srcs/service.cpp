@@ -119,6 +119,8 @@ void Service::poll_service()
 				{
 					std::cout << "===========>>  Started processing request, status code = " << std::endl;
 					// need to figure out how to avoid delays, for example cgi
+					if (this->clients[poll_fds[i].fd]._server.validateRequest(clients[poll_fds[i].fd]))
+						//this->clients[poll_fds[i].fd]._server.processRequest(clients[poll_fds[i].fd]);
 
 					//process_request(clients[poll_fds[i].fd]);
 					//ex: this->clients[poll_fds[i].fd]._server.croupier(clients[poll_fds[i].fd]);

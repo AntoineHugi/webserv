@@ -3,15 +3,16 @@
 #include <string>
 #include <cstdlib>
 
-Request::Request(): _request_data(""), _header(""), _body(""), _header_kv(), _content_length(0) {}
+Request::Request(): _request_data(""), _header(""), _body(""), _header_kv(), _content_length(0), _fullPathURI("") {}
 
 Request::Request(const Request& other)
 {
 	_request_data = other._request_data;
 	_header = other._header;
 	_body = other._body;
-	_content_length = other._content_length;
 	_header_kv = other._header_kv;
+	_content_length = other._content_length;
+	_fullPathURI = other._fullPathURI;
 }
 
 Request& Request::operator=(const Request& other)
@@ -21,8 +22,9 @@ Request& Request::operator=(const Request& other)
 			_request_data = other._request_data;
 			_header = other._header;
 			_body = other._body;
-			_content_length = other._content_length;
 			_header_kv = other._header_kv;
+			_content_length = other._content_length;
+			_fullPathURI = other._fullPathURI;
 	}
 	return (*this);
 }
