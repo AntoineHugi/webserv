@@ -3,7 +3,7 @@
 #include <string>
 #include <cstdlib>
 
-Request::Request(): _request_data(""), _header(""), _body(""), _header_kv(), _content_length(0), _fullPathURI("") {}
+Request::Request(): _request_data(""), _header(""), _body(""), _header_kv(), _content_length(0), _fullPathURI(""), _root(""), _isDirectory(false) {}
 
 Request::Request(const Request& other)
 {
@@ -13,18 +13,22 @@ Request::Request(const Request& other)
 	_header_kv = other._header_kv;
 	_content_length = other._content_length;
 	_fullPathURI = other._fullPathURI;
+	_root = other._root;
+	_isDirectory = other._isDirectory;
 }
 
 Request& Request::operator=(const Request& other)
 {
 	if (this != &other)
 	{
-			_request_data = other._request_data;
-			_header = other._header;
-			_body = other._body;
-			_header_kv = other._header_kv;
-			_content_length = other._content_length;
-			_fullPathURI = other._fullPathURI;
+		_request_data = other._request_data;
+		_header = other._header;
+		_body = other._body;
+		_header_kv = other._header_kv;
+		_content_length = other._content_length;
+		_fullPathURI = other._fullPathURI;
+		_root = other._root;
+		_isDirectory = other._isDirectory;
 	}
 	return (*this);
 }

@@ -2,20 +2,21 @@
 # define SERVER_H
 
 # include <string>
-# include <vector>
 # include <cctype>
-# include <map>
-# include <vector>
-# include <iostream>
-# include <algorithm>
-# include <iostream>
 # include <stdio.h>
 # include <unistd.h>
-# include <sys/socket.h>
-# include <fcntl.h>
+# include <limits.h>
 # include <cstring>
+# include <iostream>
+# include <vector>
+# include <map>
+# include <algorithm>
+# include <fcntl.h>
+# include <dirent.h>
 # include <netinet/in.h>
+# include <sys/socket.h>
 # include <sys/stat.h>
+# include <sys/wait.h>
 # include "route.hpp"
 
 class Client;
@@ -78,7 +79,5 @@ class Server
 
 
 };
-
-bool fileExists(const std::string &path);
 
 #endif
