@@ -1,6 +1,6 @@
-#include "parserConfig.hpp"
-#include "server.hpp"
-#include "service.hpp"
+#include "./Functions/parserConfig.hpp"
+#include "./Models/server.hpp"
+#include "./Core/service.hpp"
 #include <iostream>
 
 int	main(int argc, char **argv)

@@ -4,8 +4,8 @@
 # include <string>
 # include <vector>
 # include <iostream>
-# include "server.hpp"
-# include "client.hpp"
+# include "../Models/server.hpp"
+# include "../Models/client.hpp"
 
 // create a client class, which would have its request and respons objects, also status code, ...
 

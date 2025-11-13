@@ -1,14 +1,14 @@
 #ifndef PARSER_H
 # define PARSER_H
 
-# include "service.hpp"
-# include "server.hpp"
+# include "../Core/service.hpp"
+# include "../Models/server.hpp"
 # include <iostream>
 # include <fstream>
 # include <sstream>
 
 class Parser
-{	
+{
 	public:
 
 		/* general */

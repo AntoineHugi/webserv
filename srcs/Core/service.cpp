@@ -1,6 +1,5 @@
-#include <iostream>
 #include "service.hpp"
-#include "request_in.cpp"
+#include <iostream>
 #include <sys/socket.h>
 #include <cerrno>
 #include <poll.h>
@@ -35,12 +34,10 @@ void add_client_to_polls(std::vector<struct pollfd> &poll_fds, std::vector<struc
 	{
 			struct pollfd client_pfd;
 			client_pfd.fd = client_fd;
-			client_pfd.events = POLLIN;  // Wait for data from client
+			client_pfd.events = POLLIN | POLLOUT; // Wait for data from client
 			client_pfd.revents = 0;
 			poll_fds.push_back(client_pfd);
-			clients.insert(std::pair<int, Client>(client_fd, Client()));
-			clients[client_fd]._server = server;
-			clients[client_fd]._fd = client_fd;
+			clients.insert(std::pair<int, Client>(client_fd, Client(client_fd, server)));
 			std::cout << "\033[32m Client " << client_fd << " connected. Total clients: " << (poll_fds.size() - server_fds.size()) << "\033[0m" << std::endl;
 	}
 }
@@ -94,7 +91,7 @@ void Service::poll_service()
 				// Check for errors/hangup first
 				std::cout << "Handling event for client fd: " << poll_fds[i].fd << std::endl;
 				std::cout << " with poll_fds[i].revents: " << poll_fds[i].revents << std::endl;
-				std::cout << " with clients[poll_fds[i].fd]._inORout: " << this->clients[poll_fds[i].fd]._inORout << std::endl;
+				std::cout << " with clients[poll_fds[i].fd]._inORout: " << this->clients[poll_fds[i].fd].get_state() << std::endl;
 				if (poll_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
 				{
 					this->handle_disconnection(poll_fds, i);
@@ -107,15 +104,12 @@ void Service::poll_service()
 						this->handle_connection(poll_fds, i);
 					else
 					{
-						std::cout << "===========>>  Client work request " << this->clients[poll_fds[i].fd]._work_request <<  std::endl;
-						if (this->clients[poll_fds[i].fd]._work_request == true)
-						{
-								this->clients[poll_fds[i].fd]._inORout = true;
+						std::cout << "===========>>  Client work request " << this->clients[poll_fds[i].fd].can_i_process_request() <<  std::endl;
+						if (this->clients[poll_fds[i].fd].can_i_process_request() == true)
 								poll_fds[i].events = POLLOUT;
-						}
 					}
 				}
-				if (i < (int)poll_fds.size() && (poll_fds[i].revents & POLLOUT))
+				if (i < (int)poll_fds.size() && (poll_fds[i].revents & POLLOUT) && this->clients[poll_fds[i].fd].can_i_process_request() == true)
 				{
 					std::cout << "===========>>  Started processing request, status code = " << std::endl;
 					// need to figure out how to avoid delays, for example cgi
@@ -123,8 +117,8 @@ void Service::poll_service()
 					//process_request(clients[poll_fds[i].fd]);
 					//ex: this->clients[poll_fds[i].fd]._server.croupier(clients[poll_fds[i].fd]);
 					//if cgi -> fork() and get response (this should be in the process_request function)
-					
-					this->clients[poll_fds[i].fd]._response._response_data = format_response(this->clients[poll_fds[i].fd]);
+					std::cout << "Version::>  " << this->clients[poll_fds[i].fd]._request._header_kv["Version"] << std::endl;
+					this->clients[poll_fds[i].fd]._response.set_response_data(this->clients[poll_fds[i].fd]._response.format_response(this->clients[poll_fds[i].fd].get_status_code(), this->clients[poll_fds[i].fd]._should_keep_alive, this->clients[poll_fds[i].fd]._request._header_kv["Version"]));
 					this->clients[poll_fds[i].fd].handle_write();
 					this->handle_connection(poll_fds, i);
 				}
@@ -136,7 +130,7 @@ void Service::poll_service()
 
 void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size_t& i)
 {
-	if (this->clients[poll_fds[i].fd]._status_code < 300)
+	if (this->clients[poll_fds[i].fd].get_status_code() < 300)
 	{
 		/*if (this->clients[poll_fds[i].fd]._should_keep_alive == true)
 		{
@@ -161,10 +155,11 @@ void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 	{
 		std::cout << "==>>  Client will be closed" << std::endl;
 		int fd = poll_fds[i].fd;
+		int status = this->clients[poll_fds[i].fd].get_status_code();
 		close(fd);
 		poll_fds.erase(poll_fds.begin() + i);
 		clients.erase(fd);
-		std::cout << "Client " << poll_fds[i].fd << " disconnected, show status here: "<< clients[poll_fds[i].fd]._status_code <<" ." << std::endl;
+		std::cout << "Client " << fd << " disconnected, show status here: "<< status <<" ." << std::endl;
 		return;
 	}
 }

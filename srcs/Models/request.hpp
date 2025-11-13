@@ -23,6 +23,11 @@ class Request
 		~Request();
 
 		void flush_request_data();
-};	
+		void parse_header();
+		void parse_body();
+		bool http_requirements_met();
+		bool http_can_have_body();
+
+};
 
 #endif
