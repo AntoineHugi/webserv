@@ -5,6 +5,7 @@
 # include <vector>
 # include <map>
 # include <iostream>
+# include <sys/stat.h>
 
 class Request
 {
@@ -19,6 +20,7 @@ class Request
 		std::string	_fullPathURI;
 		std::string	_root;
 		bool	_isDirectory;
+		struct stat	_stat;
 		Request();
 		Request(const Request& other);
 		Request& operator=(const Request& other);

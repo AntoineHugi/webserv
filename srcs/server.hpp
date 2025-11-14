@@ -4,6 +4,7 @@
 # include <string>
 # include <cctype>
 # include <stdio.h>
+# include <cstdio>
 # include <unistd.h>
 # include <limits.h>
 # include <cstring>
@@ -15,11 +16,14 @@
 # include <dirent.h>
 # include <netinet/in.h>
 # include <sys/socket.h>
-# include <sys/stat.h>
 # include <sys/wait.h>
+# include "client.hpp"
+# include "method.hpp"
 # include "route.hpp"
 
 class Client;
+
+class Method;
 
 class Server
 {
@@ -67,9 +71,6 @@ class Server
 		//int	croupier(Client client);
 		bool	validateRequest(Client& client);
 		void	processRequest(Client& client);
-		void	handleGet(Client& client);
-		void	handlePost(Client& client);
-		void	handleDelete(Client& client);
 
 		void create_listening_socket();
 		void accept_new_client();

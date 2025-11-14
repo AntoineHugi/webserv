@@ -1,5 +1,4 @@
 #include "parserConfig.hpp"
-#include "server.hpp"
 #include "service.hpp"
 #include <iostream>
 
@@ -23,8 +22,6 @@ int	main(int argc, char **argv)
 		service.poll_service();
 	}
 	else
-	{
 		std::cout << "please run the executable and 1 valid .conf file" << std::endl;
-	}
 	return (0);
 }

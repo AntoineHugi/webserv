@@ -15,6 +15,7 @@ class Response
 		std::string _header;
 		std::string _body;
 		size_t _content_length;
+		std::vector <std::string>	_allowedMethods;
 
 		Response();
 		Response(const Response& other);

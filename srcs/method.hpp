@@ -5,9 +5,8 @@
 # include <vector>
 # include <map>
 # include <iostream>
-# include "request.hpp"
-# include "response.hpp"
-# include "server.hpp"
+
+# include "client.hpp"
 
 class Method
 {
@@ -20,9 +19,9 @@ class Method
 		Method& operator=(const Method& other);
 		~Method();
 
-        //static get
-        //static post
-        //static delete
+		static void	handleGet(Client& client);
+		static void	handlePost(Client& client);
+		static void	handleDelete(Client& client);
 };
 
 #endif

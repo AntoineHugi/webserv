@@ -4,18 +4,18 @@
 # include <string>
 # include <vector>
 # include <map>
+# include <iostream>
+# include <sys/socket.h>
+# include <poll.h>
+# include <cstring>
+# include <cerrno>
+# include <stdio.h>
+# include <errno.h>
+# include <sstream>
+
 # include "request.hpp"
 # include "response.hpp"
 # include "server.hpp"
-#include <iostream>
-#include "service.hpp"
-#include <sys/socket.h>
-#include <poll.h>
-#include <cstring>
-#include <cerrno>
-#include <stdio.h>
-#include <errno.h>
-#include <sstream>
 
 class Client
 {

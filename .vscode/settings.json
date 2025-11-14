@@ -50,6 +50,7 @@
 		"sstream": "cpp",
 		"cinttypes": "cpp",
 		"map": "cpp",
-		"cstring": "cpp"
+		"cstring": "cpp",
+		"cerrno": "cpp"
 	}
 }
