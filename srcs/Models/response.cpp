@@ -29,8 +29,17 @@ Response& Response::operator=(const Response& other)
 
 Response::~Response() {}
 
+void Response::flush_response_data()
+{
+	_response_data.clear();
+	_header.clear();
+	_body.clear();
+	_content_length = 0;
+	_bytes_sent = 0;
+}
 
-std::string Response::format_response(int status_code, bool should_keep_alive, std::string version)
+
+std::string Response::format_response(int status_code, bool should_keep_alive, std::string version, std::string body)
 {
 	std::string response;
 	std::string reason_phrase;
@@ -48,10 +57,6 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 		return response;
 	}
 	response += reason_phrase;
-	ss.str("");
-	ss.clear();
-	ss << this->_content_length;
-	response += "Content-Length: " + ss.str() + "\r\n";
 	response += "Content-Type: application/json\r\n"; // TODO: to be dynamic based on body
 	response += "Server: webserv42\r\n";
 
@@ -67,10 +72,16 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 			response += "Connection: keep-alive\r\n";
 	else
 			response += "Connection: close\r\n";
-	response += "\r\n";
 
-	if (this->_content_length != 0)
-		response += this->_body;
+	ss.str("");
+	ss << body.size();
+	response += "Content-Length: " + ss.str() + "\r\n";
+	response += "\r\n"; // close headers
+
+	// Append body if present
+	if (body.size() != 0)
+		response += body;
+
 
 	return response;
 }

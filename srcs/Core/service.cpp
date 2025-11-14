@@ -26,6 +26,9 @@ Service::~Service() {}
 
 void add_client_to_polls(std::vector<struct pollfd> &poll_fds, std::vector<struct pollfd> &server_fds, std::map<int, Client> &clients, size_t i, Server& server)
 {
+	std::cout << "\n###################################################"<< std::endl;
+	std::cout << "################## ADDING CLIENT #######################"<< std::endl;
+	std::cout << "###################################################\n"<< std::endl;
 	std::cout << "\033[32m New connection! \033[0m" << std::endl;
 
 	int client_fd = accept(poll_fds[i].fd, NULL, NULL);
@@ -60,8 +63,12 @@ void Service::poll_service()
 	std::vector<struct pollfd> server_fds;
 	set_polls(poll_fds, server_fds, this->servers);
 
+	// int i = 0;
 	while(true)
 	{
+		// i++ ;
+		// if (i > 20)
+		// 	break;
 		// poll(pointet to the first elemnt type struct pollfd, number of fds, timeout)
 		int ret = poll(poll_fds.data(), poll_fds.size(), 60000);
 		if (ret < 0) {
@@ -72,8 +79,6 @@ void Service::poll_service()
 		for (int i = poll_fds.size() - 1; i >= 0; i--)
 		{
 			bool new_client = false;
-			if (poll_fds[i].revents == 0)
-				continue;
 			int server_index;
 			for (size_t j = 0; j < server_fds.size(); j++)
 			{
@@ -84,41 +89,51 @@ void Service::poll_service()
 					break;
 				}
 			}
+			if (poll_fds[i].revents == 0 && (new_client || (!new_client && this->clients[poll_fds[i].fd].leftover_chunk() == false)))
+				continue;
+
 			if (new_client)
 				add_client_to_polls(poll_fds, server_fds, this->clients, i, this->servers[server_index]);
 			else
 			{
 				// Check for errors/hangup first
-				std::cout << "Handling event for client fd: " << poll_fds[i].fd << std::endl;
-				std::cout << " with poll_fds[i].revents: " << poll_fds[i].revents << std::endl;
-				std::cout << " with clients[poll_fds[i].fd]._inORout: " << this->clients[poll_fds[i].fd].get_state() << std::endl;
+				// std::cout << "Handling event for client fd: " << poll_fds[i].fd << std::endl;
+				// std::cout << " with poll_fds[i].revents: " << poll_fds[i].revents << std::endl;
+				// std::cout << " with clients[poll_fds[i].fd].get_state(): " << this->clients[poll_fds[i].fd].get_state() << std::endl;
 				if (poll_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
 				{
 					this->handle_disconnection(poll_fds, i);
 					continue; // might not need to continue
 				}
-				if (poll_fds[i].revents & POLLIN)
+				if (poll_fds[i].revents & POLLIN || this->clients[poll_fds[i].fd].leftover_chunk() == true)
 				{
-					std::cout << "===========>>  Client will send request" << std::endl;
+					std::cout << "\n###################################################"<< std::endl;
+					std::cout << "################## READING #######################"<< std::endl;
+					std::cout << "###################################################\n"<< std::endl;
+
+					std::cout << "Service ========>>  Client will send request" << std::endl;
 					if (this->clients[poll_fds[i].fd].handle_read())
 						this->handle_connection(poll_fds, i);
 					else
 					{
-						std::cout << "===========>>  Client work request " << this->clients[poll_fds[i].fd].can_i_process_request() <<  std::endl;
+						std::cout << "Service ========>>  Client work request " << this->clients[poll_fds[i].fd].can_i_process_request() <<  std::endl;
 						if (this->clients[poll_fds[i].fd].can_i_process_request() == true)
 								poll_fds[i].events = POLLOUT;
 					}
 				}
 				if (i < (int)poll_fds.size() && (poll_fds[i].revents & POLLOUT) && this->clients[poll_fds[i].fd].can_i_process_request() == true)
 				{
-					std::cout << "===========>>  Started processing request, status code = " << std::endl;
+					std::cout << "\n###################################################"<< std::endl;
+					std::cout << "################## WRITING #######################"<< std::endl;
+					std::cout << "###################################################\n"<< std::endl;
+
+					std::cout << "Service ========>>  Started processing request" << std::endl;
 					// need to figure out how to avoid delays, for example cgi
 
 					//process_request(clients[poll_fds[i].fd]);
 					//ex: this->clients[poll_fds[i].fd]._server.croupier(clients[poll_fds[i].fd]);
 					//if cgi -> fork() and get response (this should be in the process_request function)
-					std::cout << "Version::>  " << this->clients[poll_fds[i].fd]._request._header_kv["Version"] << std::endl;
-					this->clients[poll_fds[i].fd]._response.set_response_data(this->clients[poll_fds[i].fd]._response.format_response(this->clients[poll_fds[i].fd].get_status_code(), this->clients[poll_fds[i].fd]._should_keep_alive, this->clients[poll_fds[i].fd]._request._header_kv["Version"]));
+					this->clients[poll_fds[i].fd]._response.set_response_data(this->clients[poll_fds[i].fd]._response.format_response(this->clients[poll_fds[i].fd].get_status_code(), this->clients[poll_fds[i].fd].should_keep_alive(), this->clients[poll_fds[i].fd]._request._header_kv["Version"], this->clients[poll_fds[i].fd]._request._body));
 					this->clients[poll_fds[i].fd].handle_write();
 					this->handle_connection(poll_fds, i);
 				}
@@ -132,15 +147,18 @@ void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 {
 	if (this->clients[poll_fds[i].fd].get_status_code() < 300)
 	{
-		/*if (this->clients[poll_fds[i].fd]._should_keep_alive == true)
+		if (this->clients[poll_fds[i].fd].should_keep_alive() == true)
 		{
+			std::string save_buffer = "";
 			// Keep connection open for next request
 			poll_fds[i].events = POLLIN;
-			this->clients[poll_fds[i].fd]._inORout = false;
-			this->clients[poll_fds[i].fd]._request.flush_request_data();
+			if (this->clients[poll_fds[i].fd].leftover_chunk() == true)
+				save_buffer = this->clients[poll_fds[i].fd]._request._request_data.substr(this->clients[poll_fds[i].fd]._request._header.size() + this->clients[poll_fds[i].fd]._request._body.size());
+			this->clients[poll_fds[i].fd].refresh_client();
+			this->clients[poll_fds[i].fd]._request._request_data = save_buffer;
 			std::cout << "Connection kept alive for fd: " << poll_fds[i].fd << std::endl;
 		}
-		else*/
+		else
 		{
 			// Close connection
 			std::cout << "Closing connection (sent Connection: close)" << std::endl;
@@ -168,4 +186,5 @@ void	Service::handle_disconnection(std::vector<struct pollfd> &poll_fds, const s
 {
 	(void)i;
 	(void)poll_fds;
+	std::cout << "Handling disconnection (error/hangup) for fd: " << poll_fds[i].fd << std::endl;
 }

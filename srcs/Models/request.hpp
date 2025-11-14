@@ -9,7 +9,7 @@
 class Request
 {
 	private:
-
+		// size_t _reading_lenght;
 	public:
 		std::string _request_data;
 		std::string _header;
@@ -27,7 +27,8 @@ class Request
 		void parse_body();
 		bool http_requirements_met();
 		bool http_can_have_body();
-
+		// size_t get_reading_length() const { return _reading_lenght; };
+		// void set_reading_length(size_t length) { _reading_lenght = length; };
 };
 
 #endif

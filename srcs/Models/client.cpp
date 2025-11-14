@@ -2,29 +2,29 @@
 
 Client::Client():
 	_state(READING_HEADERS),
+	_flags(),
 	_fd(-1),
 	_server(),
 	_status_code(200),
-	_should_keep_alive(false),
 	_request(),
 	_response() {}
 
 
 Client::Client(int fd, Server& server):
 	_state(READING_HEADERS),
+	_flags(),
 	_fd(fd),
 	_server(&server),
 	_status_code(200),
-	_should_keep_alive(false),
 	_request(),
 	_response() {}
 
 Client::Client(const Client& other) :
 	_state(other._state),
+	_flags(other._flags),
 	_fd(other._fd),
 	_server(other._server),
 	_status_code(other._status_code),
-	_should_keep_alive(other._should_keep_alive),
 	_request(other._request),
 	_response(other._response) {}
 
@@ -33,10 +33,10 @@ Client& Client::operator=(const Client& other)
 	if (this != &other)
 	{
 		_state = other._state;
+		_flags = other._flags;
 		_fd = other._fd;
 		_server = other._server;
 		_status_code = other._status_code;
-		_should_keep_alive = other._should_keep_alive;
 		_request = other._request;
 		_response = other._response;
 	}
@@ -51,20 +51,66 @@ int Client::return_set_status_code(int code)
 	return 1;
 }
 
-int Client::fill_request_data()
+void Client::set_flags()
 {
+	if (this->_request._header_kv["Version"] == "HTTP/1.1") // HTTP/1.1 has keep-alive by default
+	{
+		this->_flags._should_keep_alive = true;
+		if (this->_request._header_kv["Connection"] == "close")
+			this->_flags._should_keep_alive = false;
+	}
+	else if (this->_request._header_kv["Version"] == "HTTP/1.0") 	// HTTP/1.0 requires explicit keep-alive
+	{
+		this->_flags._should_keep_alive = false;
+		if (this->_request._header_kv["Connection"] == "keep-alive")
+			this->_flags._should_keep_alive = true;
+	}
+
+	if (this->_request._header_kv["Transfer-Encoding"] == "chunked")
+		this->_flags._body_chunked = true;
+	else
+		this->_flags._body_chunked = false;
+
+}
+
+void Client::refresh_client()
+{
+	this->_request.flush_request_data();
+	this->_response.flush_response_data();
+	this->_state = READING_HEADERS;
+	this->_flags._should_keep_alive = false;
+	this->_flags._body_chunked = false;
+	// this->_flags._leftover_chunk = false;
+	this->_status_code = 200;
+}
+
+/*####################################################################################################*/
+/*####################################################################################################*/
+/*####################################################################################################*/
+/*####################################################################################################*/
+
+int	Client::handle_read()
+{
+	if(this->can_i_read_header() == false && this->can_i_read_body() == false)
+	{
+		std::cerr << "Client not in a reading state!" << std::endl;
+		return (1);
+	}
 	std::cout << "\033[33mClient is sending data \033[0m" << std::endl;
 	char buffer[80]; // char buffer[8192];
 	int bytes_read = recv(this->_fd, buffer, sizeof(buffer) - 1, 0);
-
 	if (bytes_read > 0)
-	{
 		this->_request._request_data.append(buffer, bytes_read);
-		if (this->can_i_read_body() == false)
+
+	if (bytes_read > 0 || this->leftover_chunk() == true)
+	{
+		this->_flags._leftover_chunk = false;
+		if (this->can_i_read_header() == true)
 		{
 			std::cout << "\033[31m  Header not parsed \033[0m"<<std::endl;
 			if (this->_request._request_data.size() > 16384)
 				return(return_set_status_code(431));
+			// std::cout << "\n=====>>  Client request data so far:\n-----\n" << this->_request._request_data << "\n-----\n" << std::endl;
 			if(this->_request._request_data.find("\r\n\r\n") != std::string::npos)
 			{
 				std::cout << "\033[35m  Header will be parsed \033[0m"<<std::endl;
@@ -85,21 +131,36 @@ int Client::fill_request_data()
 
 		if(this->can_i_read_body() == true && this->_request._content_length == 0)
 		{
-			if (this->_request._header_kv["Transfer-Encoding"] == "chunked")
+			if (this->_flags._body_chunked == true)
 			{
-				if (this->_request._request_data.size() > 400)
-					return(return_set_status_code(431));
-			}
+				std::cout << "\033[35m  Chunked body handling not implemented \033[0m"<<std::endl;
+				if (this->_request._request_data.find("0\r\n\r\n") != std::string::npos)
+				{
+					this->_request._body = this->_request._request_data.substr(this->_request._header.size(), this->_request._request_data.find("0\r\n\r\n") + 5 - this->_request._header.size());
+					if (this->_request._body.size() + this->_request._header.size() < this->_request._request_data.size())
+						this->_flags._leftover_chunk = true;
+					else
+						this->_flags._leftover_chunk = false;
 
-			std::cout << "\033[35m  work request is true \033[0m"<<std::endl;
-			this->set_process_request();
+					this->_request.parse_body();
+					this->set_process_request();
+				}
+
+			}
+			else
+				this->set_process_request();
 		}
 		if(this->can_i_read_body() == true && this->_request._content_length > 0)
 		{
 			if (this->_request._request_data.size() >= this->_request._header.size() + this->_request._content_length)
 			{
 				this->_request._body = this->_request._request_data.substr(this->_request._header.size(), this->_request._content_length);
-				std::cout << "\033[35mBody: '" << this->_request._body << "----\n" << "'\033[0m"<<std::endl;
+				if (this->_request._body.size() + this->_request._header.size() < this->_request._request_data.size())
+					this->_flags._leftover_chunk = true;
+				else
+					this->_flags._leftover_chunk = false;
+
+				std::cout << "\033[35mBody: '" << this->_request._body << "'\n----\n" << "\033[0m"<<std::endl;
 				this->_request.parse_body();
 				this->set_process_request();
 			}
@@ -107,40 +168,25 @@ int Client::fill_request_data()
 	}
 	else if (bytes_read == 0)
 	{
-			std::cout << "===========>>  Client will send request" << std::endl;
+			std::cout << "===========>>  Client finished request" << std::endl;
 			// status code to clarify
 			return 1;  // Signal to close
 	}
 	else
-	{
-			// Actual error
-			this->_status_code = 500;
-			return 1;  // Signal to close
-	}
-	std::cout << "=====>>  Client content length" << this->_request._content_length <<  std::endl;
-	std::cout << "=====>>  Client work request" << this->get_state() <<  std::endl;
+		return(return_set_status_code(500));
+
+	std::cout << "Handle_read ==>>  Client content length: " << this->_request._content_length <<  std::endl;
+	std::cout << "Handle_read ==>>  Client work request: " << this->get_state() <<  std::endl;
 	return 0;
 }
 
-
-int	Client::handle_read()
-{
-	if(this->can_i_read_header() == false && this->can_i_read_body() == false)
-	{
-		std::cerr << "Client not in a reading state!" << std::endl;
-		return (1);
-	}
-	if (this->fill_request_data())
-		return (1);
-	return (0);
-}
 
 void	Client::handle_write()
 {
 	std::cout << "==>>  Client will receive answer" << std::endl;
 
 	std::string res = this->_response.get_response_data();
-	std::cout << "Response to be sent:\n-----\n" << res << std::endl;
+	std::cout << "Response to be sent:\n-----\n" << res << "-----\n\n" << std::endl;
 
 	ssize_t bytes_sent = send(this->_fd, res.c_str(), strlen(res.c_str()), 0);
 	if (bytes_sent == -1)
@@ -150,22 +196,6 @@ void	Client::handle_write()
 	}
 }
 
-void Client::set_flags()
-{
-	if (this->_request._header_kv["Version"] == "HTTP/1.1") // HTTP/1.1 has keep-alive by default
-	{
-		this->_should_keep_alive = true;
-		if (this->_request._header_kv["Connection"] == "close")
-			this->_should_keep_alive = false;
-	}
-	else if (this->_request._header_kv["Version"] == "HTTP/1.0") 	// HTTP/1.0 requires explicit keep-alive
-	{
-		this->_should_keep_alive = false;
-		if (this->_request._header_kv["Connection"] == "keep-alive")
-			this->_should_keep_alive = true;
-	}
-
-}
 
 /*
 

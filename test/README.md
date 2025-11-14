@@ -50,6 +50,9 @@ Tests included:
 - ✓ **Truly concurrent clients** (fork-based)
 - ✓ Multiple server ports
 - ✓ Large headers
+- ✓ **Chunked transfer encoding**
+- ✓ **Pipelined requests with chunked encoding**
+- ✓ **Pipelined requests with Content-Length**
 
 ### 2. Manual Test Run
 ```bash

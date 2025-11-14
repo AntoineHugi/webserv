@@ -183,6 +183,101 @@ make -f Makefile.test
 
 ---
 
+### TEST 10: Chunked Transfer Encoding
+**What it tests:**
+- Request with `Transfer-Encoding: chunked` header
+- Multiple chunks with size prefixes
+- Proper termination with `0\r\n\r\n`
+- Body reassembly from chunks
+
+**Expected output:**
+```
+✓ Chunked request processed successfully
+```
+
+**What can go wrong:**
+- Server doesn't recognize chunked encoding → 400 Bad Request
+- Chunks not parsed correctly → Body incomplete or malformed
+- Missing `0\r\n\r\n` terminator → Server waits forever
+- Chunk size parsing fails → Wrong body content
+
+**Why this matters:**
+Chunked encoding is essential for HTTP/1.1 compliance. It allows sending data without knowing Content-Length upfront (e.g., streaming, dynamic content, CGI output).
+
+---
+
+### TEST 11: Pipelined Requests with Chunked Encoding
+**What it tests:**
+- Client sends chunked POST + GET in one send() call
+- Server detects leftover data after `0\r\n\r\n`
+- Leftover data is processed as next request
+- Both requests receive responses
+
+**Expected output:**
+```
+✓ Both pipelined requests processed (chunked leftover detected)
+```
+
+**What can go wrong:**
+- Server ignores data after `0\r\n\r\n` → Second request lost
+- Leftover flag not set → Server waits for new recv() that never comes
+- GET request treated as part of chunked body → Parse error
+
+**Why this matters:**
+With HTTP/1.1 keep-alive, clients can pipeline requests (send multiple without waiting for responses). If you don't preserve leftover data after chunked body, pipelined requests are lost.
+
+**How it works:**
+```
+Client sends:
+POST /upload HTTP/1.1
+Transfer-Encoding: chunked
+
+5
+Hello
+0
+
+GET /next HTTP/1.1
+
+```
+
+After reading chunked POST (ends at `0\r\n\r\n`), the string `GET /next HTTP/1.1\r\n...` is leftover and should be processed as next request.
+
+---
+
+### TEST 12: Pipelined Requests with Content-Length
+**What it tests:**
+- Client sends POST (Content-Length) + GET in one send() call
+- Server reads exactly Content-Length bytes for body
+- Leftover data after body is next request
+- Both requests receive responses
+
+**Expected output:**
+```
+✓ Both pipelined requests processed (Content-Length leftover detected)
+```
+
+**What can go wrong:**
+- Server ignores data after Content-Length bytes → Second request lost
+- Server reads too much (beyond Content-Length) → GET parsed as body
+- No leftover detection → Client waits forever for response to GET
+
+**Why this matters:**
+Even with Content-Length, clients can pipeline. After reading exactly `Content-Length` bytes, any remaining data in the buffer is the next request. Without leftover detection, pipelined requests after non-chunked POSTs fail.
+
+**How it works:**
+```
+Client buffer contains:
+POST /submit HTTP/1.1
+Content-Length: 13
+
+Hello, World!GET /after HTTP/1.1
+
+```
+
+After reading header + 13 bytes of body, `GET /after HTTP/1.1\r\n...` is leftover.
+
+---
+
 ## Manual Tests (for deeper debugging)
 
 ### Test Keep-Alive with curl:

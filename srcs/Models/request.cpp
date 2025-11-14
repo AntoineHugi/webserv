@@ -4,6 +4,7 @@
 #include <cstdlib>
 
 Request::Request():
+	// _reading_lenght(80),
 	_request_data(""),
 	_header(""),
 	_body(""),
@@ -12,6 +13,7 @@ Request::Request():
 
 Request::Request(const Request& other)
 {
+	// _reading_lenght = other._reading_lenght;
 	_request_data = other._request_data;
 	_header = other._header;
 	_body = other._body;
@@ -23,6 +25,7 @@ Request& Request::operator=(const Request& other)
 {
 	if (this != &other)
 	{
+		// _reading_lenght = other._reading_lenght;
 		_request_data = other._request_data;
 		_header = other._header;
 		_body = other._body;
@@ -88,6 +91,7 @@ void Request::parse_header()
 void Request::parse_body()
 {
 	std::cout << "\033[36mParsing body...\n\033[0m" << std::endl;
+	std::cout << "\033[36m    Body: " << this->_body << "\n\033[0m" << std::endl;
 
 	// if(this->_request._header_kv["Content-type"] == "application/json")
 	// 	parse_application_json(this);

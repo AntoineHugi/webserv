@@ -30,15 +30,31 @@ class Client
 			CLOSING
 		};
 		State _state;
+
+		struct flags {
+			bool _should_keep_alive;
+			bool _body_chunked;
+			bool _leftover_chunk;
+
+			flags():
+				_should_keep_alive(false),
+				_body_chunked(false),
+				_leftover_chunk(false)
+				{};
+
+			flags(const Client::flags& other_flags):
+				_should_keep_alive(other_flags._should_keep_alive),
+				_body_chunked(other_flags._body_chunked),
+				_leftover_chunk(other_flags._leftover_chunk)
+				{};
+
+		} _flags;
+
 		int _fd;
 		Server* _server;
 		int _status_code;
 
 	public:
-		// bool _header_parsed;
-		// bool _work_request;
-		// bool _inORout;
-		bool _should_keep_alive;
 		Request _request;
 		Response _response;
 
@@ -69,7 +85,10 @@ class Client
 		void set_send_response() { _state = SENDING_RESPONSE; };
 
 		void set_flags();
+		bool should_keep_alive() const { return _flags._should_keep_alive; };
+		bool leftover_chunk() const { return _flags._leftover_chunk; };
 
+		void refresh_client();
 		// void process_request(Request &req);
 		// std::string format_response(Request &req);
 };
