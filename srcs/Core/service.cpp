@@ -163,7 +163,12 @@ void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 			// Close connection
 			std::cout << "Closing connection (sent Connection: close)" << std::endl;
 			int fd = poll_fds[i].fd;
-			close(fd);
+
+			if(close(fd))
+			{
+				std::cerr << "Error closing client fd: " << fd << " Error: " << strerror(errno) << std::endl;
+				return;
+			}
 			poll_fds.erase(poll_fds.begin() + i);
 			clients.erase(fd);
 			std::cout << "\033[32m Client disconnected. Total clients (with server): " << (poll_fds.size()) << "\033[0m" << std::endl;
@@ -174,7 +179,11 @@ void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 		std::cout << "==>>  Client will be closed" << std::endl;
 		int fd = poll_fds[i].fd;
 		int status = this->clients[poll_fds[i].fd].get_status_code();
-		close(fd);
+		if(close(fd))
+		{
+			std::cerr << "Error closing client fd: " << fd << " Error: " << strerror(errno) << std::endl;
+			return;
+		}
 		poll_fds.erase(poll_fds.begin() + i);
 		clients.erase(fd);
 		std::cout << "Client " << fd << " disconnected, show status here: "<< status <<" ." << std::endl;
@@ -186,5 +195,6 @@ void	Service::handle_disconnection(std::vector<struct pollfd> &poll_fds, const s
 {
 	(void)i;
 	(void)poll_fds;
+	// TODO: clean client data (FDs, memory, etc)
 	std::cout << "Handling disconnection (error/hangup) for fd: " << poll_fds[i].fd << std::endl;
 }

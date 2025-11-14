@@ -28,3 +28,9 @@ int	main(int argc, char **argv)
 	}
 	return (0);
 }
+
+// TODO: Implement proper logging flag, so we see debug info only when needed
+// TODO: Implement signal handling for graceful shutdown
+// TODO: clear memory and open FDs when exiting
+// TODO: check strings case nonsensitivity where applicable (e.g., header fields)
+// TODO: test malformed requests and edge cases

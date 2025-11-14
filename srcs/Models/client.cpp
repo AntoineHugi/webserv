@@ -117,9 +117,10 @@ int	Client::handle_read()
 				this->_request._header = this->_request._request_data.substr(0, this->_request._request_data.find("\r\n\r\n") + 4);
 				this->_request.parse_header();
 				this->set_flags();
-				if (!this->_request.http_requirements_met())
-					return(return_set_status_code(400));
-				if (this->_request._content_length > 400)  // e.g., 1 GB limit
+				this->_status_code = this->_request.http_requirements_met();
+				if (this->_status_code != 200)
+					return(return_set_status_code(this->_status_code));
+				if (this->_request._content_length > 400)  // e.g., 1 GB limit // TODO: use server config value
 					return(return_set_status_code(431));
 				if (this->_request.http_can_have_body())
 					this->set_read_body();
@@ -185,9 +186,10 @@ void	Client::handle_write()
 {
 	std::cout << "==>>  Client will receive answer" << std::endl;
 
+	// TODO: handle partial sends if size is within limits
+	// TODO: if data to be send is too large, throw error
 	std::string res = this->_response.get_response_data();
 	std::cout << "Response to be sent:\n-----\n" << res << "-----\n\n" << std::endl;
-
 	ssize_t bytes_sent = send(this->_fd, res.c_str(), strlen(res.c_str()), 0);
 	if (bytes_sent == -1)
 	{

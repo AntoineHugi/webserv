@@ -25,7 +25,7 @@ class Request
 		void flush_request_data();
 		void parse_header();
 		void parse_body();
-		bool http_requirements_met();
+		int http_requirements_met();
 		bool http_can_have_body();
 		// size_t get_reading_length() const { return _reading_lenght; };
 		// void set_reading_length(size_t length) { _reading_lenght = length; };

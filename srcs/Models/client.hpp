@@ -57,6 +57,7 @@ class Client
 	public:
 		Request _request;
 		Response _response;
+		// TODO: add timestamp for keep-alive timeout and hanging handling
 
 		Client();
 		Client(int fd, Server& server);

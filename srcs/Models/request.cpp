@@ -90,8 +90,10 @@ void Request::parse_header()
 
 void Request::parse_body()
 {
+	// TODO: parse Body to _body_parsed string. Specially if data is chunked
 	std::cout << "\033[36mParsing body...\n\033[0m" << std::endl;
 	std::cout << "\033[36m    Body: " << this->_body << "\n\033[0m" << std::endl;
+
 
 	// if(this->_request._header_kv["Content-type"] == "application/json")
 	// 	parse_application_json(this);
@@ -240,16 +242,22 @@ void Request::parse_body()
 }
 
 
-bool Request::http_requirements_met()
+int Request::http_requirements_met()
 {
 	if (this->_header_kv["Method"] != "GET" &&
 		this->_header_kv["Method"] != "POST" &&
 		this->_header_kv["Method"] != "DELETE" &&
 		this->_header_kv["Method"] != "PUT")
 	{
-		return false;
+		return 400;
 	}
-	return true;
+
+	if (this->_header_kv["Version"] != "HTTP/1.1" &&
+		this->_header_kv["Version"] != "HTTP/1.0")
+	{
+		return 505;
+	}
+	return 200;
 }
 bool Request::http_can_have_body()
 {
