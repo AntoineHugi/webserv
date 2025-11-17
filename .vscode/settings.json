@@ -51,6 +51,7 @@
 		"cinttypes": "cpp",
 		"map": "cpp",
 		"cstring": "cpp",
-		"cerrno": "cpp"
+		"cerrno": "cpp",
+		"ctime": "cpp"
 	}
 }

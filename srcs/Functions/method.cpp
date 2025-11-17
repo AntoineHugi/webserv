@@ -17,11 +17,6 @@ Method::~Method() {}
 
 void	Method::handleGet(Client& client)
 {
-	if (access(client._request._fullPathURI.c_str(), R_OK) != 0)
-	{
-		client.set_status_code(403);
-		return;
-	}
 	if (client._request._isDirectory)
 	{
 		DIR* dir = opendir(client._request._fullPathURI.c_str());
@@ -33,7 +28,11 @@ void	Method::handleGet(Client& client)
 		}
 		struct dirent* entry;
 		while ((entry = readdir(dir)) != NULL)
-			client._response._body += std::string(entry->d_name) + '\n';
+		{
+			std::string current = client._response.get_body();
+			current += std::string(entry->d_name) + '\n';
+			client._response.set_body(current); 
+		}
 		closedir(dir);
 		client.set_status_code(200);
 		return;
@@ -49,8 +48,9 @@ void	Method::handleGet(Client& client)
 		}
 		char buffer[1024];
 		ssize_t bytes;
+		std::string body = client._response.get_body();
 		while ((bytes = read(fd, buffer, sizeof(buffer))) > 0)
-			client._response._body.append(buffer, bytes);
+			body.append(buffer, bytes);
 		if (bytes == -1)
 		{
 			std::cerr << "Error reading request target" << std::endl;
@@ -58,6 +58,7 @@ void	Method::handleGet(Client& client)
 			close(fd);
 			return;
 		}
+		client._response.set_body(body);
 		close(fd);
 		client.set_status_code(200);
 	}
@@ -77,28 +78,6 @@ void	Method::handlePost(Client& client)
 
 void	Method::handleDelete(Client& client)
 {
-	/* checking that the path to the file for deletion is located within the root of this route / server class */
-	char resolvedPath[PATH_MAX];
-	char resolvedRoot[PATH_MAX];
-	if (!realpath(client._request._fullPathURI.c_str(), resolvedPath) || !realpath(client._request._root.c_str(), resolvedRoot))
-	{
-		client.set_status_code(403);
-		return;
-	}
-	std::string resolvedFile(resolvedPath);
-	std::string resolvedRootDir(resolvedRoot);
-	if (resolvedFile.find(resolvedRootDir) != 0)
-		client.set_status_code(403);
-
-	/* checking if we can write(=delete) in this directory */
-	std::string dirPath = client._request._fullPathURI.substr(0, client._request._fullPathURI.find_last_of('/'));
-	if (access(dirPath.c_str(), W_OK) != 0)
-	{
-		client.set_status_code(403);
-		return;
-	}
-
-	/* doing the actual deletion */
 	if (S_ISREG(client._request._stat.st_mode))
 	{
 		if (std::remove(client._request._fullPathURI.c_str()) != 0)

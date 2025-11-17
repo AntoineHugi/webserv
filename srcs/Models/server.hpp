@@ -16,8 +16,9 @@
 # include <netinet/in.h>
 # include <sys/socket.h>
 # include <sys/wait.h>
-# include "client.hpp"
-# include "../Other/method.hpp"
+# include <libgen.h>
+// # include "client.hpp"
+// # include "../Functions/method.hpp"
 # include "route.hpp"
 
 class Server
@@ -62,18 +63,6 @@ class Server
 		void	add_route(Route route);
 
 		void	set_server();
-
-		//int	croupier(Client client);
-		bool	validateRequest(Client& client);
-		void	processRequest(Client& client);
-
-		void create_listening_socket();
-		void accept_new_client();
-		// void handle_client_read(Client& client);
-		// void handle_client_write(Client& client);
-
-
-
 };
 
 #endif

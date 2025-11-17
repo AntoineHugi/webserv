@@ -188,7 +188,7 @@ bool Parser::parse_location(Server* server, std::vector <std::string> tokens, si
 			return (false);
 		}
 	}
-	route.set_path(server->get_root() + tokens[*i]);
+	route.set_path(tokens[*i]); //server->get_root() + 
 	++(*i);
 	if (*i >= tokens.size() || tokens[*i] != "{")
 	{
@@ -396,6 +396,8 @@ bool Parser::check_server(Server* server)
 		std::cout << "Config file error: root missing" << std::endl;
 		return (false);
 	}
+	if (server->get_root()[server->get_root().size() - 1] != '/')
+		server->set_root(server->get_root() + "/");
 	if (server->get_index().empty())
 	{
 		std::cout << "Config file error: index missing" << std::endl;

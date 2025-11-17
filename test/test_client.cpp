@@ -811,6 +811,60 @@ void test_pipelined_content_length() {
 }
 
 // ============================================================================
+// TEST 13: Missing Host Header → 400 Bad Request
+// ============================================================================
+void test_missing_host_header() {
+	print_test("400 Bad Request: Missing Host header");
+
+	int sock = connect_to_server("127.0.0.1", 8080);
+	if (sock < 0) {
+		print_fail("Connection failed");
+		return;
+	}
+
+	// Build raw invalid request (no Host:)
+	std::string req =
+		"GET / HTTP/1.1\r\n"
+		"\r\n";
+
+	print_info("Sending request without Host header");
+
+	ssize_t sent = send(sock, req.c_str(), req.size(), 0);
+	if (sent < 0) {
+		print_fail("Failed to send request");
+		close(sock);
+		return;
+	}
+
+	// Receive
+	std::string response;
+	char buffer[4096];
+
+	struct timeval tv;
+	tv.tv_sec = 3;
+	tv.tv_usec = 0;
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+
+	while (true) {
+		ssize_t received = recv(sock, buffer, sizeof(buffer) - 1, 0);
+		if (received <= 0) break;
+		buffer[received] = '\0';
+		response.append(buffer, received);
+	}
+
+	close(sock);
+
+	// Look for "400"
+	if (response.find("400") != std::string::npos)
+		print_pass("Received 400 Bad Request");
+	else {
+		print_fail("Expected 400 Bad Request");
+		print_info("Response was:");
+		std::cout << response << std::endl;
+	}
+}
+
+// ============================================================================
 // MAIN
 // ============================================================================
 int main() {
@@ -836,6 +890,7 @@ int main() {
 	test_chunked_encoding();
 	test_pipelined_chunked();
 	test_pipelined_content_length();
+	test_missing_host_header();
 
 	// Summary
 	std::cout << "\n" << BLUE << "==========================================================" << RESET << std::endl;

@@ -41,6 +41,7 @@ void add_client_to_polls(std::vector<struct pollfd> &poll_fds, std::vector<struc
 			client_pfd.revents = 0;
 			poll_fds.push_back(client_pfd);
 			clients.insert(std::pair<int, Client>(client_fd, Client(client_fd, server)));
+			std::cout << "client's server has these routes " << server.get_routes().size() << std::endl;
 			std::cout << "\033[32m Client " << client_fd << " connected. Total clients: " << (poll_fds.size() - server_fds.size()) << "\033[0m" << std::endl;
 	}
 }
@@ -100,28 +101,32 @@ void Service::poll_service()
 				// std::cout << "Handling event for client fd: " << poll_fds[i].fd << std::endl;
 				// std::cout << " with poll_fds[i].revents: " << poll_fds[i].revents << std::endl;
 				// std::cout << " with clients[poll_fds[i].fd].get_state(): " << this->clients[poll_fds[i].fd].get_state() << std::endl;
+				Client& client = this->clients[poll_fds[i].fd];
 				if (poll_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
 				{
 					this->handle_disconnection(poll_fds, i);
 					continue; // might not need to continue
 				}
-				if (poll_fds[i].revents & POLLIN || this->clients[poll_fds[i].fd].leftover_chunk() == true)
+				if (poll_fds[i].revents & POLLIN || client.leftover_chunk() == true)
 				{
 					std::cout << "\n###################################################"<< std::endl;
 					std::cout << "################## READING #######################"<< std::endl;
 					std::cout << "###################################################\n"<< std::endl;
 
 					std::cout << "Service ========>>  Client will send request" << std::endl;
-					if (this->clients[poll_fds[i].fd].handle_read())
-						this->handle_connection(poll_fds, i);
+					if (client.handle_read())
+						{
+							this->handle_connection(poll_fds, i);
+						}
+						
 					else
 					{
-						std::cout << "Service ========>>  Client work request " << this->clients[poll_fds[i].fd].can_i_process_request() <<  std::endl;
-						if (this->clients[poll_fds[i].fd].can_i_process_request() == true)
+						std::cout << "Service ========>>  Client work request " << client.can_i_process_request() <<  std::endl;
+						if (client.can_i_process_request() == true)
 								poll_fds[i].events = POLLOUT;
 					}
 				}
-				if (i < (int)poll_fds.size() && (poll_fds[i].revents & POLLOUT) && this->clients[poll_fds[i].fd].can_i_process_request() == true)
+				if (i < (int)poll_fds.size() && (poll_fds[i].revents & POLLOUT) && client.can_i_process_request() == true)
 				{
 					std::cout << "\n###################################################"<< std::endl;
 					std::cout << "################## WRITING #######################"<< std::endl;
@@ -135,8 +140,8 @@ void Service::poll_service()
 					//process_request(clients[poll_fds[i].fd]);
 					//ex: this->clients[poll_fds[i].fd]._server.croupier(clients[poll_fds[i].fd]);
 					//if cgi -> fork() and get response (this should be in the process_request function)
-					this->clients[poll_fds[i].fd]._response.set_response_data(this->clients[poll_fds[i].fd]._response.format_response(this->clients[poll_fds[i].fd].get_status_code(), this->clients[poll_fds[i].fd].should_keep_alive(), this->clients[poll_fds[i].fd]._request._header_kv["Version"], this->clients[poll_fds[i].fd]._request._body));
-					this->clients[poll_fds[i].fd].handle_write();
+					client._response.set_response_data(client._response.format_response(client.get_status_code(), client.should_keep_alive(), client._request._header_kv["Version"], client._request._body));
+					client.handle_write();
 					this->handle_connection(poll_fds, i);
 				}
 			}
@@ -147,17 +152,18 @@ void Service::poll_service()
 
 void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size_t& i)
 {
-	if (this->clients[poll_fds[i].fd].get_status_code() < 300)
+	Client& client = this->clients[poll_fds[i].fd];
+	if (client.get_status_code() < 300)
 	{
-		if (this->clients[poll_fds[i].fd].should_keep_alive() == true)
+		if (client.should_keep_alive() == true)
 		{
 			std::string save_buffer = "";
 			// Keep connection open for next request
 			poll_fds[i].events = POLLIN;
-			if (this->clients[poll_fds[i].fd].leftover_chunk() == true)
-				save_buffer = this->clients[poll_fds[i].fd]._request._request_data.substr(this->clients[poll_fds[i].fd]._request._header.size() + this->clients[poll_fds[i].fd]._request._body.size());
-			this->clients[poll_fds[i].fd].refresh_client();
-			this->clients[poll_fds[i].fd]._request._request_data = save_buffer;
+			if (client.leftover_chunk() == true)
+				save_buffer = client._request._request_data.substr(client._request._header.size() + client._request._body.size());
+			client.refresh_client();
+			client._request._request_data = save_buffer;
 			std::cout << "Connection kept alive for fd: " << poll_fds[i].fd << std::endl;
 		}
 		else
@@ -180,7 +186,7 @@ void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 	{
 		std::cout << "==>>  Client will be closed" << std::endl;
 		int fd = poll_fds[i].fd;
-		int status = this->clients[poll_fds[i].fd].get_status_code();
+		int status = client.get_status_code();
 		if(close(fd))
 		{
 			std::cerr << "Error closing client fd: " << fd << " Error: " << strerror(errno) << std::endl;

@@ -8,12 +8,16 @@ Request::Request():
 	_request_data(""),
 	_header(""),
 	_body(""),
+	_method(""),
+	_uri(""),
+	_version(""),
 	_header_kv(),
 	_content_length(0),
 	_fullPathURI(""),
 	_root(""),
 	_isDirectory(false),
-	_stat() {}
+	_stat(),
+	_isCGI(false) {}
 
 Request::Request(const Request& other)
 {
@@ -21,13 +25,16 @@ Request::Request(const Request& other)
 	_request_data = other._request_data;
 	_header = other._header;
 	_body = other._body;
-	_content_length = other._content_length;
+	_method = other._method;
+	_uri = other._uri;
+	_version = other._version;
 	_header_kv = other._header_kv;
+	_content_length = other._content_length;
 	_fullPathURI = other._fullPathURI;
 	_root = other._root;
 	_isDirectory = other._isDirectory;
 	_stat = other._stat;
-
+	_isCGI = other._isCGI;
 }
 
 Request& Request::operator=(const Request& other)
@@ -38,12 +45,16 @@ Request& Request::operator=(const Request& other)
 		_request_data = other._request_data;
 		_header = other._header;
 		_body = other._body;
-		_content_length = other._content_length;
+		_method = other._method;
+		_uri = other._uri;
+		_version = other._version;
 		_header_kv = other._header_kv;
+		_content_length = other._content_length;
 		_fullPathURI = other._fullPathURI;
 		_root = other._root;
 		_isDirectory = other._isDirectory;
 		_stat = other._stat;
+		_isCGI = other._isCGI;
 	}
 	return (*this);
 }
@@ -72,11 +83,15 @@ void Request::parse_header()
 
 	if (first_space != std::string::npos && second_space != std::string::npos) {
 			this->_header_kv["Method"] = line.substr(0, first_space);
+			this->_method = line.substr(0, first_space);
 			this->_header_kv["URI"] = line.substr(first_space + 1, second_space - first_space - 1);
+			this->_uri = line.substr(first_space + 1, second_space - first_space - 1);
 			this->_header_kv["Version"] = line.substr(second_space + 1);
+			this->_version = line.substr(second_space + 1);
 			if (!this->_header_kv["Version"].empty() && this->_header_kv["Version"].substr(this->_header_kv["Version"].size()-1) == "\r")
 				this->_header_kv["Version"].erase(this->_header_kv["Version"].size() - 1);
 		}
+
 
 	while (std::getline(stream, line)) {
 		size_t colon_pos = line.find(":");
