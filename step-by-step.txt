@@ -1,0 +1,54 @@
+***	START	***
+
+Parse config file section : 
+	-> open_config_file							(ParserConfig)
+		-> parse_config_file						(ParserConfig)
+			-> tokenise						(ParserConfig)
+			-> parse_location					(ParserConfig)
+				-> assign_vector_keyval_route			(ParserConfig)
+				-> assign_single_keyval_route			(ParserConfig)
+			-> assign_vector_keyval_server				(ParserConfig)
+			-> assign_single_keyval_server				(ParserConfig)
+			-> check_server ( = validation)				(ParserConfig)
+
+Server initialisation section :
+	-> set_server								(Server)
+
+Server listening section :
+	-> poll_service								(Service)
+		-> set_polls							(Service)
+		-> add_client_to_polls						(Service)
+		-> handle_disconnection						(Service)
+		-> handle_read							(client)
+			-> fill_request_data					(client)
+				-> parse_header					(client)
+				-> parse_body					(client)
+			-> handle_connection					(Service)
+		-> validateRequest						(Server)
+		-> processRequest						(Server)
+			-> handleGet						(Server)
+			-> handlePost						(Server)
+			-> handleDelete						(Server)
+	-> format_response							(client)
+	-> handle_write								(client)
+		-> handle_connection						(Service)
+
+
+Suggestions : 
+	- do the parsing and validation in the handle_read section (read everything -> parse header -> validate header -> if needed parse body -> validate body  => all this fills out information needed to process the request)
+	- first just read everything into an unparsed header string and header body, then do the parsing & validation
+	- some request validation is happening in the processing part, should perhaps be moved into validation
+	- handle_disconnection could be renamed to closeConnection, which might be called by handleConnection
+	- since clients are only attached to one server/port, should the array of clients sit in server instead of service? would make circular inclusion easier and no need to have a server attribute in client class
+
+
+
+Object Strcture proposal : 
+
+Service
+	-> Server (rename to port?)
+		-> Route
+		-> Method (just functions for handling requests)
+		-> Client
+			-> Request
+			-> Response

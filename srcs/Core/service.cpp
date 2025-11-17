@@ -129,6 +129,8 @@ void Service::poll_service()
 
 					std::cout << "Service ========>>  Started processing request" << std::endl;
 					// need to figure out how to avoid delays, for example cgi
+					// if (this->clients[poll_fds[i].fd]._server->validateRequest(clients[poll_fds[i].fd])) // TODO: change validateRequest ownlership to client accesing Server info
+						//this->clients[poll_fds[i].fd]._server.processRequest(clients[poll_fds[i].fd]);
 
 					//process_request(clients[poll_fds[i].fd]);
 					//ex: this->clients[poll_fds[i].fd]._server.croupier(clients[poll_fds[i].fd]);
@@ -198,3 +200,5 @@ void	Service::handle_disconnection(std::vector<struct pollfd> &poll_fds, const s
 	// TODO: clean client data (FDs, memory, etc)
 	std::cout << "Handling disconnection (error/hangup) for fd: " << poll_fds[i].fd << std::endl;
 }
+// TODO:  merge handle connection and handle disconnection
+// TODO: double check function nameing format (lowerCamelCase or underscore)

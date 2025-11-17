@@ -9,7 +9,11 @@ Request::Request():
 	_header(""),
 	_body(""),
 	_header_kv(),
-	_content_length(0) {}
+	_content_length(0),
+	_fullPathURI(""),
+	_root(""),
+	_isDirectory(false),
+	_stat() {}
 
 Request::Request(const Request& other)
 {
@@ -19,6 +23,11 @@ Request::Request(const Request& other)
 	_body = other._body;
 	_content_length = other._content_length;
 	_header_kv = other._header_kv;
+	_fullPathURI = other._fullPathURI;
+	_root = other._root;
+	_isDirectory = other._isDirectory;
+	_stat = other._stat;
+
 }
 
 Request& Request::operator=(const Request& other)
@@ -31,6 +40,10 @@ Request& Request::operator=(const Request& other)
 		_body = other._body;
 		_content_length = other._content_length;
 		_header_kv = other._header_kv;
+		_fullPathURI = other._fullPathURI;
+		_root = other._root;
+		_isDirectory = other._isDirectory;
+		_stat = other._stat;
 	}
 	return (*this);
 }

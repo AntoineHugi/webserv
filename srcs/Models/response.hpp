@@ -15,12 +15,13 @@ class Response
 {
 	private:
 		std::string _header;
-		std::string _body;
 		size_t _content_length;
 		size_t _bytes_sent;
 		std::string _response_data;
 
 	public:
+		std::string _body; // TODO: move to Private
+		std::vector <std::string>	_allowedMethods; // TODO: move to Private
 
 		Response();
 		Response(const Response& other);

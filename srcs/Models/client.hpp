@@ -3,9 +3,9 @@
 
 # include "../Models/request.hpp"
 # include "../Models/response.hpp"
-# include "../Models/server.hpp"
+// # include "../Models/server.hpp"
 # include "../Functions/requestUtils.hpp"
-#	include "../Core/service.hpp"
+// #	include "../Core/service.hpp"
 
 # include <string>
 # include <vector>
@@ -17,6 +17,8 @@
 #	include <cerrno>
 #	include <stdio.h>
 #	include <errno.h>
+
+class Server;
 
 class Client
 {
@@ -51,10 +53,10 @@ class Client
 		} _flags;
 
 		int _fd;
-		Server* _server;
 		int _status_code;
 
 	public:
+		Server* _server;
 		Request _request;
 		Response _response;
 		// TODO: add timestamp for keep-alive timeout and hanging handling

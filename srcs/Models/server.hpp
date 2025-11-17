@@ -2,15 +2,23 @@
 # define SERVER_H
 
 # include <string>
-# include <vector>
 # include <cctype>
-# include <map>
-# include <vector>
+# include <stdio.h>
+# include <cstdio>
+# include <unistd.h>
+# include <limits.h>
+# include <cstring>
 # include <iostream>
+# include <vector>
+# include <map>
 # include <algorithm>
+# include <fcntl.h>
+# include <netinet/in.h>
+# include <sys/socket.h>
+# include <sys/wait.h>
+# include "client.hpp"
+# include "../Other/method.hpp"
 # include "route.hpp"
-
-class Client;
 
 class Server
 {
@@ -56,6 +64,9 @@ class Server
 		void	set_server();
 
 		//int	croupier(Client client);
+		bool	validateRequest(Client& client);
+		void	processRequest(Client& client);
+
 		void create_listening_socket();
 		void accept_new_client();
 		// void handle_client_read(Client& client);
