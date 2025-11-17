@@ -21,7 +21,11 @@ class Service
 		Service& operator=(const Service& other);
 		~Service();
 
-		void poll_service();
+		void	poll_service();
+		void	service_reading(std::vector<struct pollfd> poll_fds, int i);
+		void	service_processing(std::vector<struct pollfd> poll_fds, int i);
+		void	service_writing(std::vector<struct pollfd> poll_fds, int i);
+
 		void	handle_connection(std::vector<struct pollfd> &poll_fds, const size_t& i);
 		void	handle_disconnection(std::vector<struct pollfd> &poll_fds, const size_t& i);
 };

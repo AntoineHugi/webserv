@@ -6,6 +6,7 @@
 int	main(int argc, char **argv)
 {
 	long unsigned int i = 0;
+	signal(SIGPIPE, SIG_IGN);
 	if (argc == 2)
 	{
 		Service	service;

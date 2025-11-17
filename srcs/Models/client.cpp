@@ -75,6 +75,7 @@ void Client::set_flags()
 
 void Client::refresh_client()
 {
+	std::cout << ">>>   CLIENT REFRESH <<<" << std::endl;
 	this->_request.flush_request_data();
 	this->_response.flush_response_data();
 	this->_state = READING_HEADERS;
@@ -93,7 +94,7 @@ int	Client::handle_read()
 {
 	if(this->can_i_read_header() == false && this->can_i_read_body() == false)
 	{
-		std::cerr << "Client not in a reading state!" << std::endl;
+		std::cout << "Client not in a reading state!" << std::endl;
 		return (1);
 	}
 	std::cout << "\033[33mClient is sending data \033[0m" << std::endl;
@@ -102,7 +103,9 @@ int	Client::handle_read()
 	if (bytes_read > 0)
 		this->_request._request_data.append(buffer, bytes_read);
 
-	if (bytes_read > 0 || this->leftover_chunk() == true)
+	if (bytes_read < 0)
+		return(return_set_status_code(500));
+	else if (bytes_read > 0 || this->leftover_chunk() == true)
 	{
 		this->_flags._leftover_chunk = false;
 		if (this->can_i_read_header() == true)
@@ -115,7 +118,8 @@ int	Client::handle_read()
 			{
 				std::cout << "\033[35m  Header will be parsed \033[0m"<<std::endl;
 				this->_request._header = this->_request._request_data.substr(0, this->_request._request_data.find("\r\n\r\n") + 4);
-				this->_request.parse_header();
+				if(this->_request.parse_header())
+					return(return_set_status_code(400));
 				this->set_flags();
 				this->_status_code = this->_request.http_requirements_met();
 				if (this->_status_code != 200)
@@ -132,6 +136,8 @@ int	Client::handle_read()
 
 		if(this->can_i_read_body() == true && this->_request._content_length == 0)
 		{
+			if (this->_request._request_data.size() > 16384)
+				return(return_set_status_code(431));
 			if (this->_flags._body_chunked == true)
 			{
 				std::cout << "\033[35m  Chunked body handling not implemented \033[0m"<<std::endl;
@@ -173,8 +179,6 @@ int	Client::handle_read()
 			// status code to clarify
 			return 1;  // Signal to close
 	}
-	else
-		return(return_set_status_code(500));
 
 	std::cout << "Handle_read ==>>  Client content length: " << this->_request._content_length <<  std::endl;
 	std::cout << "Handle_read ==>>  Client work request: " << this->get_state() <<  std::endl;
@@ -182,22 +186,33 @@ int	Client::handle_read()
 }
 
 
-void	Client::handle_write()
+int	Client::handle_write()
 {
 	std::cout << "==>>  Client will receive answer" << std::endl;
-
-	// TODO: handle partial sends if size is within limits
-	// TODO: if data to be send is too large, throw error
-	std::string res = this->_response.get_response_data();
-	std::cout << "Response to be sent:\n-----\n" << res << "-----\n\n" << std::endl;
-	ssize_t bytes_sent = send(this->_fd, res.c_str(), strlen(res.c_str()), 0);
+	std::string res = this->_response.get_response_data(this->_response.get_bytes_sent()).substr(0,20);
+	this->_response.update_bytes_sent(res.size());
+	// std::cout << "Response to be sent:\n-----\n" << res << "-----\n\n" << std::endl;
+	ssize_t bytes_sent = send(this->_fd, res.c_str(), res.size(), 0);
 	if (bytes_sent == -1)
 	{
-		this->_status_code = 500;
-		std::cerr << "Error sending response" << std::endl;
+		if (errno == EPIPE) {
+				this->_status_code = 501;
+				// Client disconnected, close cleanly
+		} else {
+				this->_status_code = 500;
+		}
+		std::cout << "Error sending response" << std::endl;
 	}
+	if (bytes_sent + this->_response.get_bytes_sent() == (ssize_t)this->_response.get_response_data_full().size())
+	{
+		// std::cout << "I'm changing status" << std::endl;
+		if (this->_flags._should_keep_alive)
+			this->set_finish_request_alive();
+		else
+			this->set_finish_request_close();
+	}
+	return (0);
 }
-
 
 /*
 
