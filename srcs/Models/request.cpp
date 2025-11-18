@@ -72,16 +72,14 @@ int Request::parse_header()
 
 	if (first_space != std::string::npos && second_space != std::string::npos)
 	{
-		this->_header_kv["Method"] = line.substr(0, first_space);
-		this->_header_kv["URI"] = line.substr(first_space + 1, second_space - first_space - 1);
-		if (this->_header_kv["URI"].size() > 2048)
+		this->_header_kv["method"] = line.substr(0, first_space);
+		this->_header_kv["uri"] = line.substr(first_space + 1, second_space - first_space - 1);
+		if (this->_header_kv["uri"].size() > 2048)
 			return (1);
-		this->_header_kv["Version"] = line.substr(second_space + 1);
-		if (!this->_header_kv["Version"].empty() && this->_header_kv["Version"].substr(this->_header_kv["Version"].size()-1) == "\r")
-			this->_header_kv["Version"].erase(this->_header_kv["Version"].size() - 1);
+		this->_header_kv["version"] = line.substr(second_space + 1);
+		if (!this->_header_kv["version"].empty() && this->_header_kv["version"].substr(this->_header_kv["version"].size()-1) == "\r")
+			this->_header_kv["version"].erase(this->_header_kv["version"].size() - 1);
 	}
-
-	std::cout << "Method + URI + Version done" << std::endl;
 
 	while (std::getline(stream, line)) {
 		size_t colon_pos = line.find(":");
@@ -89,6 +87,7 @@ int Request::parse_header()
 		{
 			std::string key = line.substr(0, colon_pos);
 			key.erase(key.find_last_not_of(" ") + 1);
+			std::transform(key.begin(), key.end(), key.begin(), ::tolower);
 			std::string value = line.substr(colon_pos + 1, line.size() - 1);
 			value.erase(0, value.find_first_not_of(" "));
 
@@ -104,38 +103,32 @@ int Request::parse_header()
 			}
 		}
 	}
-	std::cout << "Additional K-V done" << std::endl;
 
 	/*
 		However, there's a robustness issue with strtol parsing:
 		Content-Length: 123abc456  // strtol returns 123, endptr points to "abc456"
 		You accept 123 but ignore abc456 (garbage). This is technically invalid HTTP.
 	*/
-	if (!this->_header_kv.count("Content-Length"))
-	{
-		std::cout << "no content_lenght in header" << std::endl;
+	if (!this->_header_kv.count("content-length"))
 		this->_content_length = 0;
-	}
 	else
 	{
-		std::cout << "parsing content_lenght from header" << std::endl;
-
 		char *endptr;
-		long val = std::strtol(this->_header_kv["Content-Length"].c_str(), &endptr, 10);
+		long val = std::strtol(this->_header_kv["content-length"].c_str(), &endptr, 10);
 		if (*endptr != '\0' && *endptr != '\r')
 		{
-			std::cout << "Bad formatting: Content-Length" << std::endl;
+			std::cout << "Bad formatting: content-length" << std::endl;
 			return (1);
 		}
 		this->_content_length = val;
 	}
 
-	std::cout << "Content lenght checked: " << this->_content_length << std::endl;
-
 	std::map<std::string, std::string>::iterator it;
 	for (it = this->_header_kv.begin(); it != this->_header_kv.end(); ++it) {
 			std::cout << "'" << it->first << "' : '" << it->second << "'" << std::endl;
 	}
+
+	std::cout << "\033[34mHeader parsed sucessfully! \n\033[0m" << std::endl;
 	return (0);
 }
 
@@ -296,16 +289,16 @@ void Request::parse_body()
 
 int Request::http_requirements_met()
 {
-	if (this->_header_kv["Method"] != "GET" &&
-		this->_header_kv["Method"] != "POST" &&
-		this->_header_kv["Method"] != "DELETE" &&
-		this->_header_kv["Method"] != "PUT")
+	if (this->_header_kv["method"] != "GET" &&
+		this->_header_kv["method"] != "POST" &&
+		this->_header_kv["method"] != "DELETE" &&
+		this->_header_kv["method"] != "PUT")
 	{
 		return 400;
 	}
 
-	if (this->_header_kv["Version"] != "HTTP/1.1" &&
-		this->_header_kv["Version"] != "HTTP/1.0")
+	if (this->_header_kv["version"] != "HTTP/1.1" &&
+		this->_header_kv["version"] != "HTTP/1.0")
 	{
 		return 505;
 	}
@@ -313,9 +306,9 @@ int Request::http_requirements_met()
 }
 bool Request::http_can_have_body()
 {
-	if (this->_header_kv["Method"] != "POST" &&
-		this->_header_kv["Method"] != "PATCH" &&
-		this->_header_kv["Method"] != "PUT")
+	if (this->_header_kv["method"] != "POST" &&
+		this->_header_kv["method"] != "PATCH" &&
+		this->_header_kv["method"] != "PUT")
 	{
 		return false;
 	}

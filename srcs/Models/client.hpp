@@ -54,6 +54,7 @@ class Client
 
 		int _fd;
 		int _status_code;
+		std::time_t _last_interaction;
 
 	public:
 		Server* _server;
@@ -83,6 +84,7 @@ class Client
 		bool can_i_process_request() const { return _state == PROCESSING_REQUEST; };
 		bool can_i_send_response() const { return _state == SENDING_RESPONSE; };
 		bool can_i_close_connection() const { return _state == CLOSING; };
+		bool is_inactive() const { return std::time(0) - _last_interaction > 60; }
 
 		void set_read_header() { _state = READING_HEADERS; };
 		void set_read_body() { _state = READING_BODY; };
@@ -90,6 +92,7 @@ class Client
 		void set_send_response() { _state = SENDING_RESPONSE; };
 		void set_finish_request_alive() {_state = KEEPALIVE_WAIT; };
 		void set_finish_request_close() {_state = CLOSING; };
+		void update_last_interaction() { _last_interaction = std::time(0);}
 
 		void set_flags();
 		bool should_keep_alive() const { return _flags._should_keep_alive; };

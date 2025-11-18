@@ -6,6 +6,8 @@
 # include <map>
 # include <iostream>
 # include <sys/stat.h>
+# include <algorithm>
+# include <cctype>
 
 class Request
 {
