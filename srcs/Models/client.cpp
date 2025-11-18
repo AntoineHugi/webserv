@@ -53,6 +53,10 @@ int Client::return_set_status_code(int code)
 	this->_status_code = code;
 	return 1;
 }
+void Client::set_flags_error()
+{
+	this->_flags._should_keep_alive = false;
+}
 
 void Client::set_flags()
 {
@@ -253,8 +257,8 @@ int Client::handle_read()
 {
 	if (this->can_i_read_header() == false && this->can_i_read_body() == false)
 	{
-		std::cout << "Client not in a reading state!" << std::endl;
-		return (1);
+		std::cout << "@@@@@@  IMPOSSIBLE >>>>>>>>>> Client not in a reading state!" << std::endl;
+		return(return_set_status_code(500));
 	}
 	std::cout << "\033[33mClient is sending data \033[0m" << std::endl;
 	char buffer[100]; // char buffer[8192];
@@ -277,7 +281,7 @@ int Client::handle_read()
 		{
 			std::cout << "\033[31m  Header not parsed \033[0m" << std::endl;
 			if (this->_request._request_data.size() > 16384)
-				return (return_set_status_code(431));
+				return(return_set_status_code(431));
 			// std::cout << "\n=====>>  Client request data so far:\n-----\n" << this->_request._request_data << "\n-----\n" << std::endl;
 			if (this->_request._request_data.find("\r\n\r\n") != std::string::npos)
 			{
@@ -292,14 +296,17 @@ int Client::handle_read()
 				if (this->_request._content_length > static_cast<size_t>(this->_server->get_client_max_body_size())) // e.g., 1 GB limit // TODO: use server config value
 				{
 					std::cout << "failed because: "<< (this->_server->get_client_max_body_size()) << std::endl;
-					return (return_set_status_code(431));
+					return(return_set_status_code(431));
 				}
 				if (this->_request.http_can_have_body())
 					this->set_read_body();
 				else
 					this->set_process_request();
 				// if (!validate_permissions())
-				// 	return (1);
+				// {
+				// 	std::cout << "I leave in validate permissions" << std::endl;
+				// 	return(return_set_status_code(400));
+				// }
 				this->set_flags();
 				std::cout << "\033[35m  Header parsed \033[0m" << std::endl;
 			}
@@ -367,11 +374,14 @@ int	Client::handle_write()
 	{
 		if (errno == EPIPE) {
 				this->_status_code = 501;
+				this->set_handle_error();
 				// Client disconnected, close cleanly
-		} else {
+			} else {
+				this->set_handle_error();
 				this->_status_code = 500;
 		}
 		std::cout << "Error sending response" << std::endl;
+		return (1);
 	}
 	this->_response.update_bytes_sent(bytes_sent);
 	std::cout << "bytes sent: " << bytes_sent << std::endl;

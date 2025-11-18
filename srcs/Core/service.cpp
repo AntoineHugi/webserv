@@ -91,7 +91,29 @@ int Service::service_reading(std::vector<struct pollfd> &poll_fds, int i)
 
 	if (this->clients[poll_fds[i].fd].handle_read())
 	{
-		this->handle_connection(poll_fds, i);
+		// Check if it's an error (4xx/5xx) or clean close (recv == 0)
+		int status = this->clients[poll_fds[i].fd].get_status_code();
+
+		if (status >= 400)  // Actual error - send error response
+		{
+			std::cout << "[READING] Error detected (status " << status << "), sending error response" << std::endl;
+			this->clients[poll_fds[i].fd].set_flags_error();
+			this->clients[poll_fds[i].fd]._request._body = "";
+			this->clients[poll_fds[i].fd]._response.set_response_data(this->clients[poll_fds[i].fd]._response.format_response
+				(status,
+				false,  // Always close on error
+				this->clients[poll_fds[i].fd]._request._header_kv["version"],
+				this->clients[poll_fds[i].fd]._request._body));
+
+			this->clients[poll_fds[i].fd].set_send_response();
+			poll_fds[i].events = POLLOUT;
+		}
+		else  // Clean close (recv == 0) - just disconnect
+		{
+			std::cout << "[READING] Client closed connection cleanly" << std::endl;
+			this->handle_disconnection(poll_fds, i);
+			return 1;  // Signal to continue (client already removed)
+		}
 		return (1);
 	}
 	else
@@ -115,13 +137,23 @@ int Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 	//process_request(clients[poll_fds[i].fd]);
 	//ex: this->clients[poll_fds[i].fd]._server.croupier(clients[poll_fds[i].fd]);
 	//if cgi -> fork() and get response (this should be in the process_request function)
-	this->clients[poll_fds[i].fd].set_status_code(200);
+	// this->clients[poll_fds[i].fd].set_status_code(200);
 	std::cout << "sttus: " << this->clients[poll_fds[i].fd].get_status_code() << std::endl;
 
 	if (this->clients[poll_fds[i].fd]._response.get_response_data_full().size() > 8192)
 		this->clients[poll_fds[i].fd].set_status_code(500);
 
-	this->clients[poll_fds[i].fd]._response.set_response_data(this->clients[poll_fds[i].fd]._response.format_response(this->clients[poll_fds[i].fd].get_status_code(), this->clients[poll_fds[i].fd].should_keep_alive(), this->clients[poll_fds[i].fd]._request._header_kv["version"], this->clients[poll_fds[i].fd]._request._body));
+	if (this->clients[poll_fds[i].fd].get_status_code() > 300)
+	{
+			this->clients[poll_fds[i].fd].set_flags_error();
+			this->clients[poll_fds[i].fd]._request._body = "";
+	}
+	this->clients[poll_fds[i].fd]._response.set_response_data(this->clients[poll_fds[i].fd]._response.format_response
+		(this->clients[poll_fds[i].fd].get_status_code(),
+		this->clients[poll_fds[i].fd].should_keep_alive(),
+		this->clients[poll_fds[i].fd]._request._header_kv["version"],
+		this->clients[poll_fds[i].fd]._request._body));
+
 	this->clients[poll_fds[i].fd].set_send_response();
 	return (0);
 }
@@ -134,7 +166,9 @@ int	Service::service_writing(std::vector<struct pollfd> &poll_fds, int i)
 
 	if(this->clients[poll_fds[i].fd].handle_write())
 	{
-		this->handle_connection(poll_fds, i);
+		std::cout << "\n >> returning from inside writing - handle connection should happen outside << " << std::endl;
+		// this->handle_connection(poll_fds, i);
+		poll_fds[i].events = POLLIN;
 		return (1);
 	}
 	else
@@ -142,7 +176,7 @@ int	Service::service_writing(std::vector<struct pollfd> &poll_fds, int i)
 		std::cout << "Service ========>>  Client send response: " << this->clients[poll_fds[i].fd].can_i_send_response() <<  std::endl;
 		if (!this->clients[poll_fds[i].fd].can_i_send_response())
 		{
-			std::cout << "I sohuldn't be here" << std::endl;
+			std::cout << "[Writing] Finishing request, preparing client for next or closing" << std::endl;
 			poll_fds[i].events = POLLIN;
 			if (!this->clients[poll_fds[i].fd].can_i_close_connection())
 				this->clients[poll_fds[i].fd].set_read_header();
@@ -193,7 +227,7 @@ void Service::poll_service()
 			{
 				if (new_client || (!new_client && this->clients[poll_fds[i].fd].leftover_chunk() == false))
 					continue;
-				else if (this->clients[poll_fds[i].fd].is_inactive())
+				else if (this->clients[poll_fds[i].fd].is_inactive() && poll_fds[i].revents & POLLIN)
 					this->handle_disconnection(poll_fds, i);
 			}
 			if (new_client)
@@ -202,26 +236,20 @@ void Service::poll_service()
 			{
 				Client& client = this->clients[poll_fds[i].fd];
 				client.update_last_interaction();
-				// Check for errors/hangup first
-				// std::cout << "Handling event for client fd: " << poll_fds[i].fd << std::endl;
-				// std::cout << " with poll_fds[i].revents: " << poll_fds[i].revents << std::endl;
-				// std::cout << " with clients[poll_fds[i].fd].get_state(): " << this->clients[poll_fds[i].fd].get_state() << std::endl;
 				if (client.leftover_chunk() == false && poll_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
 				{
 					std::cout << "poll_fds[i].revents : " << poll_fds[i].revents << std::endl;
 					this->handle_disconnection(poll_fds, i);
 					continue;
 				}
-				if ((poll_fds[i].revents & POLLIN || client.leftover_chunk())
-					&& (client.can_i_read_header() == true || client.can_i_read_body() == true))
-				{
-					if(this->service_reading(poll_fds, i))
-						continue;
-				}
+				if ((poll_fds[i].revents & POLLIN || client.leftover_chunk()) && (client.can_i_read_header() == true || client.can_i_read_body() == true))
+					this->service_reading(poll_fds, i);
 				if (i < (int)poll_fds.size() && (poll_fds[i].revents & POLLOUT) && client.can_i_process_request() == true)
 					this->service_processing(poll_fds, i);
 				if (i < (int)poll_fds.size() && (poll_fds[i].revents & POLLOUT) && client.can_i_send_response() == true)
 					this->service_writing(poll_fds, i);
+				if (i < (int)poll_fds.size() && poll_fds[i].revents & POLLIN && client.is_error() == true)
+					this->handle_connection(poll_fds, i);
 			}
 		}
 	}
@@ -246,27 +274,27 @@ void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 				save_buffer = client._request._request_data.substr(client._request._header.size() + client._request._body.size());
 			client.refresh_client();
 			client._request._request_data = save_buffer;
-			std::cout << "Connection kept alive for fd: " << poll_fds[i].fd << std::endl;
+			std::cout << "[Handle Conn] Connection kept alive for fd: " << poll_fds[i].fd << std::endl;
 		}
 		else
 		{
 			// Close connection
-			std::cout << "Closing connection (sent Connection: close)" << std::endl;
+			std::cout << "[Handle Conn] Closing connection (sent Connection: close)" << std::endl;
 			int fd = poll_fds[i].fd;
 
 			if(close(fd))
 			{
-				std::cout << "Error closing client fd: " << fd << std::endl;
+				std::cout << "[Handle Conn] Error closing client fd: " << fd << std::endl;
 				return;
 			}
 			poll_fds.erase(poll_fds.begin() + i);
 			clients.erase(fd);
-			std::cout << "\033[32m Client " << fd << " disconnected. Total clients (with server): " << (poll_fds.size()) << "\033[0m" << std::endl;
+			std::cout << "\033[32m [Handle Conn] Client " << fd << " disconnected. Total clients (with server): " << (poll_fds.size()) << "\033[0m" << std::endl;
 		}
 	}
 	else
 	{
-		std::cout << "==>>  Client will be closed" << std::endl;
+		std::cout << "==>> [Handle Conn]  Client will be closed" << std::endl;
 		int fd = poll_fds[i].fd;
 		int status = client.get_status_code();
 		if(close(fd))
@@ -276,7 +304,7 @@ void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 		}
 		poll_fds.erase(poll_fds.begin() + i);
 		clients.erase(fd);
-		std::cout << "Client " << fd << " disconnected, show status here: "<< status <<" ." << std::endl;
+		std::cout << "[Handle Conn] Client " << fd << " disconnected, show status here: "<< status <<" ." << std::endl;
 		return;
 	}
 }
@@ -284,12 +312,12 @@ void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 void	Service::handle_disconnection(std::vector<struct pollfd> &poll_fds, const size_t& i)
 {
 	int fd = poll_fds[i].fd;
-	std::cout << "Handling disconnection for fd: " << fd << std::endl;
+	std::cout << "[Handle Disconn] Handling disconnection for fd: " << fd << std::endl;
 
 	close(fd);  // Close file descriptor
 	poll_fds.erase(poll_fds.begin() + i);  // Remove from poll
 	clients.erase(fd);  // Remove from map
-	std::cout << "Handling disconnection (error/hangup) for fd: " << fd << std::endl;
+	std::cout << "[Handle Disconn] Handling disconnection (error/hangup) for fd: " << fd << std::endl;
 }
 // TODO:  merge handle connection and handle disconnection
 // TODO: double check function naming format (lowerCamelCase or underscore)

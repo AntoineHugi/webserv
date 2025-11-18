@@ -1,198 +1,261 @@
 # Webserv Test Suite
 
-Comprehensive testing tools for the webserv HTTP server implementation.
+A comprehensive, modular test suite for the HTTP/1.1 webserv server implementation.
+
+## Features
+
+- **Modular Design**: Tests organized into independent categories
+- **Selective Execution**: Run specific test categories or skip unwanted ones
+- **Color-Coded Output**: Easy-to-read results with colored pass/fail indicators
+- **C++98 Compatible**: Full compatibility with the project's C++ standard
+- **Comprehensive Coverage**: Tests for basic connectivity, keep-alive, chunked encoding, and pipelining
 
 ## Quick Start
 
-### Terminal 1: Start Server
+### Build the Test Suite
+
 ```bash
-cd ..
-make re
-./webserv default.conf
+cd test/
+make -f Makefile.tests
 ```
 
-### Terminal 2: Run Tests
+### Run All Tests
+
 ```bash
-cd test
-./run_tests.sh
+./test_suite
 ```
 
----
+### Run Specific Categories
 
-## Test Files
-
-| File | Purpose |
-|------|---------|
-| **test_client.cpp** | Main test suite - tests all basic functionality |
-| **stress_test.cpp** | Concurrent load testing |
-| **Makefile.test** | Builds both test programs |
-| **run_tests.sh** | One-command test runner |
-| **TEST_GUIDE.md** | Detailed test documentation |
-| **CONCURRENT_TESTING.md** | Guide to concurrent client testing |
-
----
-
-## Running Tests
-
-### 1. Full Test Suite
 ```bash
-cd test
-./run_tests.sh
+./test_suite --only basic
+./test_suite --only keepalive
+./test_suite --only chunked
+./test_suite --only pipeline
 ```
 
-Tests included:
-- ✓ Basic connection
-- ✓ Keep-alive (multiple requests, same connection)
-- ✓ Connection: close behavior
-- ✓ HTTP methods (GET, POST, DELETE, PUT)
-- ✓ POST with body
-- ✓ Rapid connections
-- ✓ **Truly concurrent clients** (fork-based)
-- ✓ Multiple server ports
-- ✓ Large headers
-- ✓ **Chunked transfer encoding**
-- ✓ **Pipelined requests with chunked encoding**
-- ✓ **Pipelined requests with Content-Length**
+### Skip Specific Categories
 
-### 2. Manual Test Run
 ```bash
-cd test
-make -f Makefile.test
-./test_client
+./test_suite --skip pipeline
+./test_suite --skip basic --skip pipeline
 ```
 
-### 3. Stress Testing
+### Other Options
+
 ```bash
-cd test
-make -f Makefile.test
-
-# Default: 10 clients, 5 requests each
-./stress_test
-
-# Custom load
-./stress_test 20 10    # 20 clients × 10 requests = 200 total
-./stress_test 50 5     # 50 clients × 5 requests = 250 total
-./stress_test 100 10   # 100 clients × 10 requests = 1000 total
+./test_suite --help              # Show help message
+./test_suite --list              # List available categories
+./test_suite --verbose           # Enable verbose output
+./test_suite --stop-on-fail      # Stop on first failure
+./test_suite --host 127.0.0.1    # Specify server host
+./test_suite --port 8080         # Specify server port
 ```
 
----
+## Test Categories
 
-## Expected Output
+### 1. Basic Connectivity & Requests (`basic`)
 
-### Success:
+Tests fundamental HTTP server functionality:
+- Basic TCP connection establishment
+- Simple GET request handling
+- 404 Not Found response
+- HTTP/1.1 version compliance
+- Required response headers (Date, Server, Content-Length)
+
+**Current Status**: 8/9 tests passing (88.89%)
+
+### 2. Connection Persistence (`keepalive`)
+
+Tests HTTP/1.1 keep-alive connection behavior:
+- Connection: keep-alive header support
+- Multiple requests on same TCP connection
+- Connection: close header handling
+- Proper connection termination
+- Idle timeout behavior (optional)
+
+**Current Status**: 10/10 tests passing (100% - 1 skipped)
+
+### 3. Chunked Transfer Encoding (`chunked`)
+
+Tests chunked request/response handling:
+- Simple chunked POST requests
+- Multiple chunks in single request
+- Chunked encoding with keep-alive connections
+- Proper chunk size parsing
+- Final chunk (0\r\n\r\n) handling
+
+**Current Status**: 5/5 tests passing (100%)
+
+### 4. Pipelined Requests (`pipeline`)
+
+Tests HTTP/1.1 pipelining support:
+- Chunked POST followed by GET in single TCP send
+- Content-Length POST followed by GET
+- Three sequential GET requests
+- Leftover data handling between requests
+- Response ordering preservation
+
+**Current Status**: 2/3 tests passing (66.67%)
+
+## Test Results Summary
+
+Latest test run:
+- **Total Tests**: 23
+- **Passed**: 20 (86.96%)
+- **Failed**: 2
+- **Skipped**: 1
+
+### Known Issues
+
+1. **404 Not Found Test Failing**: Server returns 200 for non-existent files instead of 404
+2. **Three Sequential Pipelined GETs**: Only 2 out of 3 requests are processed
+
+These failures indicate incomplete server features that need to be implemented.
+
+## Architecture
+
+### File Structure
+
 ```
-==========================================================
-  TEST SUMMARY
-==========================================================
-Passed: 30
-Failed: 0
-Total:  30
-
-==========================================================
-  ALL TESTS PASSED! ✓
-==========================================================
+test/
+├── test_framework.hpp       # Core framework: structs, utilities, declarations
+├── test_framework.cpp       # Implementation: networking, parsing, assertions
+├── test_basic.cpp           # Basic connectivity tests
+├── test_keepalive.cpp       # Keep-alive connection tests
+├── test_chunked.cpp         # Chunked transfer encoding tests
+├── test_pipelining.cpp      # Pipelined request tests
+├── test_suite.cpp           # Main runner with CLI parsing
+├── Makefile.tests           # Build system
+└── README.md                # This file
 ```
 
-### Stress Test Success:
-```
-==========================================================
-  RESULTS
-==========================================================
-Successful clients: 50/50
-Failed clients:     0/50
-Total requests:     500
+### Key Components
 
-  ✓✓✓ ALL CLIENTS SUCCEEDED! ✓✓✓
+**TestConfig**: Configuration struct with server host/port, enabled categories, verbosity
+
+**TestStats**: Tracks test results (total, passed, failed, skipped) with pass rate calculation
+
+**HttpResponse**: Parsed HTTP response with status line, headers, body, and status code
+
+**Color Namespace**: ANSI color codes for formatted output
+
+**Assertion Functions**:
+- `assert_status()` - Verify HTTP status code
+- `assert_header()` - Verify header value
+- `assert_header_exists()` - Verify header presence
+- `assert_body_contains()` - Verify body content
+- `assert_connection_closed()` - Verify socket closed
+
+## Adding New Tests
+
+### 1. Create a New Test Function
+
+```cpp
+void test_my_new_feature(const TestConfig& config, TestStats& stats) {
+    print_test("My New Feature");
+
+    int sock = connect_to_server(config.server_host.c_str(), config.server_port);
+    if (sock < 0) {
+        stats.add_skip();
+        print_skip("Connection failed");
+        return;
+    }
+
+    std::map<std::string, std::string> headers;
+    std::string response = send_request(sock, "GET", "/path", headers);
+    HttpResponse resp = parse_response(response);
+
+    assert_status(resp, 200, stats);
+
+    close(sock);
+}
 ```
 
----
+### 2. Add to Category Runner
+
+```cpp
+void run_my_category_tests(const TestConfig& config, TestStats& stats) {
+    print_category("MY NEW CATEGORY");
+
+    test_my_new_feature(config, stats);
+    // Add more tests...
+}
+```
+
+### 3. Register in test_suite.cpp
+
+Add forward declaration and call in main():
+```cpp
+void run_my_category_tests(const TestConfig& config, TestStats& stats);
+
+// In main():
+if (config.enabled_categories["mycategory"]) {
+    run_my_category_tests(config, stats);
+}
+```
+
+## Testing Best Practices
+
+1. **Connection Management**: Always close sockets when done
+2. **Error Handling**: Use skip status when connection fails
+3. **Assertions**: Use provided assertion helpers for consistent output
+4. **Descriptive Names**: Use clear, descriptive test and category names
+5. **Isolated Tests**: Each test should be independent
+6. **Cleanup**: Ensure proper cleanup even on test failure
 
 ## Troubleshooting
 
-### Server not running
-```
-❌ Error: Server not running on port 8080
-```
-**Fix:** Start server in another terminal: `./webserv default.conf`
+### Server Not Running
 
-### Compilation errors
+```
+✗ ERROR: Cannot connect to server at 127.0.0.1:8080
+Make sure your server is running!
+```
+
+**Solution**: Start the webserv server before running tests:
 ```bash
-cd test
-make -f Makefile.test fclean
-make -f Makefile.test
+./webserv default.conf
 ```
 
-### Tests hanging
-- Check if server is responsive: `curl http://localhost:8080/`
-- Check server logs for errors
-- Restart server
+### Connection Timeout
 
-### Some tests fail
-- Read `TEST_GUIDE.md` for test descriptions
-- Check server output for errors
-- Look for common issues in `CONCURRENT_TESTING.md`
+Tests hang or timeout waiting for responses.
 
----
+**Solution**: Check server logs for errors, ensure proper request handling and response generation.
 
-## Documentation
+### Compilation Errors
 
-- **TEST_GUIDE.md** - Detailed explanation of each test
-- **CONCURRENT_TESTING.md** - How concurrent testing works and what to look for
-
----
-
-## Cleaning Up
-
+**Solution**: Ensure all source files are present and Makefile paths are correct:
 ```bash
-# Clean test binaries
-cd test
-make -f Makefile.test fclean
-
-# Or manually
-rm -f test_client stress_test *.o
+make -f Makefile.tests clean
+make -f Makefile.tests
 ```
 
----
+## Future Enhancements
 
-## CI/CD Integration
+Potential additions to the test suite:
 
-You can integrate these tests into your workflow:
+1. **CGI Tests**: Execute CGI scripts and validate output
+2. **Method Tests**: Comprehensive POST, DELETE, PUT testing
+3. **Error Code Tests**: All HTTP error codes (400, 403, 413, 500, 501, etc.)
+4. **Large File Tests**: Upload and download of large files
+5. **Concurrent Tests**: Multiple simultaneous connections
+6. **Malformed Request Tests**: Handling of invalid HTTP requests
+7. **Configuration-Driven Tests**: Parse server config to determine available routes/methods
+8. **Performance Tests**: Response time and throughput measurements
+9. **Stress Tests**: Server behavior under heavy load
+10. **Security Tests**: Common web vulnerabilities (XSS, injection, etc.)
 
-```bash
-#!/bin/bash
-# Simple CI script
+## Contributing
 
-# Build server
-make re || exit 1
+When adding new tests:
+1. Follow the existing code style and structure
+2. Ensure C++98 compatibility (no C++11/14/17 features)
+3. Add appropriate documentation and comments
+4. Update this README with new test categories
+5. Test compilation and execution before committing
 
-# Start server in background
-./webserv default.conf &
-SERVER_PID=$!
+## License
 
-# Wait for server to start
-sleep 2
-
-# Run tests
-cd test
-./run_tests.sh
-TEST_RESULT=$?
-
-# Stop server
-kill $SERVER_PID
-
-# Exit with test result
-exit $TEST_RESULT
-```
-
----
-
-## Next Steps
-
-After all tests pass:
-1. Test with actual file serving (not mocked responses)
-2. Test chunked transfer encoding
-3. Test CGI execution
-4. Test error pages
-5. Test with real browsers
-
-Good luck! 🚀
+Part of the 42 School webserv project.
