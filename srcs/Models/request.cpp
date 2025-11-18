@@ -272,13 +272,13 @@ void Request::parse_body()
 
 int Request::http_requirements_met()
 {
-	if (this->_header_kv["Method"] != "GET" &&
+	/*if (this->_header_kv["Method"] != "GET" &&
 		this->_header_kv["Method"] != "POST" &&
 		this->_header_kv["Method"] != "DELETE" &&
 		this->_header_kv["Method"] != "PUT")
 	{
 		return 400;
-	}
+	}*/
 
 	if (this->_header_kv["Version"] != "HTTP/1.1" &&
 		this->_header_kv["Version"] != "HTTP/1.0")

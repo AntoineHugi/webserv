@@ -41,16 +41,14 @@ void Response::flush_response_data()
 	_bytes_sent = 0;
 }
 
-
-std::string Response::format_response(int status_code, bool should_keep_alive, std::string version, std::string body)
+std::string Response::format_response(int status_code, bool should_keep_alive, std::string version)
 {
+	std::cout << "entered format response" << std::endl;
 	std::string response;
 	std::string reason_phrase;
 	std::ostringstream ss;
-	// client._status_code = 200;
 	ss << status_code;
 
-	// response += client._request._header_kv["Version"] + ss.str() + " ";
 	response += version + " " + ss.str() + " ";
 	reason_phrase = get_reason_phrase(status_code);
 	if (reason_phrase == "Internal Server Error\r\n")
@@ -60,16 +58,29 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 		return response;
 	}
 	response += reason_phrase;
-	response += "Content-Type: application/json\r\n"; // TODO: to be dynamic based on body
+	if (!_body.empty())
+	{
+		determine_content_type();
+		response += "Content-Type: ";
+		response += _content_type;
+		response += "\r\n";
+	}
+	if (status_code == 405)
+	{
+		response += "Allowed-Methods: ";
+		for (size_t i = 0; i < get_allowed_methods().size(); ++i)
+			response += get_allowed_methods()[i];
+		response += "\r\n";
+	}
 	response += "Server: webserv42\r\n";
 
 	std::time_t now = std::time(0);
 	std::tm* gmt_time = std::gmtime(&now);
-  char date_buf[100];
-  strftime(date_buf, sizeof(date_buf), "%a, %d %b %Y %H:%M:%S GMT", gmt_time);
-  response += "Date: ";
-  response += date_buf;
-  response += "\r\n";
+	char date_buf[100];
+	strftime(date_buf, sizeof(date_buf), "%a, %d %b %Y %H:%M:%S GMT", gmt_time);
+	response += "Date: ";
+	response += date_buf;
+	response += "\r\n";
 
 	if (should_keep_alive)
 			response += "Connection: keep-alive\r\n";
@@ -77,14 +88,39 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 			response += "Connection: close\r\n";
 
 	ss.str("");
-	ss << body.size();
+	ss << _body.size();
 	response += "Content-Length: " + ss.str() + "\r\n";
 	response += "\r\n"; // close headers
 
 	// Append body if present
-	if (body.size() != 0)
-		response += body;
-
-
+	if (_body.size() != 0)
+		response += _body;
+	std::cout << "end of format response: " << response << std::endl;
 	return response;
+}
+
+void Response::determine_content_type()
+{
+	size_t dot = _request->_uri.find_last_of('.');
+	if (dot == std::string::npos)
+	{
+		_content_type = "application/octet-stream";
+		return;
+	}
+	std::string ext = _request->_uri.substr(dot + 1);
+	for (size_t i = 0; i < ext.size(); i++)
+		ext[i] = std::tolower(ext[i]);
+	if (ext == "html" || ext == "htm") { _content_type = "text/html"; }
+	else if (ext == "txt") { _content_type = "text/plain"; }
+	else if (ext == "json") { _content_type = "application/json"; }
+	else if (ext == "png") { _content_type = "image/png"; }
+	else if (ext == "jpg" || ext == "jpeg") { _content_type = "image/jpeg"; }
+	else if (ext == "webp") { _content_type = "image/webp"; }
+	else if (ext == "gif") { _content_type = "image/gif"; }
+	else if (ext == "pdf") { _content_type = "application/pdf"; }
+	else if (ext == "css") { _content_type = "text/css"; }
+	else if (ext == "js") { _content_type = "application/javascript"; }
+	else if (ext == "py") { _content_type = "text/x-python"; }
+	else { _content_type = "application/octet-stream"; }
+	return;
 }

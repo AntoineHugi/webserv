@@ -2,12 +2,12 @@
 
 Method::Method() {}
 
-Method::Method(const Method& other)
+Method::Method(const Method &other)
 {
 	(void)other;
 }
 
-Method& Method::operator=(const Method& other)
+Method &Method::operator=(const Method &other)
 {
 	(void)other;
 	return (*this);
@@ -15,56 +15,77 @@ Method& Method::operator=(const Method& other)
 
 Method::~Method() {}
 
-void	Method::handleGet(Client& client)
+void Method::getDirectory(Client &client, DIR *directory)
+{
+	if (!directory)
+	{
+		std::cout << "Error opening requested directory" << std::endl;
+		client.set_status_code(500);
+		return;
+	}
+	struct dirent *entry;
+	while ((entry = readdir(directory)) != NULL)
+	{
+		std::string current = client._response.get_body();
+		current += std::string(entry->d_name) + '\n';
+		client._response.set_body(current);
+	}
+	closedir(directory);
+	client.set_status_code(200);
+}
+
+void Method::getFile(Client &client, std::string filepath)
+{
+	int fd = open(filepath.c_str(), O_RDONLY);
+	if (fd == -1)
+	{
+		std::cout << "Error opening requested file" << std::endl;
+		client.set_status_code(500);
+		return;
+	}
+	char buffer[1024];
+	ssize_t bytes;
+	std::string body = client._response.get_body();
+	while ((bytes = read(fd, buffer, sizeof(buffer))) > 0)
+		body.append(buffer, bytes);
+	if (bytes == -1)
+	{
+		std::cout << "Error reading request target" << std::endl;
+		client.set_status_code(500);
+		close(fd);
+		return;
+	}
+	client._response.set_body(body);
+	close(fd);
+	client.set_status_code(200);
+}
+
+void Method::handleGet(Client &client)
 {
 	if (client._request._isDirectory)
 	{
-		DIR* dir = opendir(client._request._fullPathURI.c_str());
-		if (!dir)
+		/* looks if there is an index file */
+		const std::vector<std::string> &indices = client.get_server()->get_index();
+		for (size_t i = 0; i < indices.size(); i++)
 		{
-			std::cout << "Error opening requested directory" << std::endl;
-			client.set_status_code(500);
-			return;
+			std::string attempt = client._request._fullPathURI + "/" + indices[i];
+			if (access(attempt.c_str(), R_OK) == 0)
+			{
+				getFile(client, attempt);
+				return;
+			}
 		}
-		struct dirent* entry;
-		while ((entry = readdir(dir)) != NULL)
-		{
-			std::string current = client._response.get_body();
-			current += std::string(entry->d_name) + '\n';
-			client._response.set_body(current); 
-		}
-		closedir(dir);
-		client.set_status_code(200);
-		return;
+
+		/* if not, then serves the directory list */
+		DIR *dir = opendir(client._request._fullPathURI.c_str());
+		getDirectory(client, dir);
 	}
 	else
-	{
-		int fd = open(client._request._fullPathURI.c_str(), O_RDONLY);
-		if (fd == -1)
-		{
-			std::cout << "Error opening requested file" << std::endl;
-			client.set_status_code(500);
-			return;
-		}
-		char buffer[1024];
-		ssize_t bytes;
-		std::string body = client._response.get_body();
-		while ((bytes = read(fd, buffer, sizeof(buffer))) > 0)
-			body.append(buffer, bytes);
-		if (bytes == -1)
-		{
-			std::cerr << "Error reading request target" << std::endl;
-			client.set_status_code(500);
-			close(fd);
-			return;
-		}
-		client._response.set_body(body);
-		close(fd);
-		client.set_status_code(200);
-	}
+		Method::getFile(client, client._request._fullPathURI);
+	return;
 }
 
-void	Method::handlePost(Client& client)
+void Method::handlePost(Client &client)
 {
 	(void)client;
 	// need to parse the request body in further detail
@@ -75,8 +96,7 @@ void	Method::handlePost(Client& client)
 	return;
 }
 
-
-void	Method::handleDelete(Client& client)
+void Method::handleDelete(Client &client)
 {
 	if (S_ISREG(client._request._stat.st_mode))
 	{

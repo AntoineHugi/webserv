@@ -6,7 +6,7 @@ Server::Server():
 	_host(""), 
 	_root(""), 
 	_index(), 
-	_error_page(""),
+	_error_page(),
 	_client_max_body_size(-1), 
 	_sock(-1),
 	_routes()
@@ -48,8 +48,8 @@ int	Server::get_sock() { return (this->_sock); }
 std::string	Server::get_host() { return (this->_host); }
 std::string	Server::get_root() { return (this->_root); }
 std::vector <std::string>	Server::get_index() { return (this->_index); }
-std::string	Server::get_error_page() { return (this->_error_page); }
-int	Server::get_client_max_body_size() { return (this->_client_max_body_size); }
+std::vector <std::string>	Server::get_error_page() { return (this->_error_page); }
+long long	Server::get_client_max_body_size() { return (this->_client_max_body_size); }
 std::vector <Route>	Server::get_routes() { return (this->_routes); }
 
 
@@ -66,16 +66,34 @@ void	Server::set_port(const std::string& port)
 void	Server::set_sock(int sock) { this->_sock = sock; }
 void	Server::set_host(const std::string& host) { this->_host = host; }
 void	Server::set_root(const std::string& root) { this->_root = root; }
-void	Server::set_index(std::vector <std::string> index) { this->_index = index; }
-void	Server::set_error_page(const std::string& page) { this->_error_page = page; }
+void	Server::set_index(const std::vector <std::string>& index) { this->_index = index; }
+void	Server::set_error_page(const std::vector <std::string>& page) { this->_error_page = page; }
 void	Server::set_client_max_body_size(const std::string& max)
 {
-	for (size_t i = 0; i < max.size(); i++)
+	if (max.empty())
+		throw (std::runtime_error("Invalid max client body size - empty string"));
+	errno = 0;
+	char* last;
+	long long value = std::strtoll(max.c_str(), &last, 10);
+	if (errno == ERANGE)
+		throw (std::runtime_error("Invalid max client body size - out of range"));
+	if (*last != '\0')
 	{
-		if (!std::isdigit(max[i]))
-			throw (std::runtime_error("Invalid max client body size - not numerical value"));
+		if (last[1] != '\0')
+			throw (std::runtime_error("Invalid max client body size - invalid format"));
+		if (last == max.c_str())
+			throw std::runtime_error("Invalid max client body size - no digits");
+		char suffix = std::tolower(*last);
+		if (suffix == 'k')
+			value *= 1024;
+		else if (suffix == 'm')
+			value *= 1024 * 1024;
+		else if (suffix == 'g')
+			value *= 1024 * 1024 * 1024;
+		else
+			throw (std::runtime_error("Invalid max client body size - wrong unit suffix"));
 	}
-	this->_client_max_body_size = atoi(max.c_str());
+	this->_client_max_body_size = value;
 }
 void	Server::add_route(Route route) { this->_routes.push_back(route); }
 

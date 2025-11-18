@@ -73,6 +73,7 @@ class Client
 
 		int get_fd() const { return _fd; };
 		int get_status_code() const { return _status_code; };
+		Server* get_server() const { return _server; };
 		void set_status_code(int code) { _status_code = code; };
 
 		enum State get_state() const { return _state; };
@@ -92,6 +93,7 @@ class Client
 		bool	validate_permissions();
 		bool	validate_methods();
 		void	processRequest();
+		
 
 		void refresh_client();
 		// void process_request(Request &req);

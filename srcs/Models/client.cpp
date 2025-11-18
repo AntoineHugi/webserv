@@ -88,10 +88,8 @@ bool Client::validate_permissions()
 {
 	/* looks the best matching route for that uri */
 	std::vector<Route> routes = this->_server->get_routes();
-
 	if (routes.empty())
 	{
-		std::cout << "routes are empty" << std::endl;
 		Route default_route;
 		std::vector<std::string> methods;
 		methods.push_back("GET");
@@ -101,11 +99,9 @@ bool Client::validate_permissions()
 	}
 	int index = -1;
 	std::string matchedPath;
-	std::cout << "uri is " << _request._uri << std::endl;
 	for (size_t i = 0; i < routes.size(); ++i)
 	{
 		std::string path = routes[i].get_path();
-		std::cout << "path is " << path << std::endl;
 		if (_request._uri.compare(0, path.size(), path) == 0)
 		{
 			if (path.size() >= matchedPath.size())
@@ -115,12 +111,12 @@ bool Client::validate_permissions()
 			}
 		}
 	}
-	std::cout << "matchedPath is " << matchedPath << std::endl;
 	if (matchedPath.empty() || index == -1)
 	{
 		set_status_code(404);
 		return (false);
 	}
+	std::cout << "matched path: " << matchedPath << std::endl;
 	/* sets the right root for security: default or specific to the route and creates the full path root + uri */
 	if (!routes[index].get_root().empty())
 	{
@@ -133,16 +129,17 @@ bool Client::validate_permissions()
 		_request._fullPathURI = this->_server->get_root() + _request._uri.substr(matchedPath.size());
 	}
 
-	std::cout << "_fullPathURI is " << _request._fullPathURI << std::endl;
 	/* checks that the target uri exists */
 	if (stat(_request._fullPathURI.c_str(), &_request._stat) != 0)
 	{
 		set_status_code(404);
+		std::cout << "fails to find resource" << std::endl;
 		return (false);
 	}
 
+
 	/* checks if it's a directory */
-	if (S_ISDIR(_request._stat.st_mode))
+	if (S_ISDIR(_request._stat.st_mode) && (_request._method == "GET" || _request._method == "POST"))
 	{
 		if ((!routes[index].get_autoindex().empty() && _request._method == "GET") || _request._method == "POST")
 			_request._isDirectory = true;
@@ -278,7 +275,11 @@ int Client::handle_read()
 				else
 					this->set_process_request();
 				if (!validate_permissions())
+				{
+					std::cout << "failed permissions" << std::endl;
+					this->set_flags();
 					return (1);
+				}
 				this->set_flags();
 				std::cout << "\033[35m  Header parsed \033[0m" << std::endl;
 			}
@@ -337,19 +338,28 @@ int Client::handle_read()
 
 void Client::handle_write()
 {
-	std::cout << "==>>  Client will receive answer" << std::endl;
+	std::cout << "==>> Client will receive answer" << std::endl;
 
 	// TODO: handle partial sends if size is within limits
 	// TODO: if data to be send is too large, throw error
 	std::string res = this->_response.get_response_data();
 	std::cout << "Response to be sent:\n-----\n"
-			  << res << "-----\n\n"
-			  << std::endl;
-	ssize_t bytes_sent = send(this->_fd, res.c_str(), strlen(res.c_str()), 0);
-	if (bytes_sent == -1)
+		<< res << "-----\n\n"
+		<< std::endl;
+
+	ssize_t total_sent = 0;
+	ssize_t to_send = res.size();
+
+	while (total_sent < to_send)
 	{
-		this->_status_code = 500;
-		std::cerr << "Error sending response" << std::endl;
+		ssize_t bytes_sent = send(this->_fd, &res[total_sent], to_send - total_sent, 0);
+		if (bytes_sent == -1)
+		{
+			this->_status_code = 500;
+			std::cerr << "Error sending response" << std::endl;
+			break;
+		}
+		total_sent += bytes_sent;
 	}
 }
 

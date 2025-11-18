@@ -115,10 +115,13 @@ void Service::poll_service()
 
 					std::cout << "Service ========>>  Client will send request" << std::endl;
 					if (client.handle_read())
-						{
-							this->handle_connection(poll_fds, i);
-						}
-						
+					{
+						std::cout << "failed handle read"<< std::endl;
+						client._response.set_request(&client._request);
+						client._response.set_response_data(client._response.format_response(client.get_status_code(), client.should_keep_alive(), client._request._header_kv["Version"]));
+						client.handle_write();
+						this->handle_connection(poll_fds, i);
+					}
 					else
 					{
 						std::cout << "Service ========>>  Client work request " << client.can_i_process_request() <<  std::endl;
@@ -140,7 +143,9 @@ void Service::poll_service()
 					//process_request(clients[poll_fds[i].fd]);
 					//ex: this->clients[poll_fds[i].fd]._server.croupier(clients[poll_fds[i].fd]);
 					//if cgi -> fork() and get response (this should be in the process_request function)
-					client._response.set_response_data(client._response.format_response(client.get_status_code(), client.should_keep_alive(), client._request._header_kv["Version"], client._request._body));
+					client.processRequest();
+					client._response.set_request(&client._request);
+					client._response.set_response_data(client._response.format_response(client.get_status_code(), client.should_keep_alive(), client._request._header_kv["Version"]));
 					client.handle_write();
 					this->handle_connection(poll_fds, i);
 				}
@@ -153,8 +158,8 @@ void Service::poll_service()
 void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size_t& i)
 {
 	Client& client = this->clients[poll_fds[i].fd];
-	if (client.get_status_code() < 300)
-	{
+	//if (client.get_status_code() < 300)
+	//{
 		if (client.should_keep_alive() == true)
 		{
 			std::string save_buffer = "";
@@ -181,7 +186,7 @@ void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 			clients.erase(fd);
 			std::cout << "\033[32m Client disconnected. Total clients (with server): " << (poll_fds.size()) << "\033[0m" << std::endl;
 		}
-	}
+	/*}
 	else
 	{
 		std::cout << "==>>  Client will be closed" << std::endl;
@@ -196,7 +201,7 @@ void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 		clients.erase(fd);
 		std::cout << "Client " << fd << " disconnected, show status here: "<< status <<" ." << std::endl;
 		return;
-	}
+	}*/
 }
 
 void	Service::handle_disconnection(std::vector<struct pollfd> &poll_fds, const size_t& i)
