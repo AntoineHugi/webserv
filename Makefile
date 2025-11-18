@@ -12,16 +12,16 @@ SRCDIR := srcs
 # 		client.cpp \ main.cpp  parserConfig.cpp request.cpp response.cpp route.cpp server.cpp service.cpp \
 # 	)
 
-SRCS = srcs/main.cpp  \
-	   srcs/Core/service.cpp \
-		 srcs/Functions/parserConfig.cpp \
-		 srcs/Functions/requestUtils.cpp \
-	   srcs/Models/client.cpp \
-	   srcs/Models/request.cpp \
-	   srcs/Models/response.cpp \
-	   srcs/Models/route.cpp \
-	   srcs/Models/server.cpp \
-		 srcs/Other/method.cpp
+SRCS =	srcs/main.cpp  \
+		srcs/Core/service.cpp \
+		srcs/Functions/method.cpp \
+		srcs/Functions/parserConfig.cpp \
+		srcs/Functions/requestUtils.cpp \
+		srcs/Models/client.cpp \
+		srcs/Models/request.cpp \
+		srcs/Models/response.cpp \
+		srcs/Models/route.cpp \
+		srcs/Models/server.cpp 
 
 OBJDIR := build
 

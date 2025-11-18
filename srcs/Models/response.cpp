@@ -25,7 +25,7 @@ Response& Response::operator=(const Response& other)
 		_bytes_sent = other._bytes_sent;
 		_response_data = other._response_data;
 		_body = other._body;
-		_allowedMethods =other._allowedMethods;
+		_allowedMethods = other._allowedMethods;
 	}
 	return (*this);
 }

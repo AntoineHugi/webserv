@@ -3,22 +3,20 @@
 
 # include "../Models/request.hpp"
 # include "../Models/response.hpp"
-// # include "../Models/server.hpp"
+# include "../Models/server.hpp"
+# include "../Functions/method.hpp"
 # include "../Functions/requestUtils.hpp"
-// #	include "../Core/service.hpp"
 
 # include <string>
 # include <vector>
 # include <map>
-#	include <iostream>
-#	include <sys/socket.h>
-#	include <poll.h>
-#	include <cstring>
-#	include <cerrno>
-#	include <stdio.h>
-#	include <errno.h>
-
-class Server;
+# include <iostream>
+# include <sys/socket.h>
+# include <poll.h>
+# include <cstring>
+# include <cerrno>
+# include <stdio.h>
+# include <errno.h>
 
 class Client
 {
@@ -55,9 +53,9 @@ class Client
 		int _fd;
 		int _status_code;
 		std::time_t _last_interaction;
+		Server* _server;
 
 	public:
-		Server* _server;
 		Request _request;
 		Response _response;
 		// TODO: add timestamp for keep-alive timeout and hanging handling
@@ -97,6 +95,10 @@ class Client
 		void set_flags();
 		bool should_keep_alive() const { return _flags._should_keep_alive; };
 		bool leftover_chunk() const { return _flags._leftover_chunk; };
+
+		bool	validate_permissions();
+		bool	validate_methods();
+		void	processRequest();
 
 		void refresh_client();
 		// void process_request(Request &req);

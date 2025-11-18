@@ -7,8 +7,6 @@
 # include "../Models/server.hpp"
 # include "../Models/client.hpp"
 
-// create a client class, which would have its request and respons objects, also status code, ...
-
 class Service
 {
 	private:

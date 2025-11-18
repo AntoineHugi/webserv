@@ -27,7 +27,7 @@ class Route
 		std::string	get_root() const;
 		std::string	get_autoindex() const;
 		std::string	get_cgi_path() const;
-				std::vector <std::string> get_methods() const;
+		std::vector <std::string> get_methods() const;
 
 		void	set_path(const std::string& path);
 		void	set_root(const std::string& root);

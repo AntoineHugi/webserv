@@ -160,7 +160,17 @@ void Service::poll_service()
 
 	while(g_shutdown == 0)
 	{
-		int ret = poll(poll_fds.data(), poll_fds.size(), 60000);
+		// Use timeout 0 if any client has leftover data to process
+		int timeout = 60000;
+		for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+		{
+			if (it->second.leftover_chunk())
+			{
+				timeout = 0;
+				break;
+			}
+		}
+		int ret = poll(poll_fds.data(), poll_fds.size(), timeout);
 		if (ret < 0) {
 				if (errno == EINTR) continue;  // Interrupted, retry
 				perror("poll failed");
@@ -190,22 +200,27 @@ void Service::poll_service()
 				add_client_to_polls(poll_fds, server_fds, this->clients, i, this->servers[server_index]);
 			else
 			{
-				this->clients[poll_fds[i].fd].update_last_interaction();
-				if (this->clients[poll_fds[i].fd].leftover_chunk() == false && poll_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
+				Client& client = this->clients[poll_fds[i].fd];
+				client.update_last_interaction();
+				// Check for errors/hangup first
+				// std::cout << "Handling event for client fd: " << poll_fds[i].fd << std::endl;
+				// std::cout << " with poll_fds[i].revents: " << poll_fds[i].revents << std::endl;
+				// std::cout << " with clients[poll_fds[i].fd].get_state(): " << this->clients[poll_fds[i].fd].get_state() << std::endl;
+				if (client.leftover_chunk() == false && poll_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
 				{
 					std::cout << "poll_fds[i].revents : " << poll_fds[i].revents << std::endl;
 					this->handle_disconnection(poll_fds, i);
 					continue;
 				}
-				if ((poll_fds[i].revents & POLLIN || this->clients[poll_fds[i].fd].leftover_chunk())
-					&& (this->clients[poll_fds[i].fd].can_i_read_header() == true || this->clients[poll_fds[i].fd].can_i_read_body() == true))
+				if ((poll_fds[i].revents & POLLIN || client.leftover_chunk())
+					&& (client.can_i_read_header() == true || client.can_i_read_body() == true))
 				{
 					if(this->service_reading(poll_fds, i))
 						continue;
 				}
-				if (i < (int)poll_fds.size() && (poll_fds[i].revents & POLLOUT) && this->clients[poll_fds[i].fd].can_i_process_request() == true)
+				if (i < (int)poll_fds.size() && (poll_fds[i].revents & POLLOUT) && client.can_i_process_request() == true)
 					this->service_processing(poll_fds, i);
-				if (i < (int)poll_fds.size() && (poll_fds[i].revents & POLLOUT) && this->clients[poll_fds[i].fd].can_i_send_response() == true)
+				if (i < (int)poll_fds.size() && (poll_fds[i].revents & POLLOUT) && client.can_i_send_response() == true)
 					this->service_writing(poll_fds, i);
 			}
 		}
@@ -219,18 +234,19 @@ void Service::poll_service()
 
 void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size_t& i)
 {
-	if (this->clients[poll_fds[i].fd].get_status_code() < 300)
+	Client& client = this->clients[poll_fds[i].fd];
+	if (client.get_status_code() < 300)
 	{
-		if (this->clients[poll_fds[i].fd].should_keep_alive() == true)
+		if (client.should_keep_alive() == true)
 		{
 			std::string save_buffer = "";
 			// Keep connection open for next request
 			poll_fds[i].events = POLLIN;
-			if (this->clients[poll_fds[i].fd].leftover_chunk() == true)
-				save_buffer = this->clients[poll_fds[i].fd]._request._request_data.substr(this->clients[poll_fds[i].fd]._request._header.size() + this->clients[poll_fds[i].fd]._request._body.size());
-			this->clients[poll_fds[i].fd].refresh_client();
-			this->clients[poll_fds[i].fd]._request._request_data = save_buffer;
-			std::cout << "Connection kept alive for fd: " << poll_fds[i].fd << " with buffer: " << save_buffer << std::endl;
+			if (client.leftover_chunk() == true)
+				save_buffer = client._request._request_data.substr(client._request._header.size() + client._request._body.size());
+			client.refresh_client();
+			client._request._request_data = save_buffer;
+			std::cout << "Connection kept alive for fd: " << poll_fds[i].fd << std::endl;
 		}
 		else
 		{
@@ -252,7 +268,7 @@ void	Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 	{
 		std::cout << "==>>  Client will be closed" << std::endl;
 		int fd = poll_fds[i].fd;
-		int status = this->clients[poll_fds[i].fd].get_status_code();
+		int status = client.get_status_code();
 		if(close(fd))
 		{
 			std::cout << "Error closing client fd: " << fd << std::endl;

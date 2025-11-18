@@ -17,12 +17,17 @@ class Request
 		std::string	_request_data;
 		std::string	_header;
 		std::string	_body;
+		std::string	_method;
+		std::string	_uri;
+		std::string	_version;
 		std::map<std::string, std::string> _header_kv;
 		size_t	_content_length;
 		std::string	_fullPathURI;
 		std::string	_root;
 		bool	_isDirectory;
 		struct stat	_stat;
+		bool _isCGI;
+
 		Request();
 		Request(const Request& other);
 		Request& operator=(const Request& other);

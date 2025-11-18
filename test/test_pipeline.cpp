@@ -118,7 +118,7 @@ void test_pipelined_content_length() {
     std::string request;
     request += "POST /submit HTTP/1.1\r\n";
     request += "Host: localhost:8080\r\n";
-    request += "Content-Length: " + std::to_string(body.size()) + "\r\n";
+    request += "Content-Length: 13\r\n";
     request += "Connection: keep-alive\r\n";
     request += "\r\n";
     request += body;

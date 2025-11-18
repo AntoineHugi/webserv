@@ -10,8 +10,7 @@ Client::Client():
 	_request(),
 	_response() {}
 
-
-Client::Client(int fd, Server& server):
+Client::Client(int fd, Server &server) :
 	_state(READING_HEADERS),
 	_flags(),
 	_fd(fd),
@@ -31,7 +30,7 @@ Client::Client(const Client& other) :
 	_request(other._request),
 	_response(other._response) {}
 
-Client& Client::operator=(const Client& other)
+Client &Client::operator=(const Client &other)
 {
 	if (this != &other)
 	{
@@ -74,7 +73,6 @@ void Client::set_flags()
 		this->_flags._body_chunked = true;
 	else
 		this->_flags._body_chunked = false;
-
 }
 
 void Client::refresh_client()
@@ -94,9 +92,166 @@ void Client::refresh_client()
 /*####################################################################################################*/
 /*####################################################################################################*/
 
-int	Client::handle_read()
+bool Client::validate_permissions()
 {
-	if(this->can_i_read_header() == false && this->can_i_read_body() == false)
+	/* looks the best matching route for that uri */
+	std::vector<Route> routes = this->_server->get_routes();
+
+	if (routes.empty())
+	{
+		std::cout << "routes are empty" << std::endl;
+		Route default_route;
+		std::vector<std::string> methods;
+		methods.push_back("GET");
+		default_route.set_path("/");
+		default_route.set_methods(methods);
+		routes.push_back(default_route);
+	}
+	int index = -1;
+	std::string matchedPath;
+	std::cout << "uri is " << _request._uri << std::endl;
+	for (size_t i = 0; i < routes.size(); ++i)
+	{
+		std::string path = routes[i].get_path();
+		std::cout << "path is " << path << std::endl;
+		if (_request._uri.compare(0, path.size(), path) == 0)
+		{
+			if (path.size() >= matchedPath.size())
+			{
+				matchedPath = path;
+				index = i;
+			}
+		}
+	}
+	std::cout << "matchedPath is " << matchedPath << std::endl;
+	if (matchedPath.empty() || index == -1)
+	{
+		set_status_code(404);
+		return (false);
+	}
+	/* sets the right root for security: default or specific to the route and creates the full path root + uri */
+	if (!routes[index].get_root().empty())
+	{
+		_request._root = routes[index].get_root();
+		_request._fullPathURI = routes[index].get_root() + _request._uri.substr(matchedPath.size());
+	}
+	else
+	{
+		_request._root = this->_server->get_root();
+		_request._fullPathURI = this->_server->get_root() + _request._uri.substr(matchedPath.size());
+	}
+
+	std::cout << "_fullPathURI is " << _request._fullPathURI << std::endl;
+	/* checks that the target uri exists */
+	if (stat(_request._fullPathURI.c_str(), &_request._stat) != 0)
+	{
+		set_status_code(404);
+		return (false);
+	}
+
+	/* checks if it's a directory */
+	if (S_ISDIR(_request._stat.st_mode))
+	{
+		if ((!routes[index].get_autoindex().empty() && _request._method == "GET") || _request._method == "POST")
+			_request._isDirectory = true;
+		else
+		{
+			set_status_code(403);
+			return (false);
+		}
+	}
+
+	/* checks that the method is allowed by that route, and then validates that method's permissions */
+	for (size_t j = 0; j < routes[index].get_methods().size(); ++j)
+	{
+		if (_request._method == routes[index].get_methods()[j])
+		{
+			if (validate_methods())
+				return (true);
+			else
+				return (false);
+		}
+	}
+	set_status_code(405);
+	_response.set_allowed_methods(routes[index].get_methods());
+	return (false);
+}
+
+bool Client::validate_methods()
+{
+	if (_request._method == "GET")
+	{
+		/* checking if we can read/execute this file/directory */
+		if (_request._isCGI && access(_request._fullPathURI.c_str(), X_OK) != 0)
+		{
+			set_status_code(403);
+			return (false);
+		}
+		else if (!_request._isCGI && access(_request._fullPathURI.c_str(), R_OK) != 0)
+		{
+			set_status_code(403);
+			return (false);
+		}
+	}
+	else if (_request._method == "POST")
+	{
+		/* checking if we can post in this directory */
+		std::string dirPath;
+		{
+			char tmp[PATH_MAX];
+			strncpy(tmp, _request._fullPathURI.c_str(), PATH_MAX);
+			tmp[PATH_MAX - 1] = '\0';
+
+			char *d = dirname(tmp);
+			dirPath = std::string(d);
+		}
+		if (access(dirPath.c_str(), W_OK) != 0)
+		{
+			set_status_code(403);
+			return (false);
+		}
+	}
+	else if (_request._method == "DELETE" || _request._method == "POST")
+	{
+		/* checking that the path to the file for deletion is located within the root of this route / server class */
+		char resolvedPath[PATH_MAX];
+		char resolvedRoot[PATH_MAX];
+		if (!realpath(_request._fullPathURI.c_str(), resolvedPath) || !realpath(_request._root.c_str(), resolvedRoot))
+		{
+			set_status_code(403);
+			return (false);
+		}
+		std::string resolvedFile(resolvedPath);
+		std::string resolvedRootDir(resolvedRoot);
+		if (resolvedRootDir[resolvedRootDir.size() - 1] != '/')
+			resolvedRootDir += '/';
+		if (resolvedFile.find(resolvedRootDir) != 0)
+		{
+			set_status_code(403);
+			return (false);
+		}
+		/* checking if we can delete in this directory */
+		std::string dirPath;
+		{
+			char tmp[PATH_MAX];
+			strncpy(tmp, _request._fullPathURI.c_str(), PATH_MAX);
+			tmp[PATH_MAX - 1] = '\0';
+
+			char *d = dirname(tmp);
+			dirPath = std::string(d);
+		}
+		if (access(dirPath.c_str(), W_OK) != 0)
+		{
+			set_status_code(403);
+			return (false);
+		}
+	}
+	return (true);
+}
+
+int Client::handle_read()
+{
+	if (this->can_i_read_header() == false && this->can_i_read_body() == false)
 	{
 		std::cout << "Client not in a reading state!" << std::endl;
 		return (1);
@@ -120,37 +275,43 @@ int	Client::handle_read()
 		this->_flags._leftover_chunk = false;
 		if (this->can_i_read_header() == true)
 		{
-			std::cout << "\033[31m  Header not parsed \033[0m"<<std::endl;
+			std::cout << "\033[31m  Header not parsed \033[0m" << std::endl;
 			if (this->_request._request_data.size() > 16384)
-				return(return_set_status_code(431));
+				return (return_set_status_code(431));
 			// std::cout << "\n=====>>  Client request data so far:\n-----\n" << this->_request._request_data << "\n-----\n" << std::endl;
-			if(this->_request._request_data.find("\r\n\r\n") != std::string::npos)
+			if (this->_request._request_data.find("\r\n\r\n") != std::string::npos)
 			{
-				std::cout << "\033[35m  Header will be parsed \033[0m"<<std::endl;
+				std::cout << "\033[35m  Header will be parsed \033[0m" << std::endl;
 				this->_request._header = this->_request._request_data.substr(0, this->_request._request_data.find("\r\n\r\n") + 4);
 				if(this->_request.parse_header() == 1)
 					return(return_set_status_code(400));
 				this->set_flags();
 				this->_status_code = this->_request.http_requirements_met();
 				if (this->_status_code != 200)
-					return(return_set_status_code(this->_status_code));
-				if (this->_request._content_length > 400)  // e.g., 1 GB limit // TODO: use server config value
-					return(return_set_status_code(431));
+					return (return_set_status_code(this->_status_code));
+				if (this->_request._content_length > static_cast<size_t>(this->_server->get_client_max_body_size())) // e.g., 1 GB limit // TODO: use server config value
+				{
+					std::cout << "failed because: "<< (this->_server->get_client_max_body_size()) << std::endl;
+					return (return_set_status_code(431));
+				}
 				if (this->_request.http_can_have_body())
 					this->set_read_body();
 				else
 					this->set_process_request();
-				std::cout << "\033[35m  Header parsed \033[0m"<<std::endl;
+				// if (!validate_permissions())
+				// 	return (1);
+				this->set_flags();
+				std::cout << "\033[35m  Header parsed \033[0m" << std::endl;
 			}
 		}
 
-		if(this->can_i_read_body() == true && this->_request._content_length == 0)
+		if (this->can_i_read_body() == true && this->_request._content_length == 0)
 		{
 			if (this->_request._request_data.size() > 16384)
 				return(return_set_status_code(431));
 			if (this->_flags._body_chunked == true)
 			{
-				std::cout << "\033[35m  Chunked body handling not implemented \033[0m"<<std::endl;
+				std::cout << "\033[35m  Chunked body handling not implemented \033[0m" << std::endl;
 				if (this->_request._request_data.find("0\r\n\r\n") != std::string::npos)
 				{
 					this->_request._body = this->_request._request_data.substr(this->_request._header.size(), this->_request._request_data.find("0\r\n\r\n") + 5 - this->_request._header.size());
@@ -162,12 +323,11 @@ int	Client::handle_read()
 					this->_request.parse_body();
 					this->set_process_request();
 				}
-
 			}
 			else
 				this->set_process_request();
 		}
-		if(this->can_i_read_body() == true && this->_request._content_length > 0)
+		if (this->can_i_read_body() == true && this->_request._content_length > 0)
 		{
 			if (this->_request._request_data.size() >= this->_request._header.size() + this->_request._content_length)
 			{
@@ -177,7 +337,8 @@ int	Client::handle_read()
 				else
 					this->_flags._leftover_chunk = false;
 
-				std::cout << "\033[35mBody: '" << this->_request._body << "'\n----\n" << "\033[0m"<<std::endl;
+				std::cout << "\033[35mBody: '" << this->_request._body << "'\n----\n"
+						  << "\033[0m" << std::endl;
 				this->_request.parse_body();
 				this->set_process_request();
 			}
@@ -185,13 +346,13 @@ int	Client::handle_read()
 	}
 	else if (bytes_read == 0)
 	{
-			std::cout << "===========>>  Client finished request" << std::endl;
-			// status code to clarify
-			return 1;  // Signal to close
+		std::cout << "===========>>  Client finished request" << std::endl;
+		// status code to clarify
+		return 1; // Signal to close
 	}
 
-	std::cout << "Handle_read ==>>  Client content length: " << this->_request._content_length <<  std::endl;
-	std::cout << "Handle_read ==>>  Client work request: " << this->get_state() <<  std::endl;
+	std::cout << "Handle_read ==>>  Client content length: " << this->_request._content_length << std::endl;
+	std::cout << "Handle_read ==>>  Client work request: " << this->get_state() << std::endl;
 	return 0;
 }
 
@@ -216,7 +377,7 @@ int	Client::handle_write()
 	std::cout << "bytes sent: " << bytes_sent << std::endl;
 	std::cout << "this->_response.get_bytes_sent(): " << this->_response.get_bytes_sent() << std::endl;
 	std::cout << "this->_response.get_response_data_full().size(): " << this->_response.get_response_data_full().size() << std::endl;
-	if (this->_response.get_bytes_sent() == (ssize_t)this->_response.get_response_data_full().size())
+	if (this->_response.get_bytes_sent() == (size_t)this->_response.get_response_data_full().size())
 	{
 		std::cout << "I'm changing status" << std::endl;
 		if (this->_flags._should_keep_alive)
@@ -231,6 +392,33 @@ int	Client::handle_write()
 		}
 	}
 	return (0);
+}
+
+void Client::processRequest()
+{
+	std::string methods[3] = {"GET", "POST", "DELETE"};
+	int field = -1;
+	for (int i = 0; i < 3; i++)
+	{
+		if (_request._header_kv["Method"] == methods[i])
+			field = i;
+	}
+	switch (field)
+	{
+	case 0:
+		Method::handleGet(*this);
+		break;
+	case 1:
+		Method::handlePost(*this);
+		break;
+	case 2:
+		Method::handleDelete(*this);
+		break;
+	default:
+		std::cout << "Error processing request" << std::endl;
+		set_status_code(500);
+		return;
+	}
 }
 
 /*
