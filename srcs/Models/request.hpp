@@ -27,6 +27,11 @@ class Request
 		bool	_isDirectory;
 		struct stat	_stat;
 		bool _isCGI;
+		size_t	_chunk_parse_index;     // where chunk parsing currently is
+		bool	_chunk_size_pending;    // waiting to read chunk-size line
+		size_t	_current_chunk_size;    // parsed chunk size for current chunk
+		std::string	_decoded_body;
+
 
 		Request();
 		Request(const Request& other);
@@ -35,7 +40,7 @@ class Request
 
 		void flush_request_data();
 		int parse_header();
-		void parse_body();
+		int parse_body();
 		int http_requirements_met();
 		bool http_can_have_body();
 		// size_t get_reading_length() const { return _reading_lenght; };

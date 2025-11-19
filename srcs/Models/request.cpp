@@ -3,25 +3,28 @@
 #include <string>
 #include <cstdlib>
 
-Request::Request():
-	// _reading_lenght(80),
-	_request_data(""),
-	_header(""),
-	_body(""),
-	_method(""),
-	_uri(""),
-	_version(""),
-	_header_kv(),
-	_content_length(0),
-	_fullPathURI(""),
-	_root(""),
-	_isDirectory(false),
-	_stat(),
-	_isCGI(false) {}
-
-Request::Request(const Request& other)
+Request::Request() : _request_data(""),
+		     _header(""),
+		     _body(""),
+		     _method(""),
+		     _uri(""),
+		     _version(""),
+		     _header_kv(),
+		     _content_length(0),
+		     _fullPathURI(""),
+		     _root(""),
+		     _isDirectory(false),
+		     _stat(),
+		     _isCGI(false),
+		     _chunk_parse_index(0),
+		     _chunk_size_pending(false),
+		     _current_chunk_size(0),
+		     _decoded_body("")
 {
-	// _reading_lenght = other._reading_lenght;
+}
+
+Request::Request(const Request &other)
+{
 	_request_data = other._request_data;
 	_header = other._header;
 	_body = other._body;
@@ -35,13 +38,16 @@ Request::Request(const Request& other)
 	_isDirectory = other._isDirectory;
 	_stat = other._stat;
 	_isCGI = other._isCGI;
+	_chunk_parse_index = other._chunk_parse_index;
+	_chunk_size_pending = other._chunk_size_pending;
+	_current_chunk_size = other._current_chunk_size;
+	_decoded_body = other._decoded_body;
 }
 
-Request& Request::operator=(const Request& other)
+Request &Request::operator=(const Request &other)
 {
 	if (this != &other)
 	{
-		// _reading_lenght = other._reading_lenght;
 		_request_data = other._request_data;
 		_header = other._header;
 		_body = other._body;
@@ -55,6 +61,10 @@ Request& Request::operator=(const Request& other)
 		_isDirectory = other._isDirectory;
 		_stat = other._stat;
 		_isCGI = other._isCGI;
+		_chunk_parse_index = other._chunk_parse_index;
+		_chunk_size_pending = other._chunk_size_pending;
+		_current_chunk_size = other._current_chunk_size;
+		_decoded_body = other._decoded_body;
 	}
 	return (*this);
 }
@@ -70,6 +80,28 @@ void Request::flush_request_data()
 	this->_header_kv.clear();
 }
 
+int Request::http_requirements_met()
+{
+	if (_method.empty() || _uri.empty() || _version.empty())
+	{
+		std::cout << "something is empty" << std::endl;
+		return 505;
+	}
+	if (_version != "HTTP/1.1" && _version != "HTTP/1.0")
+	{
+		std::cout << "version is " << _version << std::endl;
+		return 505;
+	}
+	return 200;
+}
+
+bool Request::http_can_have_body()
+{
+	if (this->_method != "POST" && this->_method != "PATCH" && this->_method != "PUT")
+		return false;
+	return true;
+}
+
 int Request::parse_header()
 {
 	std::cout << "\033[34mParsing header...\n\033[0m" << std::endl;
@@ -83,19 +115,16 @@ int Request::parse_header()
 
 	if (first_space != std::string::npos && second_space != std::string::npos)
 	{
-		this->_header_kv["method"] = line.substr(0, first_space);
 		this->_method = line.substr(0, first_space);
-		this->_header_kv["uri"] = line.substr(first_space + 1, second_space - first_space - 1);
-		if (this->_header_kv["uri"].size() > 2048)
-			return (1);
 		this->_uri = line.substr(first_space + 1, second_space - first_space - 1);
-		this->_header_kv["version"] = line.substr(second_space + 1);
-		if (!this->_header_kv["version"].empty() && this->_header_kv["version"].substr(this->_header_kv["version"].size()-1) == "\r")
-			this->_header_kv["version"].erase(this->_header_kv["version"].size() - 1);
-		this->_version = this->_header_kv["version"];
+		if (this->_uri.size() > 2048)
+			return (1);
+		this->_version = line.substr(second_space + 1);
+		if (!this->_version.empty() && this->_version.substr(this->_version.size() - 1) == "\r")
+			this->_version.erase(this->_version.size() - 1);
 	}
-
-	while (std::getline(stream, line)) {
+	while (std::getline(stream, line))
+	{
 		size_t colon_pos = line.find(":");
 		if (colon_pos != std::string::npos)
 		{
@@ -105,7 +134,7 @@ int Request::parse_header()
 			std::string value = line.substr(colon_pos + 1, line.size() - 1);
 			value.erase(0, value.find_first_not_of(" "));
 
-			if (!value.empty() && value.substr(value.size()-1) == "\r")
+			if (!value.empty() && value.substr(value.size() - 1) == "\r")
 				value.erase(value.size() - 1);
 
 			if (!this->_header_kv.count(key))
@@ -117,7 +146,6 @@ int Request::parse_header()
 			}
 		}
 	}
-
 	/*
 		However, there's a robustness issue with strtol parsing:
 		Content-Length: 123abc456  // strtol returns 123, endptr points to "abc456"
@@ -138,22 +166,22 @@ int Request::parse_header()
 	}
 
 	std::map<std::string, std::string>::iterator it;
-	for (it = this->_header_kv.begin(); it != this->_header_kv.end(); ++it) {
-			std::cout << "'" << it->first << "' : '" << it->second << "'" << std::endl;
+	for (it = this->_header_kv.begin(); it != this->_header_kv.end(); ++it)
+	{
+		std::cout << "'" << it->first << "' : '" << it->second << "'" << std::endl;
 	}
 
 	std::cout << "\033[34mHeader parsed sucessfully! \n\033[0m" << std::endl;
 	return (0);
 }
 
-
-void Request::parse_body()
+int Request::parse_body()
 {
 	// TODO: parse Body to _body_parsed string. Specially if data is chunked
 	std::cout << "\033[36mParsing body...\n\033[0m" << std::endl;
 	std::cout << "\033[36m    Body: " << this->_body << "\n\033[0m" << std::endl;
 
-
+	return 0;
 	// if(this->_request._header_kv["Content-type"] == "application/json")
 	// 	parse_application_json(this);
 	// else if(this->_request._header_kv["Content-type"] == "application/x-www-form-urlencoded")
@@ -168,7 +196,6 @@ void Request::parse_body()
 	// 		std::cout << "Unknown or missing Content-Type. Treating body as plain text." << std::endl;
 	// 	parse_text_plain(this);
 	// }
-
 
 	/* WIP */
 	/*
@@ -298,33 +325,4 @@ void Request::parse_body()
 
 
 	*/
-}
-
-
-int Request::http_requirements_met()
-{
-	/*if (this->_header_kv["Method"] != "GET" &&
-		this->_header_kv["Method"] != "POST" &&
-		this->_header_kv["Method"] != "DELETE" &&
-		this->_header_kv["Method"] != "PUT")
-	{
-		return 400;
-	}*/
-
-	if (this->_header_kv["version"] != "HTTP/1.1" &&
-		this->_header_kv["version"] != "HTTP/1.0")
-	{
-		return 505;
-	}
-	return 200;
-}
-bool Request::http_can_have_body()
-{
-	if (this->_header_kv["method"] != "POST" &&
-		this->_header_kv["method"] != "PATCH" &&
-		this->_header_kv["method"] != "PUT")
-	{
-		return false;
-	}
-	return true;
 }

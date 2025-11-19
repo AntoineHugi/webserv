@@ -1001,7 +1001,7 @@ void test_get_webp()
 
 	// Build GET request
 	std::ostringstream req;
-	req << "GET /images/basic.webp HTTP/1.1\r\n";
+	req << "GET /upload/basic.webp HTTP/1.1\r\n";
 	req << "Host: localhost:8080\r\n";
 	req << "Connection: close\r\n";
 	req << "\r\n";

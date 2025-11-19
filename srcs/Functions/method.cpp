@@ -93,6 +93,7 @@ void Method::handlePost(Client &client)
 	// 	multipartPost(Client& client)
 	// else if (client._request._content_type == "application/x-www-form-urlencoded")
 	// 	formPost(Client& client)
+	client.set_status_code(200);
 	return;
 }
 

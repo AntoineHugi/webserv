@@ -43,16 +43,16 @@ void Response::flush_response_data()
 
 std::string Response::format_response(int status_code, bool should_keep_alive, std::string version)
 {
-	std::cout << "entered format response" << std::endl;
 	std::string response;
 	std::string reason_phrase;
 	std::ostringstream ss;
-	ss << status_code;
 
+	ss << status_code;
 	if (version.empty() || (version != "HTTP/1.1" && version != "HTTP/1.0"))
 		version = "HTTP/1.1";
 	// response += client._request._header_kv["Version"] + ss.str() + " ";
 	response += version + " " + ss.str() + " ";
+
 	reason_phrase = get_reason_phrase(status_code);
 	response += reason_phrase;
 	if (!_body.empty())
@@ -79,7 +79,7 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	response += date_buf;
 	response += "\r\n";
 
-	response += "Server: webserv42\r\n";
+	//response += "Server: webserv42\r\n";
 
 	if (reason_phrase == "Internal Server Error\r\n")
 	{
@@ -88,7 +88,7 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 		return response;
 	}
 
-	response += "Content-Type: application/json\r\n"; // TODO: to be dynamic based on body
+	//response += "Content-Type: application/json\r\n"; // TODO: to be dynamic based on body
 
 	if (should_keep_alive)
 			response += "Connection: keep-alive\r\n";
@@ -103,7 +103,6 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	// Append body if present
 	if (_body.size() != 0)
 		response += _body;
-	std::cout << "end of format response: " << response << std::endl;
 	return response;
 }
 
