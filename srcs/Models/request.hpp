@@ -6,6 +6,8 @@
 # include <map>
 # include <iostream>
 # include <sys/stat.h>
+# include <algorithm>
+# include <cctype>
 
 class Request
 {
@@ -32,7 +34,7 @@ class Request
 		~Request();
 
 		void flush_request_data();
-		void parse_header();
+		int parse_header();
 		void parse_body();
 		int http_requirements_met();
 		bool http_can_have_body();

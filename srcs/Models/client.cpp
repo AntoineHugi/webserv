@@ -1,28 +1,34 @@
 #include "client.hpp"
 
-Client::Client() : _state(READING_HEADERS),
-				   _flags(),
-				   _fd(-1),
-				   _status_code(200),
-				   _server(),
-				   _request(),
-				   _response() {}
+Client::Client():
+	_state(READING_HEADERS),
+	_flags(),
+	_fd(-1),
+	_status_code(200),
+	_last_interaction(std::time(0)),
+	_server(),
+	_request(),
+	_response() {}
 
-Client::Client(int fd, Server &server) : _state(READING_HEADERS),
-										 _flags(),
-										 _fd(fd),
-										 _status_code(200),
-										 _server(&server),
-										 _request(),
-										 _response() {}
+Client::Client(int fd, Server &server) :
+	_state(READING_HEADERS),
+	_flags(),
+	_fd(fd),
+	_status_code(200),
+	_last_interaction(std::time(0)),
+	_server(&server),
+	_request(),
+	_response() {}
 
-Client::Client(const Client &other) : _state(other._state),
-									  _flags(other._flags),
-									  _fd(other._fd),
-									  _status_code(other._status_code),
-									  _server(other._server),
-									  _request(other._request),
-									  _response(other._response) {}
+Client::Client(const Client& other) :
+	_state(other._state),
+	_flags(other._flags),
+	_fd(other._fd),
+	_status_code(other._status_code),
+	_last_interaction(other._last_interaction),
+	_server(other._server),
+	_request(other._request),
+	_response(other._response) {}
 
 Client &Client::operator=(const Client &other)
 {
@@ -32,6 +38,7 @@ Client &Client::operator=(const Client &other)
 		_flags = other._flags;
 		_fd = other._fd;
 		_status_code = other._status_code;
+		_last_interaction = other._last_interaction;
 		_server = other._server;
 		_request = other._request;
 		_response = other._response;
@@ -46,23 +53,27 @@ int Client::return_set_status_code(int code)
 	this->_status_code = code;
 	return 1;
 }
+void Client::set_flags_error()
+{
+	this->_flags._should_keep_alive = false;
+}
 
 void Client::set_flags()
 {
-	if (this->_request._header_kv["Version"] == "HTTP/1.1") // HTTP/1.1 has keep-alive by default
+	if (this->_request._header_kv["version"] == "HTTP/1.1") // HTTP/1.1 has keep-alive by default
 	{
 		this->_flags._should_keep_alive = true;
-		if (this->_request._header_kv["Connection"] == "close")
+		if (this->_request._header_kv["connection"] == "close")
 			this->_flags._should_keep_alive = false;
 	}
-	else if (this->_request._header_kv["Version"] == "HTTP/1.0") // HTTP/1.0 requires explicit keep-alive
+	else if (this->_request._header_kv["version"] == "HTTP/1.0") 	// HTTP/1.0 requires explicit keep-alive
 	{
 		this->_flags._should_keep_alive = false;
-		if (this->_request._header_kv["Connection"] == "keep-alive")
+		if (this->_request._header_kv["connection"] == "keep-alive")
 			this->_flags._should_keep_alive = true;
 	}
 
-	if (this->_request._header_kv["Transfer-Encoding"] == "chunked")
+	if (this->_request._header_kv["transfer-encoding"] == "chunked")
 		this->_flags._body_chunked = true;
 	else
 		this->_flags._body_chunked = false;
@@ -70,6 +81,7 @@ void Client::set_flags()
 
 void Client::refresh_client()
 {
+	std::cout << ">>>   CLIENT REFRESH <<<" << std::endl;
 	this->_request.flush_request_data();
 	this->_response.flush_response_data();
 	this->_state = READING_HEADERS;
@@ -242,34 +254,47 @@ int Client::handle_read()
 {
 	if (this->can_i_read_header() == false && this->can_i_read_body() == false)
 	{
-		std::cerr << "Client not in a reading state!" << std::endl;
-		return (1);
+		std::cout << "@@@@@@  IMPOSSIBLE >>>>>>>>>> Client not in a reading state!" << std::endl;
+		return(return_set_status_code(500));
 	}
 	std::cout << "\033[33mClient is sending data \033[0m" << std::endl;
-	char buffer[80]; // char buffer[8192];
-	int bytes_read = recv(this->_fd, buffer, sizeof(buffer) - 1, 0);
-	if (bytes_read > 0)
-		this->_request._request_data.append(buffer, bytes_read);
+	char buffer[100]; // char buffer[8192];
+	int bytes_read = 0;
+	if (this->leftover_chunk() == true)
+		bytes_read = 1;
+	else
+	{
+		bytes_read = recv(this->_fd, buffer, sizeof(buffer) - 1, 0);
+		if (bytes_read > 0)
+			this->_request._request_data.append(buffer, bytes_read);
+		if (bytes_read < 0)
+			return(return_set_status_code(500));
+	}
 
-	if (bytes_read > 0 || this->leftover_chunk() == true)
+	if (bytes_read > 0)
 	{
 		this->_flags._leftover_chunk = false;
 		if (this->can_i_read_header() == true)
 		{
 			std::cout << "\033[31m  Header not parsed \033[0m" << std::endl;
 			if (this->_request._request_data.size() > 16384)
-				return (return_set_status_code(431));
+				return(return_set_status_code(431));
 			// std::cout << "\n=====>>  Client request data so far:\n-----\n" << this->_request._request_data << "\n-----\n" << std::endl;
 			if (this->_request._request_data.find("\r\n\r\n") != std::string::npos)
 			{
 				std::cout << "\033[35m  Header will be parsed \033[0m" << std::endl;
 				this->_request._header = this->_request._request_data.substr(0, this->_request._request_data.find("\r\n\r\n") + 4);
-				this->_request.parse_header();
+				if(this->_request.parse_header() == 1)
+					return(return_set_status_code(400));
+				this->set_flags();
 				this->_status_code = this->_request.http_requirements_met();
 				if (this->_status_code != 200)
 					return (return_set_status_code(this->_status_code));
 				if (this->_request._content_length > static_cast<size_t>(this->_server->get_client_max_body_size())) // e.g., 1 GB limit // TODO: use server config value
-					return (return_set_status_code(431));
+				{
+					std::cout << "failed because: "<< (this->_server->get_client_max_body_size()) << std::endl;
+					return(return_set_status_code(431));
+				}
 				if (this->_request.http_can_have_body())
 					this->set_read_body();
 				else
@@ -287,6 +312,8 @@ int Client::handle_read()
 
 		if (this->can_i_read_body() == true && this->_request._content_length == 0)
 		{
+			if (this->_request._request_data.size() > 16384)
+				return(return_set_status_code(431));
 			if (this->_flags._body_chunked == true)
 			{
 				std::cout << "\033[35m  Chunked body handling not implemented \033[0m" << std::endl;
@@ -328,39 +355,51 @@ int Client::handle_read()
 		// status code to clarify
 		return 1; // Signal to close
 	}
-	else
-		return (return_set_status_code(500));
 
 	std::cout << "Handle_read ==>>  Client content length: " << this->_request._content_length << std::endl;
 	std::cout << "Handle_read ==>>  Client work request: " << this->get_state() << std::endl;
 	return 0;
 }
 
-void Client::handle_write()
+
+int	Client::handle_write()
 {
-	std::cout << "==>> Client will receive answer" << std::endl;
-
-	// TODO: handle partial sends if size is within limits
-	// TODO: if data to be send is too large, throw error
-	std::string res = this->_response.get_response_data();
-	std::cout << "Response to be sent:\n-----\n"
-		<< res << "-----\n\n"
-		<< std::endl;
-
-	ssize_t total_sent = 0;
-	ssize_t to_send = res.size();
-
-	while (total_sent < to_send)
+	std::cout << "==>>  Client will receive answer" << std::endl;
+	std::string res = this->_response.get_response_data(this->_response.get_bytes_sent()).substr(0,100);
+	std::cout << "Response to be sent:\n-----\n" << res << "-----\n\n" << std::endl;
+	ssize_t bytes_sent = send(this->_fd, res.c_str(), res.size(), 0);
+	if (bytes_sent == -1)
 	{
-		ssize_t bytes_sent = send(this->_fd, &res[total_sent], to_send - total_sent, 0);
-		if (bytes_sent == -1)
-		{
-			this->_status_code = 500;
-			std::cerr << "Error sending response" << std::endl;
-			break;
+		if (errno == EPIPE) {
+				this->_status_code = 501;
+				this->set_handle_error();
+				// Client disconnected, close cleanly
+			} else {
+				this->set_handle_error();
+				this->_status_code = 500;
 		}
-		total_sent += bytes_sent;
+		std::cout << "Error sending response" << std::endl;
+		return (1);
 	}
+	this->_response.update_bytes_sent(bytes_sent);
+	std::cout << "bytes sent: " << bytes_sent << std::endl;
+	std::cout << "this->_response.get_bytes_sent(): " << this->_response.get_bytes_sent() << std::endl;
+	std::cout << "this->_response.get_response_data_full().size(): " << this->_response.get_response_data_full().size() << std::endl;
+	if (this->_response.get_bytes_sent() == (size_t)this->_response.get_response_data_full().size())
+	{
+		std::cout << "I'm changing status" << std::endl;
+		if (this->_flags._should_keep_alive)
+		{
+			std::cout << "I'm staying alive" << std::endl;
+			this->set_finish_request_alive();
+		}
+		else
+		{
+			std::cout << "I'm closing" << std::endl;
+			this->set_finish_request_close();
+		}
+	}
+	return (0);
 }
 
 void Client::processRequest()

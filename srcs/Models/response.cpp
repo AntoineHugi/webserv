@@ -49,14 +49,11 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	std::ostringstream ss;
 	ss << status_code;
 
+	if (version.empty() || (version != "HTTP/1.1" && version != "HTTP/1.0"))
+		version = "HTTP/1.1";
+	// response += client._request._header_kv["Version"] + ss.str() + " ";
 	response += version + " " + ss.str() + " ";
 	reason_phrase = get_reason_phrase(status_code);
-	if (reason_phrase == "Internal Server Error\r\n")
-	{
-		response += "Content-Length: 0\r\n";
-		response += "Connection: close\r\n";
-		return response;
-	}
 	response += reason_phrase;
 	if (!_body.empty())
 	{
@@ -81,6 +78,17 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	response += "Date: ";
 	response += date_buf;
 	response += "\r\n";
+
+	response += "Server: webserv42\r\n";
+
+	if (reason_phrase == "Internal Server Error\r\n")
+	{
+		response += "Content-Length: 0\r\n";
+		response += "Connection: close\r\n";
+		return response;
+	}
+
+	response += "Content-Type: application/json\r\n"; // TODO: to be dynamic based on body
 
 	if (should_keep_alive)
 			response += "Connection: keep-alive\r\n";

@@ -27,7 +27,8 @@ class Client
 			PROCESSING_REQUEST,
 			SENDING_RESPONSE,
 			KEEPALIVE_WAIT,
-			CLOSING
+			CLOSING,
+			HANDLE_ERROR
 		};
 		State _state;
 
@@ -52,6 +53,7 @@ class Client
 
 		int _fd;
 		int _status_code;
+		std::time_t _last_interaction;
 		Server* _server;
 
 	public:
@@ -68,7 +70,7 @@ class Client
 		int return_set_status_code(int code);
 
 		int	handle_read();
-		void handle_write();
+		int handle_write();
 		int fill_request_data();
 
 		int get_fd() const { return _fd; };
@@ -81,12 +83,21 @@ class Client
 		bool can_i_read_body() const { return _state == READING_BODY; };
 		bool can_i_process_request() const { return _state == PROCESSING_REQUEST; };
 		bool can_i_send_response() const { return _state == SENDING_RESPONSE; };
+		bool can_i_close_connection() const { return _state == CLOSING; };
+		bool is_error() const { return _state == HANDLE_ERROR; };
+		bool is_inactive() const { return std::time(0) - _last_interaction > 60; }
+
 		void set_read_header() { _state = READING_HEADERS; };
 		void set_read_body() { _state = READING_BODY; };
 		void set_process_request() { _state = PROCESSING_REQUEST; };
 		void set_send_response() { _state = SENDING_RESPONSE; };
+		void set_finish_request_alive() {_state = KEEPALIVE_WAIT; };
+		void set_finish_request_close() {_state = CLOSING; };
+		void set_handle_error() {_state = HANDLE_ERROR; };
+		void update_last_interaction() { _last_interaction = std::time(0);}
 
 		void set_flags();
+		void set_flags_error();
 		bool should_keep_alive() const { return _flags._should_keep_alive; };
 		bool leftover_chunk() const { return _flags._leftover_chunk; };
 

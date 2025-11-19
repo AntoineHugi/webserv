@@ -35,11 +35,14 @@ public:
 	std::string get_header() const { return _header; };
 	size_t get_content_length() const { return _content_length; };
 	size_t get_bytes_sent() const { return _bytes_sent; };
-	std::string get_response_data() const { return _response_data; };
+		std::string get_response_data(int start) const { return _response_data.substr(start); };
+		std::string get_response_data_full() const { return _response_data; };
 	std::string get_body() const { return _body; };
 	std::vector<std::string> get_allowed_methods() const { return _allowedMethods; };
 	std::string get_content_type() const { return _content_type; };
 	Request* get_request() const { return _request; };
+
+	void update_bytes_sent(int res) { _bytes_sent+= res; };
 
 	void set_header(std::string header) { _header = header; };
 	void set_content_length(size_t content_length) { _content_length = content_length; };

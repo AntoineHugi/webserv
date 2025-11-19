@@ -6,6 +6,10 @@
 int	main(int argc, char **argv)
 {
 	long unsigned int i = 0;
+	signal(SIGINT, handle_shutdown);
+	signal(SIGTERM, handle_shutdown);
+	signal(SIGPIPE, SIG_IGN);
+
 	if (argc == 2)
 	{
 		Service	service;

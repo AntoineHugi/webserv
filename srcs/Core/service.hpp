@@ -19,10 +19,16 @@ class Service
 		Service& operator=(const Service& other);
 		~Service();
 
-		void poll_service();
+		void	poll_service();
+		int	service_reading(std::vector<struct pollfd> &poll_fds, int i);
+		int	service_processing(std::vector<struct pollfd> &poll_fds, int i);
+		int	service_writing(std::vector<struct pollfd> &poll_fds, int i);
+
 		void	handle_connection(std::vector<struct pollfd> &poll_fds, const size_t& i);
 		void	handle_disconnection(std::vector<struct pollfd> &poll_fds, const size_t& i);
 };
+
+void handle_shutdown(int sig);
 
 // struct pollfd {
 //     int fd;        // File descriptor to monitor
