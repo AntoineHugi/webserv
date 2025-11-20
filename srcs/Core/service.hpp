@@ -21,8 +21,8 @@ class Service
 		~Service();
 
 		void	poll_service();
-		int	service_reading(std::vector<struct pollfd> &poll_fds, int i);
-		int	service_processing(std::vector<struct pollfd> &poll_fds, int i);
+		void	service_reading(std::vector<struct pollfd> &poll_fds, int i);
+		void	service_processing(std::vector<struct pollfd> &poll_fds, int i);
 		int	service_writing(std::vector<struct pollfd> &poll_fds, int i);
 
 		void	handle_connection(std::vector<struct pollfd> &poll_fds, const size_t& i);

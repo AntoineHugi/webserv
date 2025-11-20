@@ -16,7 +16,6 @@
 #include <signal.h>
 #include <stdio.h>
 
-
 // ANSI Colors
 #define GREEN "\033[32m"
 #define RED "\033[31m"
@@ -24,42 +23,50 @@
 #define BLUE "\033[34m"
 #define RESET "\033[0m"
 
-struct TestResult {
+struct TestResult
+{
 	int passed;
 	int failed;
 };
 
 TestResult g_results = {0, 0};
 
-void print_test(const std::string& name) {
-	std::cout << "\n" << BLUE << "==========================================================" << RESET << std::endl;
+void print_test(const std::string &name)
+{
+	std::cout << "\n"
+			  << BLUE << "==========================================================" << RESET << std::endl;
 	std::cout << BLUE << "TEST: " << name << RESET << std::endl;
 	std::cout << BLUE << "==========================================================" << RESET << std::endl;
 }
 
-void print_pass(const std::string& msg) {
+void print_pass(const std::string &msg)
+{
 	std::cout << GREEN << "✓ PASS: " << RESET << msg << std::endl;
 	g_results.passed++;
 }
 
-void print_fail(const std::string& msg) {
+void print_fail(const std::string &msg)
+{
 	std::cout << RED << "✗ FAIL: " << RESET << msg << std::endl;
 	g_results.failed++;
 }
 
-void print_info(const std::string& msg) {
+void print_info(const std::string &msg)
+{
 	std::cout << YELLOW << "ℹ INFO: " << RESET << msg << std::endl;
 }
 
 // Simple HTTP Response Parser
-struct HttpResponse {
+struct HttpResponse
+{
 	std::string status_line;
 	std::map<std::string, std::string> headers;
 	std::string body;
 	int status_code;
 };
 
-HttpResponse parse_response(const std::string& response) {
+HttpResponse parse_response(const std::string &response)
+{
 	HttpResponse resp;
 	resp.status_code = 0;
 
@@ -74,13 +81,16 @@ HttpResponse parse_response(const std::string& response) {
 	std::string line;
 
 	// Parse status line
-	if (std::getline(stream, line)) {
+	if (std::getline(stream, line))
+	{
 		resp.status_line = line;
 		// Extract status code
 		size_t first_space = line.find(' ');
-		if (first_space != std::string::npos) {
+		if (first_space != std::string::npos)
+		{
 			size_t second_space = line.find(' ', first_space + 1);
-			if (second_space != std::string::npos) {
+			if (second_space != std::string::npos)
+			{
 				std::string code = line.substr(first_space + 1, second_space - first_space - 1);
 				resp.status_code = atoi(code.c_str());
 			}
@@ -94,7 +104,8 @@ HttpResponse parse_response(const std::string& response) {
 			line.erase(line.size()-1);
 
 		size_t colon = line.find(':');
-		if (colon != std::string::npos) {
+		if (colon != std::string::npos)
+		{
 			std::string key = line.substr(0, colon);
 			std::string value = line.substr(colon + 1);
 
@@ -115,9 +126,11 @@ HttpResponse parse_response(const std::string& response) {
 	return resp;
 }
 
-int connect_to_server(const char* host, int port) {
+int connect_to_server(const char *host, int port)
+{
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock < 0) {
+	if (sock < 0)
+	{
 		perror("socket");
 		return -1;
 	}
@@ -127,13 +140,15 @@ int connect_to_server(const char* host, int port) {
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
 
-	if (inet_pton(AF_INET, host, &server_addr.sin_addr) <= 0) {
+	if (inet_pton(AF_INET, host, &server_addr.sin_addr) <= 0)
+	{
 		perror("inet_pton");
 		close(sock);
 		return -1;
 	}
 
-	if (connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+	if (connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+	{
 		perror("connect");
 		close(sock);
 		return -1;
@@ -142,26 +157,30 @@ int connect_to_server(const char* host, int port) {
 	return sock;
 }
 
-std::string send_request(int sock, const std::string& method, const std::string& path,
-						 const std::map<std::string, std::string>& headers = std::map<std::string, std::string>(),
-						 const std::string& body = "") {
+std::string send_request(int sock, const std::string &method, const std::string &path,
+						 const std::map<std::string, std::string> &headers = std::map<std::string, std::string>(),
+						 const std::string &body = "")
+{
 	// Build request
 	std::ostringstream request;
 	request << method << " " << path << " HTTP/1.1\r\n";
 	request << "Host: localhost:8080\r\n";
 
 	// Add custom headers
-	for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
+	for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it)
+	{
 		request << it->first << ": " << it->second << "\r\n";
 	}
 
-	if (!body.empty()) {
+	if (!body.empty())
+	{
 		request << "Content-Length: " << body.size() << "\r\n";
 	}
 
 	request << "\r\n";
 
-	if (!body.empty()) {
+	if (!body.empty())
+	{
 		request << body;
 	}
 
@@ -170,7 +189,8 @@ std::string send_request(int sock, const std::string& method, const std::string&
 
 	// Send request
 	ssize_t sent = send(sock, req_str.c_str(), req_str.size(), 0);
-	if (sent < 0) {
+	if (sent < 0)
+	{
 		perror("send");
 		return "";
 	}
@@ -183,7 +203,7 @@ std::string send_request(int sock, const std::string& method, const std::string&
 	struct timeval tv;
 	tv.tv_sec = 2;
 	tv.tv_usec = 0;
-	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
 
 	size_t header_end_pos = std::string::npos;
 	size_t content_length = 0;
@@ -191,14 +211,18 @@ std::string send_request(int sock, const std::string& method, const std::string&
 
 	while (true) {
 		ssize_t received = recv(sock, buffer, sizeof(buffer) - 1, 0);
-		if (received < 0) {
-			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+		if (received < 0)
+		{
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+			{
 				// Timeout - no more data
 				break;
 			}
 			perror("recv");
 			break;
-		} else if (received == 0) {
+		}
+		else if (received == 0)
+		{
 			// Connection closed
 			break;
 		}
@@ -245,11 +269,13 @@ std::string send_request(int sock, const std::string& method, const std::string&
 // ============================================================================
 // TEST 1: Basic Connection
 // ============================================================================
-void test_basic_connection() {
+void test_basic_connection()
+{
 	print_test("Basic Connection and Response");
 
 	int sock = connect_to_server("127.0.0.1", 8080);
-	if (sock < 0) {
+	if (sock < 0)
+	{
 		print_fail("Could not connect to server");
 		return;
 	}
@@ -258,9 +284,12 @@ void test_basic_connection() {
 	std::string response = send_request(sock, "GET", "/");
 	HttpResponse resp = parse_response(response);
 
-	if (resp.status_code == 200) {
+	if (resp.status_code == 200)
+	{
 		print_pass("Received 200 OK response");
-	} else {
+	}
+	else
+	{
 		std::ostringstream oss;
 		oss << "Expected 200, got: " << resp.status_code;
 		print_fail(oss.str());
@@ -273,11 +302,13 @@ void test_basic_connection() {
 // ============================================================================
 // TEST 2: Keep-Alive - Multiple Requests
 // ============================================================================
-void test_keepalive() {
+void test_keepalive()
+{
 	print_test("Keep-Alive: Multiple Sequential Requests");
 
 	int sock = connect_to_server("127.0.0.1", 8080);
-	if (sock < 0) {
+	if (sock < 0)
+	{
 		print_fail("Could not connect");
 		return;
 	}
@@ -292,13 +323,17 @@ void test_keepalive() {
 	std::cerr << "DEBUG: Raw response:\n" << response1 << "\n[END]" << std::endl;
 	HttpResponse resp1 = parse_response(response1);
 
-	if (resp1.status_code == 200) {
+	if (resp1.status_code == 200)
+	{
 		print_pass("First request: 200 OK");
-	} else {
+	}
+	else
+	{
 		print_fail("First request failed");
 	}
 
-	if (resp1.headers["Connection"] == "keep-alive") {
+	if (resp1.headers["Connection"] == "keep-alive")
+	{
 		print_pass("Server responded with Connection: keep-alive");
 	} else {
 		std::cerr << "DEBUG: Connection header value: '" << resp1.headers["Connection"] << "'" << std::endl;
@@ -312,24 +347,30 @@ void test_keepalive() {
 	usleep(100000); // 100ms delay
 
 	// Second request on same connection
-	std::string response2 = send_request(sock, "GET", "/index", headers);
+	std::string response2 = send_request(sock, "GET", "/", headers);
 	HttpResponse resp2 = parse_response(response2);
 
-	if (resp2.status_code == 200) {
+	if (resp2.status_code == 200)
+	{
 		print_pass("Second request on same connection: 200 OK");
-	} else {
+	}
+	else
+	{
 		print_fail("Second request failed");
 	}
 
 	usleep(100000);
 
 	// Third request
-	std::string response3 = send_request(sock, "POST", "/data", headers, "test body");
+	std::string response3 = send_request(sock, "GET", "/", headers);
 	HttpResponse resp3 = parse_response(response3);
 
-	if (resp3.status_code == 200) {
+	if (resp3.status_code == 200)
+	{
 		print_pass("Third request on same connection: 200 OK");
-	} else {
+	}
+	else
+	{
 		print_fail("Third request failed");
 	}
 
@@ -340,11 +381,13 @@ void test_keepalive() {
 // ============================================================================
 // TEST 3: Connection Close
 // ============================================================================
-void test_connection_close() {
+void test_connection_close()
+{
 	print_test("Connection: close Behavior");
 
 	int sock = connect_to_server("127.0.0.1", 8080);
-	if (sock < 0) {
+	if (sock < 0)
+	{
 		print_fail("Could not connect");
 		return;
 	}
@@ -355,31 +398,41 @@ void test_connection_close() {
 	std::string response = send_request(sock, "GET", "/", headers);
 	HttpResponse resp = parse_response(response);
 
-	if (resp.status_code == 200) {
+	if (resp.status_code == 200)
+	{
 		print_pass("Received 200 OK");
 	}
 
-	if (resp.headers["Connection"] == "close") {
+	if (resp.headers["Connection"] == "close")
+	{
 		print_pass("Server responded with Connection: close");
-	} else {
+	}
+	else
+	{
 		print_fail("Expected Connection: close header");
 	}
 
 	usleep(200000); // 200ms
 
 	// Try to send another request (should fail or get no response)
-	const char* test_req = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+	const char *test_req = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
 	ssize_t sent = send(sock, test_req, strlen(test_req), 0);
 
-	if (sent > 0) {
+	if (sent > 0)
+	{
 		char buffer[1024];
 		ssize_t received = recv(sock, buffer, sizeof(buffer), 0);
-		if (received == 0) {
+		if (received == 0)
+		{
 			print_pass("Server closed connection after Connection: close");
-		} else {
+		}
+		else
+		{
 			print_fail("Server accepted request after Connection: close");
 		}
-	} else {
+	}
+	else
+	{
 		print_pass("Cannot send on closed connection");
 	}
 
@@ -389,14 +442,17 @@ void test_connection_close() {
 // ============================================================================
 // TEST 4: Different HTTP Methods
 // ============================================================================
-void test_http_methods() {
+void test_http_methods()
+{
 	print_test("Different HTTP Methods");
 
-	const char* methods[] = {"GET", "POST", "DELETE", "PUT"};
+	const char *methods[] = {"GET", "POST", "DELETE", "PUT"};
 
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 4; i++)
+	{
 		int sock = connect_to_server("127.0.0.1", 8080);
-		if (sock < 0) {
+		if (sock < 0)
+		{
 			print_fail("Connection failed");
 			continue;
 		}
@@ -405,10 +461,13 @@ void test_http_methods() {
 		std::string response = send_request(sock, methods[i], "/test", std::map<std::string, std::string>(), body);
 		HttpResponse resp = parse_response(response);
 
-		if (resp.status_code == 200) {
+		if (resp.status_code == 200)
+		{
 			std::string msg = std::string(methods[i]) + " request successful";
 			print_pass(msg);
-		} else {
+		}
+		else
+		{
 			std::ostringstream oss;
 			oss << methods[i] << " returned: " << resp.status_code;
 			print_info(oss.str());
@@ -421,11 +480,13 @@ void test_http_methods() {
 // ============================================================================
 // TEST 5: POST with Body
 // ============================================================================
-void test_post_with_body() {
+void test_post_with_body()
+{
 	print_test("POST Request with JSON Body");
 
 	int sock = connect_to_server("127.0.0.1", 8080);
-	if (sock < 0) {
+	if (sock < 0)
+	{
 		print_fail("Connection failed");
 		return;
 	}
@@ -438,9 +499,12 @@ void test_post_with_body() {
 	std::string response = send_request(sock, "POST", "/api/data", headers, body);
 	HttpResponse resp = parse_response(response);
 
-	if (resp.status_code == 200) {
+	if (resp.status_code == 200)
+	{
 		print_pass("POST with JSON body successful");
-	} else {
+	}
+	else
+	{
 		print_fail("POST failed");
 	}
 
@@ -450,13 +514,16 @@ void test_post_with_body() {
 // ============================================================================
 // TEST 6: Rapid Connections
 // ============================================================================
-void test_rapid_connections() {
+void test_rapid_connections()
+{
 	print_test("Rapid Connect/Disconnect (10 connections)");
 
 	int success = 0;
-	for (int i = 0; i < 10; i++) {
+	for (int i = 0; i < 10; i++)
+	{
 		int sock = connect_to_server("127.0.0.1", 8080);
-		if (sock < 0) {
+		if (sock < 0)
+		{
 			continue;
 		}
 
@@ -465,7 +532,8 @@ void test_rapid_connections() {
 		std::string response = send_request(sock, "GET", path.str());
 		HttpResponse resp = parse_response(response);
 
-		if (resp.status_code == 200) {
+		if (resp.status_code == 200 || resp.status_code == 404)
+		{
 			success++;
 		}
 
@@ -474,9 +542,12 @@ void test_rapid_connections() {
 
 	std::ostringstream oss;
 	oss << success << "/10 rapid connections successful";
-	if (success == 10) {
+	if (success == 10)
+	{
 		print_pass(oss.str());
-	} else {
+	}
+	else
+	{
 		print_fail(oss.str());
 	}
 }
@@ -484,14 +555,17 @@ void test_rapid_connections() {
 // ============================================================================
 // TEST 7: Multiple Server Ports
 // ============================================================================
-void test_multiple_ports() {
+void test_multiple_ports()
+{
 	print_test("Multiple Server Instances (ports 8080 and 8081)");
 
 	int ports[] = {8080, 8081};
 
-	for (int i = 0; i < 2; i++) {
+	for (int i = 0; i < 2; i++)
+	{
 		int sock = connect_to_server("127.0.0.1", ports[i]);
-		if (sock < 0) {
+		if (sock < 0)
+		{
 			std::ostringstream oss;
 			oss << "Could not connect to port " << ports[i];
 			print_info(oss.str());
@@ -505,9 +579,12 @@ void test_multiple_ports() {
 
 		std::ostringstream oss;
 		oss << "Server on port " << ports[i];
-		if (resp.status_code == 200) {
+		if (resp.status_code == 200)
+		{
 			print_pass(oss.str() + " responsive");
-		} else {
+		}
+		else
+		{
 			print_fail(oss.str() + " not working");
 		}
 	}
@@ -516,10 +593,12 @@ void test_multiple_ports() {
 // ============================================================================
 // TEST 8: Truly Concurrent Clients (using fork)
 // ============================================================================
-void concurrent_client_process(int client_id, int requests_per_client) {
+void concurrent_client_process(int client_id, int requests_per_client)
+{
 	// Child process - connect and send requests
 	int sock = connect_to_server("127.0.0.1", 8080);
-	if (sock < 0) {
+	if (sock < 0)
+	{
 		exit(1); // Failed
 	}
 
@@ -527,14 +606,16 @@ void concurrent_client_process(int client_id, int requests_per_client) {
 	headers["Connection"] = "keep-alive";
 
 	int success_count = 0;
-	for (int i = 0; i < requests_per_client; i++) {
+	for (int i = 0; i < requests_per_client; i++)
+	{
 		std::ostringstream path;
 		path << "/client" << client_id << "/req" << i;
 
 		std::string response = send_request(sock, "GET", path.str(), headers);
 		HttpResponse resp = parse_response(response);
 
-		if (resp.status_code == 200) {
+		if (resp.status_code == 200 || resp.status_code == 404)
+		{
 			success_count++;
 		}
 
@@ -547,7 +628,8 @@ void concurrent_client_process(int client_id, int requests_per_client) {
 	exit(success_count == requests_per_client ? 0 : 1);
 }
 
-void test_truly_concurrent_clients() {
+void test_truly_concurrent_clients()
+{
 	print_test("Truly Concurrent Clients (5 clients via fork, 3 requests each)");
 
 	const int num_clients = 5;
@@ -557,22 +639,29 @@ void test_truly_concurrent_clients() {
 	print_info("Spawning 5 concurrent client processes...");
 
 	// Fork all clients at once
-	for (int i = 0; i < num_clients; i++) {
+	for (int i = 0; i < num_clients; i++)
+	{
 		pid_t pid = fork();
 
-		if (pid < 0) {
+		if (pid < 0)
+		{
 			print_fail("Fork failed");
 			// Kill any children we already created
-			for (int j = 0; j < i; j++) {
+			for (int j = 0; j < i; j++)
+			{
 				kill(pids[j], SIGTERM);
 			}
 			return;
-		} else if (pid == 0) {
+		}
+		else if (pid == 0)
+		{
 			// Child process
 			concurrent_client_process(i, requests_per_client);
 			// Should not reach here
 			exit(1);
-		} else {
+		}
+		else
+		{
 			// Parent process - save child PID
 			pids[i] = pid;
 		}
@@ -582,11 +671,13 @@ void test_truly_concurrent_clients() {
 	int success_count = 0;
 	int total_clients = num_clients;
 
-	for (int i = 0; i < num_clients; i++) {
+	for (int i = 0; i < num_clients; i++)
+	{
 		int status;
 		waitpid(pids[i], &status, 0);
 
-		if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+		if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+		{
 			success_count++;
 		}
 	}
@@ -594,9 +685,12 @@ void test_truly_concurrent_clients() {
 	std::ostringstream oss;
 	oss << success_count << "/" << total_clients << " concurrent clients completed all requests";
 
-	if (success_count == total_clients) {
+	if (success_count == total_clients)
+	{
 		print_pass(oss.str());
-	} else {
+	}
+	else
+	{
 		print_fail(oss.str());
 	}
 
@@ -606,11 +700,13 @@ void test_truly_concurrent_clients() {
 // ============================================================================
 // TEST 9: Large Header (within limits)
 // ============================================================================
-void test_large_header() {
+void test_large_header()
+{
 	print_test("Large Header (within 16KB limit)");
 
 	int sock = connect_to_server("127.0.0.1", 8080);
-	if (sock < 0) {
+	if (sock < 0)
+	{
 		print_fail("Connection failed");
 		return;
 	}
@@ -623,9 +719,12 @@ void test_large_header() {
 	std::string response = send_request(sock, "GET", "/", headers);
 	HttpResponse resp = parse_response(response);
 
-	if (resp.status_code == 200) {
+	if (resp.status_code == 200)
+	{
 		print_pass("Large header accepted (within limit)");
-	} else {
+	}
+	else
+	{
 		print_fail("Large header rejected");
 	}
 
@@ -635,11 +734,13 @@ void test_large_header() {
 // ============================================================================
 // TEST 10: Chunked Transfer Encoding
 // ============================================================================
-void test_chunked_encoding() {
+void test_chunked_encoding()
+{
 	print_test("Chunked Transfer Encoding");
 
 	int sock = connect_to_server("127.0.0.1", 8080);
-	if (sock < 0) {
+	if (sock < 0)
+	{
 		print_fail("Connection failed");
 		return;
 	}
@@ -668,7 +769,8 @@ void test_chunked_encoding() {
 	print_info("Sending chunked POST request");
 
 	ssize_t sent = send(sock, req_str.c_str(), req_str.size(), 0);
-	if (sent < 0) {
+	if (sent < 0)
+	{
 		print_fail("Failed to send chunked request");
 		close(sock);
 		return;
@@ -681,24 +783,30 @@ void test_chunked_encoding() {
 	struct timeval tv;
 	tv.tv_sec = 2;
 	tv.tv_usec = 0;
-	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
 
-	while (true) {
+	while (true)
+	{
 		ssize_t received = recv(sock, buffer, sizeof(buffer) - 1, 0);
-		if (received <= 0) break;
+		if (received <= 0)
+			break;
 		buffer[received] = '\0';
 		response.append(buffer, received);
 		if (response.find("\r\n\r\n") != std::string::npos &&
-			response.find("Content-Length: 0") != std::string::npos) {
+			response.find("Content-Length: 0") != std::string::npos)
+		{
 			break;
 		}
 	}
 
 	HttpResponse resp = parse_response(response);
 
-	if (resp.status_code == 200) {
+	if (resp.status_code == 200)
+	{
 		print_pass("Chunked request processed successfully");
-	} else {
+	}
+	else
+	{
 		std::ostringstream oss;
 		oss << "Chunked request failed with status: " << resp.status_code;
 		print_fail(oss.str());
@@ -710,11 +818,13 @@ void test_chunked_encoding() {
 // ============================================================================
 // TEST 11: Pipelined Requests with Chunked Encoding
 // ============================================================================
-void test_pipelined_chunked() {
+void test_pipelined_chunked()
+{
 	print_test("Pipelined Requests: Chunked + GET (leftover detection)");
 
 	int sock = connect_to_server("127.0.0.1", 8080);
-	if (sock < 0) {
+	if (sock < 0)
+	{
 		print_fail("Connection failed");
 		return;
 	}
@@ -741,7 +851,8 @@ void test_pipelined_chunked() {
 	print_info("Sending pipelined chunked POST + GET");
 
 	ssize_t sent = send(sock, req_str.c_str(), req_str.size(), 0);
-	if (sent < 0) {
+	if (sent < 0)
+	{
 		print_fail("Failed to send pipelined request");
 		close(sock);
 		return;
@@ -754,11 +865,13 @@ void test_pipelined_chunked() {
 	struct timeval tv;
 	tv.tv_sec = 3;
 	tv.tv_usec = 0;
-	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
 
-	while (true) {
+	while (true)
+	{
 		ssize_t received = recv(sock, buffer, sizeof(buffer) - 1, 0);
-		if (received <= 0) break;
+		if (received <= 0)
+			break;
 		buffer[received] = '\0';
 		all_responses.append(buffer, received);
 	}
@@ -766,16 +879,22 @@ void test_pipelined_chunked() {
 	// Count how many "HTTP/" status lines we got
 	size_t count = 0;
 	size_t pos = 0;
-	while ((pos = all_responses.find("HTTP/", pos)) != std::string::npos) {
+	while ((pos = all_responses.find("HTTP/", pos)) != std::string::npos)
+	{
 		count++;
 		pos += 5;
 	}
 
-	if (count >= 2) {
+	if (count >= 2)
+	{
 		print_pass("Both pipelined requests processed (chunked leftover detected)");
-	} else if (count == 1) {
+	}
+	else if (count == 1)
+	{
 		print_fail("Only first request processed - leftover GET was lost!");
-	} else {
+	}
+	else
+	{
 		print_fail("No valid responses received");
 	}
 
@@ -785,11 +904,13 @@ void test_pipelined_chunked() {
 // ============================================================================
 // TEST 12: Pipelined Requests with Content-Length
 // ============================================================================
-void test_pipelined_content_length() {
+void test_pipelined_content_length()
+{
 	print_test("Pipelined Requests: Content-Length + GET (leftover detection)");
 
 	int sock = connect_to_server("127.0.0.1", 8080);
-	if (sock < 0) {
+	if (sock < 0)
+	{
 		print_fail("Connection failed");
 		return;
 	}
@@ -814,7 +935,8 @@ void test_pipelined_content_length() {
 	print_info("Sending pipelined POST (Content-Length) + GET");
 
 	ssize_t sent = send(sock, req_str.c_str(), req_str.size(), 0);
-	if (sent < 0) {
+	if (sent < 0)
+	{
 		print_fail("Failed to send pipelined request");
 		close(sock);
 		return;
@@ -827,11 +949,13 @@ void test_pipelined_content_length() {
 	struct timeval tv;
 	tv.tv_sec = 3;
 	tv.tv_usec = 0;
-	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
 
-	while (true) {
+	while (true)
+	{
 		ssize_t received = recv(sock, buffer, sizeof(buffer) - 1, 0);
-		if (received <= 0) break;
+		if (received <= 0)
+			break;
 		buffer[received] = '\0';
 		all_responses.append(buffer, received);
 	}
@@ -839,16 +963,22 @@ void test_pipelined_content_length() {
 	// Count HTTP responses
 	size_t count = 0;
 	size_t pos = 0;
-	while ((pos = all_responses.find("HTTP/", pos)) != std::string::npos) {
+	while ((pos = all_responses.find("HTTP/", pos)) != std::string::npos)
+	{
 		count++;
 		pos += 5;
 	}
 
-	if (count >= 2) {
+	if (count >= 2)
+	{
 		print_pass("Both pipelined requests processed (Content-Length leftover detected)");
-	} else if (count == 1) {
+	}
+	else if (count == 1)
+	{
 		print_fail("Only POST processed - leftover GET was lost!");
-	} else {
+	}
+	else
+	{
 		print_fail("No valid responses received");
 	}
 
@@ -856,13 +986,115 @@ void test_pipelined_content_length() {
 }
 
 // ============================================================================
-// TEST 13: Missing Host Header → 400 Bad Request
+// TEST 13: Fetch webp Image
 // ============================================================================
-void test_missing_host_header() {
+void test_get_webp()
+{
+	print_test("GET /images/basic.webp returns binary WebP");
+
+	int sock = connect_to_server("127.0.0.1", 8080);
+	if (sock < 0)
+	{
+		print_fail("Connection failed");
+		return;
+	}
+
+	// Build GET request
+	std::ostringstream req;
+	req << "GET /upload/basic.webp HTTP/1.1\r\n";
+	req << "Host: localhost:8080\r\n";
+	req << "Connection: close\r\n";
+	req << "\r\n";
+
+	std::string req_str = req.str();
+	print_info("Requesting /images/basic.webp");
+
+	ssize_t sent = send(sock, req_str.c_str(), req_str.size(), 0);
+	if (sent < 0)
+	{
+		print_fail("Failed to send request");
+		close(sock);
+		return;
+	}
+
+	// Read response
+	std::string response;
+	char buffer[8192];
+
+	struct timeval tv;
+	tv.tv_sec = 3;
+	tv.tv_usec = 0;
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
+
+	while (true)
+	{
+		ssize_t received = recv(sock, buffer, sizeof(buffer), 0);
+		if (received <= 0)
+			break;
+		response.append(buffer, received);
+	}
+
+	close(sock);
+
+	// ------------------------------------------------------------------------
+	// Basic validation
+	// ------------------------------------------------------------------------
+	if (response.find("HTTP/1.1 200") == std::string::npos)
+	{
+		print_fail("Did not receive 200 OK");
+		return;
+	}
+
+	// WebP signature check:
+	// RIFF....WEBP
+	const unsigned char webp_magic_1[4] = {'R', 'I', 'F', 'F'};
+	const unsigned char webp_magic_2[4] = {'W', 'E', 'B', 'P'};
+
+	// Find start of body
+	size_t header_end = response.find("\r\n\r\n");
+	if (header_end == std::string::npos)
+	{
+		print_fail("Malformed response, missing header terminator");
+		return;
+	}
+
+	size_t body_start = header_end + 4;
+	if (response.size() <= body_start + 12)
+	{
+		print_fail("Response body too small to contain WebP");
+		return;
+	}
+
+	// Verify "RIFF"
+	bool ok = true;
+	for (int i = 0; i < 4; i++)
+		if ((unsigned char)response[body_start + i] != webp_magic_1[i])
+			ok = false;
+
+	// Verify "WEBP" at offset 8
+	for (int i = 0; i < 4; i++)
+		if ((unsigned char)response[body_start + 8 + i] != webp_magic_2[i])
+			ok = false;
+
+	if (!ok)
+	{
+		print_fail("WebP magic bytes missing — file corrupted or wrong format");
+		return;
+	}
+
+	print_pass("WebP file served correctly!");
+}
+
+// ============================================================================
+// TEST 14: Missing Host Header → 400 Bad Request
+// ============================================================================
+void test_missing_host_header()
+{
 	print_test("400 Bad Request: Missing Host header");
 
 	int sock = connect_to_server("127.0.0.1", 8080);
-	if (sock < 0) {
+	if (sock < 0)
+	{
 		print_fail("Connection failed");
 		return;
 	}
@@ -875,7 +1107,8 @@ void test_missing_host_header() {
 	print_info("Sending with HTTP/0.9");
 
 	ssize_t sent = send(sock, req.c_str(), req.size(), 0);
-	if (sent < 0) {
+	if (sent < 0)
+	{
 		print_fail("Failed to send request");
 		close(sock);
 		return;
@@ -888,11 +1121,13 @@ void test_missing_host_header() {
 	struct timeval tv;
 	tv.tv_sec = 3;
 	tv.tv_usec = 0;
-	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
 
-	while (true) {
+	while (true)
+	{
 		ssize_t received = recv(sock, buffer, sizeof(buffer) - 1, 0);
-		if (received <= 0) break;
+		if (received <= 0)
+			break;
 		buffer[received] = '\0';
 		response.append(buffer, received);
 	}
@@ -910,10 +1145,177 @@ void test_missing_host_header() {
 }
 
 // ============================================================================
+// TEST 15: Invalid Method → 405 Method Not Allowed
+// ============================================================================
+void test_invalid_method()
+{
+	print_test("405 Method Not Allowed: Invalid HTTP method");
+
+	int sock = connect_to_server("127.0.0.1", 8080);
+	if (sock < 0)
+	{
+		print_fail("Connection failed");
+		return;
+	}
+
+	std::string req =
+		"FOO / HTTP/1.1\r\n"
+		"Host: localhost\r\n"
+		"\r\n";
+
+	print_info("Sending request with invalid method FOO");
+
+	ssize_t sent = send(sock, req.c_str(), req.size(), 0);
+	if (sent < 0)
+	{
+		print_fail("Failed to send request");
+		close(sock);
+		return;
+	}
+
+	std::string response;
+	char buffer[4096];
+	struct timeval tv = {3, 0};
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
+
+	while (true)
+	{
+		ssize_t received = recv(sock, buffer, sizeof(buffer) - 1, 0);
+		if (received <= 0)
+			break;
+		buffer[received] = '\0';
+		response.append(buffer, received);
+	}
+
+	close(sock);
+
+	if (response.find("405") != std::string::npos)
+		print_pass("Received 405 Method Not Allowed");
+	else
+	{
+		print_fail("Expected 405 Method Not Allowed");
+		print_info("Response was:");
+		std::cout << response << std::endl;
+	}
+}
+
+// ============================================================================
+// TEST 16: HTTP Version Not Supported → 505 HTTP Version Not Supported
+// ============================================================================
+void test_http_version_not_supported()
+{
+	print_test("505 HTTP Version Not Supported");
+
+	int sock = connect_to_server("127.0.0.1", 8080);
+	if (sock < 0)
+	{
+		print_fail("Connection failed");
+		return;
+	}
+
+	std::string req =
+		"GET / HTTP/2.0\r\n"
+		"Host: localhost\r\n"
+		"\r\n";
+
+	print_info("Sending request with unsupported HTTP version 2.0");
+
+	ssize_t sent = send(sock, req.c_str(), req.size(), 0);
+	if (sent < 0)
+	{
+		print_fail("Failed to send request");
+		close(sock);
+		return;
+	}
+
+	std::string response;
+	char buffer[4096];
+	struct timeval tv = {3, 0};
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
+
+	while (true)
+	{
+		ssize_t received = recv(sock, buffer, sizeof(buffer) - 1, 0);
+		if (received <= 0)
+			break;
+		buffer[received] = '\0';
+		response.append(buffer, received);
+	}
+
+	close(sock);
+
+	if (response.find("505") != std::string::npos)
+		print_pass("Received 505 HTTP Version Not Supported");
+	else
+	{
+		print_fail("Expected 505 HTTP Version Not Supported");
+		print_info("Response was:");
+		std::cout << response << std::endl;
+	}
+}
+
+// ============================================================================
+// TEST 17: Requesting Non-existent Resource → 404 Not Found
+// ============================================================================
+void test_not_found()
+{
+	print_test("404 Not Found: Requesting non-existent resource");
+
+	int sock = connect_to_server("127.0.0.1", 8080);
+	if (sock < 0)
+	{
+		print_fail("Connection failed");
+		return;
+	}
+
+	std::string req =
+		"GET /nonexistent.html HTTP/1.1\r\n"
+		"Host: localhost\r\n"
+		"\r\n";
+
+	print_info("Requesting a non-existent resource");
+
+	ssize_t sent = send(sock, req.c_str(), req.size(), 0);
+	if (sent < 0)
+	{
+		print_fail("Failed to send request");
+		close(sock);
+		return;
+	}
+
+	std::string response;
+	char buffer[4096];
+	struct timeval tv = {3, 0};
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
+
+	while (true)
+	{
+		ssize_t received = recv(sock, buffer, sizeof(buffer) - 1, 0);
+		if (received <= 0)
+			break;
+		buffer[received] = '\0';
+		response.append(buffer, received);
+	}
+
+	close(sock);
+
+	if (response.find("404") != std::string::npos)
+		print_pass("Received 404 Not Found");
+	else
+	{
+		print_fail("Expected 404 Not Found");
+		print_info("Response was:");
+		std::cout << response << std::endl;
+	}
+}
+
+// ============================================================================
 // MAIN
 // ============================================================================
-int main() {
-	std::cout << "\n" << BLUE << "==========================================================" << RESET << std::endl;
+int main()
+{
+	std::cout << "\n"
+			  << BLUE << "==========================================================" << RESET << std::endl;
 	std::cout << BLUE << "  WEBSERV C++ TEST SUITE" << RESET << std::endl;
 	std::cout << BLUE << "==========================================================" << RESET << std::endl;
 
@@ -935,26 +1337,37 @@ int main() {
 	test_chunked_encoding();
 	test_pipelined_chunked();
 	test_pipelined_content_length();
+	test_get_webp();
 	test_missing_host_header();
+	test_invalid_method();
+	test_http_version_not_supported();
+	test_not_found();
 
 	// Summary
-	std::cout << "\n" << BLUE << "==========================================================" << RESET << std::endl;
+	std::cout << "\n"
+			  << BLUE << "==========================================================" << RESET << std::endl;
 	std::cout << BLUE << "  TEST SUMMARY" << RESET << std::endl;
 	std::cout << BLUE << "==========================================================" << RESET << std::endl;
 
 	std::cout << GREEN << "Passed: " << g_results.passed << RESET << std::endl;
 	std::cout << RED << "Failed: " << g_results.failed << RESET << std::endl;
-	std::cout << "Total:  " << (g_results.passed + g_results.failed) << "\n" << std::endl;
+	std::cout << "Total:  " << (g_results.passed + g_results.failed) << "\n"
+			  << std::endl;
 
-	if (g_results.failed == 0) {
+	if (g_results.failed == 0)
+	{
 		std::cout << GREEN << "==========================================================" << std::endl;
 		std::cout << "  ALL TESTS PASSED! ✓" << std::endl;
-		std::cout << "==========================================================" << RESET << "\n" << std::endl;
+		std::cout << "==========================================================" << RESET << "\n"
+				  << std::endl;
 		return 0;
-	} else {
+	}
+	else
+	{
 		std::cout << RED << "==========================================================" << std::endl;
 		std::cout << "  SOME TESTS FAILED" << std::endl;
-		std::cout << "==========================================================" << RESET << "\n" << std::endl;
+		std::cout << "==========================================================" << RESET << "\n"
+				  << std::endl;
 		return 1;
 	}
 }

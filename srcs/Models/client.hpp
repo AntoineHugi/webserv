@@ -25,6 +25,7 @@ class Client
 			READING_HEADERS,
 			READING_BODY,
 			PROCESSING_REQUEST,
+			CREATING_RESPONSE,
 			SENDING_RESPONSE,
 			KEEPALIVE_WAIT,
 			CLOSING,
@@ -67,49 +68,55 @@ class Client
 		Client& operator=(const Client& other);
 		~Client();
 
-		int return_set_status_code(int code);
-
-		int	handle_read();
-		int handle_write();
-		int fill_request_data();
-
 		int get_fd() const { return _fd; };
 		int get_status_code() const { return _status_code; };
-		void set_status_code(int code) { _status_code = code; };
-
+		Server* get_server() const { return _server; };
 		enum State get_state() const { return _state; };
 		bool can_i_read_header() const { return _state == READING_HEADERS; };
 		bool can_i_read_body() const { return _state == READING_BODY; };
 		bool can_i_process_request() const { return _state == PROCESSING_REQUEST; };
+		bool can_i_create_response() const { return _state == CREATING_RESPONSE; };
 		bool can_i_send_response() const { return _state == SENDING_RESPONSE; };
 		bool can_i_close_connection() const { return _state == CLOSING; };
 		bool is_error() const { return _state == HANDLE_ERROR; };
 		bool is_inactive() const { return std::time(0) - _last_interaction > 60; }
 
+		void set_status_code(int code) { _status_code = code; };
 		void set_read_header() { _state = READING_HEADERS; };
 		void set_read_body() { _state = READING_BODY; };
 		void set_process_request() { _state = PROCESSING_REQUEST; };
+		void set_create_response() { _state = CREATING_RESPONSE; };
 		void set_send_response() { _state = SENDING_RESPONSE; };
 		void set_finish_request_alive() {_state = KEEPALIVE_WAIT; };
 		void set_finish_request_close() {_state = CLOSING; };
 		void set_handle_error() {_state = HANDLE_ERROR; };
 		void update_last_interaction() { _last_interaction = std::time(0);}
 
+
 		void set_flags();
 		void set_flags_error();
+		bool is_body_chunked() { return _flags._body_chunked; };
 		bool should_keep_alive() const { return _flags._should_keep_alive; };
 		bool leftover_chunk() const { return _flags._leftover_chunk; };
+		bool request_complete() const { return _state == PROCESSING_REQUEST; };
 
+		/* Read section */
+		int	handle_read();
+		int	read_to_buffer();
+		bool	try_parse_header();
+		bool	try_parse_body();
+		bool	try_parse_chunked_body();
 		bool	validate_permissions();
 		bool	validate_methods();
+
+		/* Processing section */
 		void	processRequest();
 
+		/* Writing section */
+		int	handle_write();
+
 		void refresh_client();
-		// void process_request(Request &req);
-		// std::string format_response(Request &req);
 };
 
-// int fill_request_data(int fd, Client& client);
-// std::string format_response(Client &client);
 
 #endif

@@ -6,9 +6,9 @@ void run_cgi(Client& client)
 	std::cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^  I am the GCI hook" << std::endl;
 
 	// Child:
-		dup2(pipe_to_cgi[0], STDIN_FILENO);
-		// dup2(pipe_from_cgi[1], STDOUT_FILENO);
-		execve("/usr/bin/php-cgi", argv, envp);
+		// dup2(pipe_to_cgi[0], STDIN_FILENO);
+		// // dup2(pipe_from_cgi[1], STDOUT_FILENO);
+		// execve("/usr/bin/php-cgi", argv, envp);
 
 	// Find the file in the CGI folder
 	  // for now, I'll assume the file exists
@@ -64,29 +64,32 @@ void add_cgi_to_polls(std::vector<struct pollfd> &cgi_fds)
 	std::cout << "###################################################\n"<< std::endl;
 	std::cout << "\033[32m New connection! \033[0m" << std::endl;
 
-	int pipe_to_cgi[2];
-	int pipe_from_cgi[2];
+	(void)cgi_fds;
+// 	int pipe_to_cgi[2];
+// 	int pipe_from_cgi[2];
 
-	if(pipe(pipe_to_cgi))
-	{
-		// TODO: handle error;
-		return;
-	}
-	if(pipe(pipe_from_cgi))
-	{
-		// TODO: handle error;
-		return;
-	}
+// 	if(pipe(pipe_to_cgi))
+// 	{
+// 		// TODO: handle error;
+// 		return;
+// 	}
+// 	if(pipe(pipe_from_cgi))
+// 	{
+// 		// TODO: handle error;
+// 		return;
+// 	}
 
-	struct pollfd ptc;
-	ptc.fd = pipe_to_cgi[1];
-	ptc.events = POLLIN | POLLOUT;
-	ptc.revents = 0;
-	cgi_fds.push_back(ptc);
+// 	struct pollfd ptc;
+// 	ptc.fd = pipe_to_cgi[1];
+// 	ptc.events = POLLIN | POLLOUT;
+// 	ptc.revents = 0;
+// 	cgi_fds.push_back(ptc);
 
-	struct pollfd pfc;
-	pfc.fd = pipe_from_cgi[1];
-	pfc.events = POLLIN | POLLOUT;
-	pfc.revents = 0;
-	cgi_fds.push_back(pfc);
+// 	struct pollfd pfc;
+// 	pfc.fd = pipe_from_cgi[1];
+// 	pfc.events = POLLIN | POLLOUT;
+// 	pfc.revents = 0;
+// 	cgi_fds.push_back(pfc);
+
+
 }

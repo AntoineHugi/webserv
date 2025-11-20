@@ -24,6 +24,8 @@ class Method
 		~Method();
 
 		static void	handleGet(Client& client);
+		static void	getFile(Client &client, std::string filepath);
+		static void	getDirectory(Client &client, DIR* directory);
 		static void	handlePost(Client& client);
 		static void	handleDelete(Client& client);
 };

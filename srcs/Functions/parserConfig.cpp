@@ -102,7 +102,7 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 				if (!parse_location(&server, tokens, &i))
 					return (false);
 			}
-			else if (tokens[i] == "index")
+			else if (tokens[i] == "index" || tokens[i] == "error_page")
 			{
 				std::string key = tokens[i];
 				++i;
@@ -273,10 +273,10 @@ bool Parser::parse_location(Server* server, std::vector <std::string> tokens, si
 
 bool Parser::assign_single_keyval_server(Server* server, std::string& key, std::string& value)
 {
-	std::string fields[6] = {"server_name", "listen", "host", "root", "error_page", "client_max_body_size"};
+	std::string fields[5] = {"server_name", "listen", "host", "root", "client_max_body_size"};
 	int field = -1;
 
-	for (int i = 0; i < 6; i++)
+	for (int i = 0; i < 5; i++)
 	{
 		if (key == fields[i])
 			field = i;
@@ -321,14 +321,6 @@ bool Parser::assign_single_keyval_server(Server* server, std::string& key, std::
 			server->set_root(value);
 			break ;
 		case 4:
-			if (!server->get_error_page().empty())
-			{
-				std::cout << "Config file error: duplicate error page" << std::endl;
-				return (false);
-			}
-			server->set_error_page(value);
-			break ;
-		case 5:
 			if (server->get_client_max_body_size() != -1)
 			{
 				std::cout << "Config file error: duplicate max body size" << std::endl;
@@ -350,10 +342,10 @@ bool Parser::assign_single_keyval_server(Server* server, std::string& key, std::
 
 bool Parser::assign_vector_keyval_server(Server* server, std::string& key, std::vector <std::string> values)
 {
-	std::string fields[1] = {"index"};
+	std::string fields[2] = {"index", "error_page"};
 	int field = -1;
 
-	for (int i = 0; i < 1; i++)
+	for (int i = 0; i < 2; i++)
 	{
 		if (key == fields[i])
 			field = i;
@@ -367,6 +359,14 @@ bool Parser::assign_vector_keyval_server(Server* server, std::string& key, std::
 				return (false);
 			}
 			server->set_index(values);
+			break ;
+		case 1:
+			if (!server->get_error_page().empty())
+			{
+				std::cout << "Config file error: duplicate error page" << std::endl;
+				return (false);
+			}
+			server->set_error_page(values);
 			break ;
 		default:
 			return (false);

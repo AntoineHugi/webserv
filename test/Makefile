@@ -2,7 +2,7 @@
 # WEBSERV TEST SUITE MAKEFILE
 # ==============================================================================
 
-CXX := g++
+CXX := c++
 CXXFLAGS := -std=c++98 -Wall -Wextra -Werror -I.
 TARGET := test_suite
 
