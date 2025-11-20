@@ -39,8 +39,7 @@ void handle_shutdown(int sig)
 /*####################################################################################################*/
 /*####################################################################################################*/
 
-
-void add_client_to_polls(std::vector<struct pollfd> &poll_fds, std::vector<struct pollfd> &server_fds, std::map<int, Client> &clients, size_t i, Server& server)
+void add_client_to_polls(std::vector<struct pollfd> &poll_fds, std::map<int, Client> &clients, size_t i, Server& server)
 {
 	std::cout << "\n###################################################"<< std::endl;
 	std::cout << "################## ADDING CLIENT #######################"<< std::endl;
@@ -67,7 +66,6 @@ void add_client_to_polls(std::vector<struct pollfd> &poll_fds, std::vector<struc
 		client_pfd.revents = 0;
 		poll_fds.push_back(client_pfd);
 		clients.insert(std::pair<int, Client>(client_fd, Client(client_fd, server)));
-		std::cout << "\033[32m Client " << client_fd << " connected. Total clients: " << (poll_fds.size() - server_fds.size()) << "\033[0m" << std::endl;
 	}
 }
 
@@ -131,8 +129,6 @@ int Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 	std::cout << "################## PROCESSING #######################"<< std::endl;
 	std::cout << "###################################################\n"<< std::endl;
 
-	if(this->clients[poll_fds[i].fd]._request._uri.find("cgi")) // TODO: it has to be based on the file extension, not the folder
-		run_cgi(this->clients[poll_fds[i].fd]);
 	// need to figure out how to avoid delays, for example cgi
 	// if (this->clients[poll_fds[i].fd]._server->validateRequest(clients[poll_fds[i].fd])) // TODO: change validateRequest ownlership to client accesing Server info
 		//this->clients[poll_fds[i].fd]._server.processRequest(clients[poll_fds[i].fd]);
@@ -192,6 +188,7 @@ void Service::poll_service()
 {
 	std::vector<struct pollfd> poll_fds;
 	std::vector<struct pollfd> server_fds;
+	std::vector<struct pollfd> cgi_fds;
 	set_polls(poll_fds, server_fds, this->servers);
 
 	while(g_shutdown == 0)
@@ -233,7 +230,10 @@ void Service::poll_service()
 					this->handle_disconnection(poll_fds, i);
 			}
 			if (new_client)
-				add_client_to_polls(poll_fds, server_fds, this->clients, i, this->servers[server_index]);
+			{
+				add_client_to_polls(poll_fds, this->clients, i, this->servers[server_index]);
+				std::cout << "\033[32m New client connected. Total clients: " << (poll_fds.size() - server_fds.size()) << "\033[0m" << std::endl;
+			}
 			else
 			{
 				Client& client = this->clients[poll_fds[i].fd];
@@ -252,6 +252,7 @@ void Service::poll_service()
 					this->service_writing(poll_fds, i);
 				if (i < (int)poll_fds.size() && poll_fds[i].revents & POLLIN && client.is_error() == true)
 					this->handle_connection(poll_fds, i);
+
 			}
 		}
 	}
