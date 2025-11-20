@@ -43,7 +43,7 @@ void add_client_to_polls(std::vector<struct pollfd> &poll_fds, std::vector<struc
 	std::cout << "\n###################################################" << std::endl;
 	std::cout << "################## ADDING CLIENT ##################" << std::endl;
 	std::cout << "###################################################\n"
-		  << std::endl;
+			  << std::endl;
 	std::cout << "\033[32m New connection! \033[0m" << std::endl;
 
 	int client_fd = accept(poll_fds[i].fd, NULL, NULL);
@@ -86,23 +86,44 @@ void Service::service_reading(std::vector<struct pollfd> &poll_fds, int i)
 {
 	std::cout << "\n###################################################" << std::endl;
 	std::cout << "################## READING #######################" << std::endl;
-	std::cout << "###################################################\n" << std::endl;
+	std::cout << "###################################################\n"
+			  << std::endl;
 
-	if (clients[poll_fds[i].fd].handle_read())
-		poll_fds[i].events = POLLOUT;
-	else
+	int read_status = clients[poll_fds[i].fd].handle_read();
+	if (read_status == 0)
+		return;
+	else if (read_status == 1)
 	{
-		std::cout << "Service ========>>  Client work request " << clients[poll_fds[i].fd].can_i_process_request() << std::endl;
-		if (clients[poll_fds[i].fd].can_i_process_request() == true)
+		if (clients[poll_fds[i].fd].can_i_create_response())
 			poll_fds[i].events = POLLOUT;
+		else
+			handle_connection(poll_fds, i);
 	}
+	else
+		poll_fds[i].events = POLLOUT;
+
+
+
+
+	// 	if (clients[poll_fds[i].fd].handle_read())
+	// 	if (clients[poll_fds[i].fd].can_i_create_response() || clients[poll_fds[i].fd].can_i_process_request())
+	// 		poll_fds[i].events = POLLOUT;
+	// 	else
+	// 		handle_disconnection(poll_fds, i);
+	// else
+	// {
+	// 	std::cout << "Service ========>>  Client work request " << clients[poll_fds[i].fd].can_i_process_request() << std::endl;
+	// 	if (clients[poll_fds[i].fd].can_i_process_request() == true)
+	// 		poll_fds[i].events = POLLOUT;
+	// }
 }
 
 void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 {
 	std::cout << "\n###################################################" << std::endl;
 	std::cout << "################## PROCESSING #######################" << std::endl;
-	std::cout << "###################################################\n" << std::endl;
+	std::cout << "###################################################\n"
+			  << std::endl;
 
 	std::cout << "sttus: " << clients[poll_fds[i].fd].get_status_code() << std::endl;
 
@@ -123,12 +144,13 @@ int Service::service_writing(std::vector<struct pollfd> &poll_fds, int i)
 {
 	std::cout << "\n###################################################" << std::endl;
 	std::cout << "################## WRITING #######################" << std::endl;
-	std::cout << "###################################################\n" << std::endl;
-
+	std::cout << "###################################################\n"
+			  << std::endl;
 
 	if (clients[poll_fds[i].fd].handle_write())
 	{
 		std::cout << "\n >> returning from inside writing - handle connection should happen outside << " << std::endl;
+		handle_connection(poll_fds, i);
 		// handle_connection(poll_fds, i);
 		poll_fds[i].events = POLLIN;
 		return (1);
@@ -231,7 +253,10 @@ void Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 		// Keep connection open for next request
 		poll_fds[i].events = POLLIN;
 		if (client.leftover_chunk() == true)
-			save_buffer = client._request._request_data.substr(client._request._header.size() + client._request._body.size());
+		{
+			std::cout << "there is data left: " << client._request._request_data << std::endl;
+			save_buffer = client._request._request_data;
+		}
 		client.refresh_client();
 		client._request._request_data = save_buffer;
 		std::cout << "[Handle Conn] Connection kept alive for fd: " << poll_fds[i].fd << std::endl;
@@ -258,9 +283,9 @@ void Service::handle_disconnection(std::vector<struct pollfd> &poll_fds, const s
 	int fd = poll_fds[i].fd;
 	std::cout << "[Handle Disconn] Handling disconnection for fd: " << fd << std::endl;
 
-	close(fd);			      // Close file descriptor
+	close(fd);							  // Close file descriptor
 	poll_fds.erase(poll_fds.begin() + i); // Remove from poll
-	clients.erase(fd);		      // Remove from map
+	clients.erase(fd);					  // Remove from map
 	std::cout << "[Handle Disconn] Handling disconnection (error/hangup) for fd: " << fd << std::endl;
 }
 // TODO:  merge handle connection and handle disconnection

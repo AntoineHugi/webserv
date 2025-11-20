@@ -101,11 +101,12 @@ class Client
 		bool request_complete() const { return _state == PROCESSING_REQUEST; };
 
 		/* Read section */
-		int	handle_read();
-		int	read_to_buffer();
+		int		handle_read();
+		int		read_to_buffer();
 		bool	try_parse_header();
 		bool	try_parse_body();
-		bool	try_parse_chunked_body();
+		bool	chunked_body_finished() const;
+		bool	decode_chunked_body();
 		bool	validate_permissions();
 		bool	validate_methods();
 

@@ -1,31 +1,31 @@
 #include "client.hpp"
 
 Client::Client() : _state(READING_HEADERS),
-		   _flags(),
-		   _fd(-1),
-		   _status_code(200),
-		   _last_interaction(std::time(0)),
-		   _server(),
-		   _request(),
-		   _response() {}
+				   _flags(),
+				   _fd(-1),
+				   _status_code(200),
+				   _last_interaction(std::time(0)),
+				   _server(),
+				   _request(),
+				   _response() {}
 
 Client::Client(int fd, Server &server) : _state(READING_HEADERS),
-					 _flags(),
-					 _fd(fd),
-					 _status_code(200),
-					 _last_interaction(std::time(0)),
-					 _server(&server),
-					 _request(),
-					 _response() {}
+										 _flags(),
+										 _fd(fd),
+										 _status_code(200),
+										 _last_interaction(std::time(0)),
+										 _server(&server),
+										 _request(),
+										 _response() {}
 
 Client::Client(const Client &other) : _state(other._state),
-				      _flags(other._flags),
-				      _fd(other._fd),
-				      _status_code(other._status_code),
-				      _last_interaction(other._last_interaction),
-				      _server(other._server),
-				      _request(other._request),
-				      _response(other._response) {}
+									  _flags(other._flags),
+									  _fd(other._fd),
+									  _status_code(other._status_code),
+									  _last_interaction(other._last_interaction),
+									  _server(other._server),
+									  _request(other._request),
+									  _response(other._response) {}
 
 Client &Client::operator=(const Client &other)
 {
@@ -79,7 +79,7 @@ void Client::refresh_client()
 	_state = READING_HEADERS;
 	_flags._should_keep_alive = false;
 	_flags._body_chunked = false;
-	// _flags._leftover_chunk = false;
+	//_flags._leftover_chunk = false;
 	_status_code = 200;
 }
 
@@ -136,9 +136,11 @@ bool Client::validate_permissions()
 	/* checks that the target uri exists */
 	if (stat(_request._fullPathURI.c_str(), &_request._stat) != 0)
 	{
+		std::cout << "URI doesn't exist : " << _request._fullPathURI << std::endl;
 		set_status_code(404);
 		return (false);
 	}
+	std::cout << "URI exists : " << _request._fullPathURI << std::endl;
 
 	/* checks if it's a directory */
 	if (S_ISDIR(_request._stat.st_mode) && (_request._method == "GET" || _request._method == "POST"))
@@ -243,7 +245,7 @@ bool Client::validate_methods()
 
 int Client::read_to_buffer()
 {
-	char buf[4096];
+	char buf[80];
 	ssize_t n = recv(_fd, buf, sizeof(buf), 0);
 
 	if (n > 0)
@@ -257,196 +259,106 @@ int Client::read_to_buffer()
 		return -1;
 }
 
-bool Client::try_parse_chunked_body()
+bool Client::decode_chunked_body()
 {
-	std::string &data = _request._request_data;
-	size_t &idx = _request._chunk_parse_index;
+	std::string &raw = _request._request_data;
+	size_t pos = 0;
+	_request._body.clear();
 
 	while (true)
 	{
-		if (_request._chunk_size_pending)
-		{
-			/* returns if need more data */
-			size_t line_end = data.find("\r\n", idx);
-			if (line_end == std::string::npos)
-			{
-				std::cout << "returned very early" << std::endl;
-				return false;
-			}
+		size_t size_end = raw.find("\r\n", pos);
+		if (size_end == std::string::npos)
+			return (false);
 
-			std::string size_str = data.substr(idx, line_end - idx);
-			size_t semicolon = size_str.find(';');
-			if (semicolon != std::string::npos)
-				size_str = size_str.substr(0, semicolon);
-			if (size_str.empty())
-			{
-				std::cout << "size_str empty" << std::endl;
-				_status_code = 400;
-				set_create_response();
-				return false;
-			}
-
-			for (size_t i = 0; i < size_str.size(); ++i)
-			{
-				char c = size_str[i];
-				bool hex = (c >= '0' && c <= '9') ||
-					   (c >= 'a' && c <= 'f') ||
-					   (c >= 'A' && c <= 'F');
-				if (!hex)
-				{
-					_status_code = 400;
-					std::cout << "no hex" << std::endl;
-					set_create_response();
-					return false;
-				}
-			}
-
-			// Manual hex parse
-			size_t chunk_size = 0;
-			for (size_t i = 0; i < size_str.size(); ++i)
-			{
-				chunk_size *= 16;
-				char c = size_str[i];
-				if (c >= '0' && c <= '9')
-					chunk_size += (c - '0');
-				else if (c >= 'a' && c <= 'f')
-					chunk_size += (c - 'a' + 10);
-				else
-					chunk_size += (c - 'A' + 10);
-			}
-			_request._current_chunk_size = chunk_size;
-
-			idx = line_end + 2;
-			_request._chunk_size_pending = false;
-		}
-
-		size_t chunk_size = _request._current_chunk_size;
-
-		if (data.size() < idx + chunk_size + 2)
-		{
-			std::cout << "returned kinda early" << std::endl;
-			return false;
-		}
-
-		if (static_cast<long long>(_request._decoded_body.size() + chunk_size) > _server->get_client_max_body_size())
-		{
-			std::cout << "too large" << std::endl;
-			_status_code = 413;
-			set_create_response();
-			return false;
-		}
-
-		if (chunk_size > 0)
-			_request._decoded_body.append(data, idx, chunk_size);
-
-		if (data[idx + chunk_size] != '\r' || data[idx + chunk_size + 1] != '\n')
-		{
-			std::cout << "no rn at the end" << std::endl;
-			_status_code = 400;
-			set_create_response();
-			return false;
-		}
-
-		idx += chunk_size + 2;
+		std::string hexsize = raw.substr(pos, size_end - pos);
+		size_t chunk_size = strtoul(hexsize.c_str(), NULL, 16);
+		pos = size_end + 2;
 
 		if (chunk_size == 0)
-		{
-			size_t trailers_end = data.find("\r\n\r\n", idx);
-			if (trailers_end == std::string::npos)
-			{
-				if (data.compare(idx, 2, "\r\n") != 0)
-				{
-					std::cout << "returned not so early" << std::endl;
-					return false;
-				}
-				trailers_end = idx + 2;
-			}
-			else
-				trailers_end += 4;
+			break;
 
-			size_t end_pos = trailers_end;
-			_request._body = _request._decoded_body;
+		if (raw.size() < pos + chunk_size + 2)
+			return (false);
 
-			if (_request.parse_body())
-			{
-				std::cout << "parse_body fail" << std::endl;
-				_status_code = 400;
-				set_create_response();
-				return false;
-			}
-			set_process_request();
-
-			// Mark leftover bytes
-			if (end_pos < data.size())
-				_flags._leftover_chunk = true;
-			else
-				_flags._leftover_chunk = false;
-
-			//_request._decoded_body.clear();
-
-			// _request._chunk_parse_index = 0;
-			 _request._chunk_size_pending = true;
-			 _request._current_chunk_size = 0;
-			std::cout << "about to return true" << std::endl;
-			return true;
-		}
-		_request._chunk_size_pending = true;
+		_request._body.append(raw, pos, chunk_size);
+		pos += chunk_size + 2;
 	}
+	_request._request_data.erase(0, pos);
+	if (!_request._request_data.empty())
+		_flags._leftover_chunk = true;
+	return (true);
+}
+
+bool Client::chunked_body_finished() const
+{
+	if (_request._request_data.find("0\r\n\r\n") != std::string::npos)
+		return true;
+	return false;
 }
 
 bool Client::try_parse_body()
 {
-	/* skips if not needed */
-	if (!can_i_read_body())
-		return (false);
-
+	std::cout << "try to parse body" << std::endl;
 	/* send to chunked version */
 	if (is_body_chunked())
 	{
 		std::cout << "body is chunked" << std::endl;
-		return (try_parse_chunked_body());
+		if (chunked_body_finished())
+		{
+			if (!decode_chunked_body())
+			{
+				_status_code = 400;
+				set_create_response();
+				return (1);
+			}
+			else
+			{
+				std::cout << "\033[35m  Body parsed \033[0m" << std::endl;
+				set_process_request();
+				return (0);
+			}
+		}
+		return (0);
 	}
 
 	/* if we didn't get the get the whole data yet, skip for another turn of reading */
-	size_t total_needed = _request._header.size() + _request._content_length;
-	if (_request._request_data.size() < total_needed)
-		return false;
+	if (_request._request_data.size() < _request._content_length)
+		return (0);
 
 	/* once we have everything, dump it into request._body */
-	_request._body = _request._request_data.substr(_request._header.size(), _request._content_length);
-
+	_request._body = _request._request_data.substr(0, _request._content_length);
 	if (_request.parse_body())
 	{
 		_status_code = 400;
 		set_create_response();
-		return false;
+		return (1);
 	}
 
+	std::cout << "\033[35m  Body parsed \033[0m" << std::endl;
+	_request._request_data.erase(0, _request._content_length);
+	set_process_request();
+
 	/* checking if there is anything left, potentially a new request */
-	if (_request._request_data.size() > _request._body.size() + _request._header.size())
+	if (_request._request_data.size() > 0)
 		_flags._leftover_chunk = true;
 	else
 		_flags._leftover_chunk = false;
-
-	_request._request_data.erase(0, total_needed);
-	set_process_request();
-	return true;
+	return (0);
 }
 
 bool Client::try_parse_header()
 {
 	/* Checking if we are still chekcking the header, if we're exceeding the size and if the end of header indicator has been found */
-	if (!can_i_read_header())
-		return false;
 	if (_request._request_data.size() > 16384)
 	{
 		_status_code = 413;
 		set_create_response();
-		return (false);
+		return (1);
 	}
 	size_t pos = _request._request_data.find("\r\n\r\n");
 	if (pos == std::string::npos)
-		return false;
+		return (0);
 
 	/* if found, parse the header and make some validation, jumping to the response if the parsing/validation fails */
 	_request._header = _request._request_data.substr(0, pos + 4);
@@ -454,42 +366,41 @@ bool Client::try_parse_header()
 	{
 		_status_code = 400;
 		set_create_response();
-		return (false);
+		return (1);
 	}
+	_request._request_data.erase(0, pos + 4);
 	set_flags();
+	if (_request._request_data.size() > _request._content_length)
+		_flags._leftover_chunk = true;
 	if (static_cast<long long>(_request._content_length) > _server->get_client_max_body_size())
 	{
 		_status_code = 413;
 		set_create_response();
-		return (false);
+		return (1);
 	}
 	if (_request.http_requirements_met() != 200)
 	{
 		set_create_response();
 		std::cout << "failed requirements" << std::endl;
-		return (false);
+		return (1);
 	}
 	if (!validate_permissions())
 	{
 		set_create_response();
+		if (_request._content_length > 0)
+			_request._request_data.erase(0, std::min(_request._content_length, _request._request_data.size()));
 		std::cout << "failed permissions" << std::endl;
-		return (false);
+		return (1);
 	}
-
+	std::cout << "\033[35m  Header parsed \033[0m" << std::endl;
 	/* if validation works, check if we should read the body next or go to the processing step */
 	if (is_body_chunked())
-	{
-		_request._chunk_parse_index = _request._header.size();
-		_request._chunk_size_pending = true;
-		_request._current_chunk_size = 0;
-		_request._decoded_body.clear();
 		set_read_body();
-	}
 	else if (_request.http_can_have_body() && _request._content_length != 0)
 		set_read_body();
 	else
 		set_process_request();
-	return true;
+	return (0);
 }
 
 int Client::handle_read()
@@ -502,44 +413,47 @@ int Client::handle_read()
 		return 1;
 	}
 
-	int read_result = read_to_buffer();
-	if (read_result == -1)
+	if (!leftover_chunk())
 	{
-		_status_code = 500;
-		set_create_response();
-		return 1;
-	}
-
-	/* proceed to next step if we received data */
-	if (read_result == 0)
-	{
-		if (!request_complete())
+		// std::cout << "request data was empty" << std::endl;
+		int read_result = read_to_buffer();
+		if (read_result == -1)
 		{
-			_status_code = 400;
+			_status_code = 500;
 			set_create_response();
 			return 1;
 		}
-		if (!_request._request_data.empty())
-			set_process_request();
-		return 1;
+
+		/* proceed to next step if we received data */
+		if (read_result == 0)
+		{
+			return 1;
+		}
 	}
+	else
+		_flags._leftover_chunk = false;
 
 	/* attempt finding and parsing header on what we received */
-	if (try_parse_header())
-		std::cout << "\033[35m  Header parsed \033[0m" << std::endl;
-
-	/* skipping processing the request if header malformed */
-	if (can_i_create_response())
+	if (can_i_read_header())
 	{
-		std::cout << "\033[35m skipping ahead to response \033[0m" << std::endl;
-		return (1);
+		if (try_parse_header() == 1)
+			return (1);
+		else
+		{
+			if (can_i_process_request())
+				return (2);	
+		}
 	}
-
-	/* attempt parsing body on what is left if needed */
-	if (try_parse_body())
+	
+	if (can_i_read_body())
 	{
-		std::cout << "\033[35m  Body parsed \033[0m" << std::endl;
-		return 1;
+		if (try_parse_body() == 1)
+			return 1;
+		else
+		{
+			if (can_i_process_request())
+				return (2);
+		}
 	}
 	return 0;
 }
@@ -573,32 +487,29 @@ void Client::processRequest()
 
 int Client::handle_write()
 {
-	if (can_i_create_response())
+	if (!can_i_create_response())
 	{
-		_response.set_request(&_request);
-		std::string response = _response.format_response(get_status_code(), should_keep_alive(), _request._header_kv["version"]);
-		_response.set_response_data(response);
-		set_send_response();
+		std::cout << "@@@@@@  IMPOSSIBLE >>>>>>>>>> Client not geting a reponse!" << std::endl;
+		_status_code = 500;
+		set_create_response();
+		return 1;
 	}
+	if (_status_code >= 500)
+		set_flags_error();
+	_response.set_request(&_request);
+	std::string response = _response.format_response(get_status_code(), should_keep_alive(), _request._header_kv["version"]);
+	_response.set_response_data(response);
+	set_send_response();
 	std::cout << "==>>  Client will receive answer" << std::endl;
 	std::string res = _response.get_response_data(_response.get_bytes_sent()).substr(0, 1024);
 	std::cout << "Response to be sent:\n-----\n"
-		  << res << "-----\n\n"
-		  << std::endl;
+			  << res << "-----\n\n"
+			  << std::endl;
 	ssize_t bytes_sent = send(_fd, res.c_str(), res.size(), 0);
 	if (bytes_sent == -1)
 	{
-		if (errno == EPIPE)
-		{
-			_status_code = 501;
-			set_handle_error();
-			// Client disconnected, close cleanly
-		}
-		else
-		{
-			set_handle_error();
-			_status_code = 500;
-		}
+		_status_code = 500;
+		set_flags_error();
 		std::cout << "Error sending response" << std::endl;
 		return (1);
 	}
@@ -622,7 +533,6 @@ int Client::handle_write()
 	}
 	return (0);
 }
-
 
 /*
 
