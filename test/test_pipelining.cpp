@@ -102,7 +102,7 @@ void test_pipeline_content_length_get(const TestConfig& config, TestStats& stats
 	request += "\r\n";
 	request += body;
 	// Second request
-	request += "GET /after HTTP/1.1\r\n";
+	request += "GET / HTTP/1.1\r\n";
 	request += "Host: localhost:8080\r\n";
 	request += "Connection: close\r\n";
 	request += "\r\n";

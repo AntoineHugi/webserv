@@ -87,7 +87,7 @@ void Method::handleGet(Client &client)
 
 void Method::handlePost(Client &client)
 {
-	(void)client;
+	//(void)client;
 	// need to parse the request body in further detail
 	// if (client._request._content_type == "multipart/form-data")
 	// 	multipartPost(Client& client)
