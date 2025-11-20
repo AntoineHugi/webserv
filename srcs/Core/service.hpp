@@ -6,6 +6,7 @@
 # include <iostream>
 # include "../Models/server.hpp"
 # include "../Models/client.hpp"
+# include "../Functions/workCGI.hpp"
 
 class Service
 {

@@ -131,6 +131,8 @@ int Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 	std::cout << "################## PROCESSING #######################"<< std::endl;
 	std::cout << "###################################################\n"<< std::endl;
 
+	if(this->clients[poll_fds[i].fd]._request._uri.find("cgi")) // TODO: it has to be based on the file extension, not the folder
+		run_cgi(this->clients[poll_fds[i].fd]);
 	// need to figure out how to avoid delays, for example cgi
 	// if (this->clients[poll_fds[i].fd]._server->validateRequest(clients[poll_fds[i].fd])) // TODO: change validateRequest ownlership to client accesing Server info
 		//this->clients[poll_fds[i].fd]._server.processRequest(clients[poll_fds[i].fd]);

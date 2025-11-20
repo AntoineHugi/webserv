@@ -17,11 +17,12 @@ SRCS =	srcs/main.cpp  \
 		srcs/Functions/method.cpp \
 		srcs/Functions/parserConfig.cpp \
 		srcs/Functions/requestUtils.cpp \
+		srcs/Functions/workCGI.cpp \
 		srcs/Models/client.cpp \
 		srcs/Models/request.cpp \
 		srcs/Models/response.cpp \
 		srcs/Models/route.cpp \
-		srcs/Models/server.cpp 
+		srcs/Models/server.cpp
 
 OBJDIR := build
 
