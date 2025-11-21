@@ -1,86 +1,58 @@
 
 #include "client.hpp"
 
-bool Client::validate_permissions()
+bool Client::transversal_protection()
 {
-	/* looks the best matching route for that uri */
-	std::vector<Route> routes = _server->get_routes();
-	if (routes.empty())
+	/* checking that the absolute path to the root exists */
+	char resolved_root[PATH_MAX];
+	if (!realpath(_request._root.c_str(), resolved_root))
 	{
-		Route default_route;
-		std::vector<std::string> methods;
-		methods.push_back("GET");
-		default_route.set_path("/");
-		default_route.set_methods(methods);
-		routes.push_back(default_route);
+		set_status_code(403);
+		return (false);
 	}
-	int index = -1;
-	std::string matchedPath;
-	for (size_t i = 0; i < routes.size(); ++i)
+	std::string real_root = resolved_root;
+	if (real_root[real_root.size() - 1] != '/')
+		real_root += '/';
+
+	/* checking that the path to the file is located within the root */
+	if (_request._method == "GET" || _request._method == "DELETE")
 	{
-		std::string path = routes[i].get_path();
-		if (_request._uri.compare(0, path.size(), path) == 0)
+		char resolved_file[PATH_MAX];
+		if (!realpath(_request._fullPathURI.c_str(), resolved_file))
 		{
-			if (path.size() >= matchedPath.size())
-			{
-				matchedPath = path;
-				index = i;
-			}
+			set_status_code(403);
+			return (false);
 		}
-	}
-	if (matchedPath.empty() || index == -1)
-	{
-		set_status_code(404);
-		return (false);
-	}
-
-	/* sets the right root for security: default or specific to the route and creates the full path root + uri */
-	if (!routes[index].get_root().empty())
-	{
-		_request._root = routes[index].get_root();
-		_request._fullPathURI = routes[index].get_root() + _request._uri.substr(matchedPath.size());
-	}
-	else
-	{
-		_request._root = _server->get_root();
-		_request._fullPathURI = _server->get_root() + _request._uri.substr(matchedPath.size());
-	}
-
-	/* checks that the target uri exists */
-	if (stat(_request._fullPathURI.c_str(), &_request._stat) != 0)
-	{
-		std::cout << "URI doesn't exist : " << _request._fullPathURI << std::endl;
-		set_status_code(404);
-		return (false);
-	}
-	std::cout << "URI exists : " << _request._fullPathURI << std::endl;
-
-	/* checks if it's a directory */
-	if (S_ISDIR(_request._stat.st_mode) && (_request._method == "GET" || _request._method == "POST"))
-	{
-		if ((!routes[index].get_autoindex().empty() && _request._method == "GET") || _request._method == "POST")
-			_request._isDirectory = true;
-		else
+		std::string real_file(resolved_file);
+		if (real_file.find(real_root) != 0)
 		{
 			set_status_code(403);
 			return (false);
 		}
 	}
-
-	/* checks that the method is allowed by that route, and then validates that method's permissions */
-	for (size_t j = 0; j < routes[index].get_methods().size(); ++j)
+	/* checking that the path to the file parent directory is located within the root */
+	else if (_request._method == "POST")
 	{
-		if (_request._method == routes[index].get_methods()[j])
+		char tmp[PATH_MAX];
+		strncpy(tmp, _request._fullPathURI.c_str(), PATH_MAX);
+		tmp[PATH_MAX - 1] = '\0';
+
+		char *parent = dirname(tmp);
+
+		char resolved_parent[PATH_MAX];
+		if (!realpath(parent, resolved_parent))
 		{
-			if (validate_methods())
-				return (true);
-			else
-				return (false);
+			set_status_code(403);
+			return false;
+		}
+		std::string real_parent = resolved_parent;
+		if (real_parent.find(real_root) != 0)
+		{
+			set_status_code(403);
+			return false;
 		}
 	}
-	set_status_code(405);
-	_response.set_allowed_methods(routes[index].get_methods());
-	return (false);
+	return (true);
 }
 
 bool Client::validate_methods()
@@ -99,9 +71,9 @@ bool Client::validate_methods()
 			return (false);
 		}
 	}
-	else if (_request._method == "POST")
+	else if (_request._method == "POST" || _request._method == "DELETE")
 	{
-		/* checking if we can post in this directory */
+		/* checking if we can write in this directory */
 		std::string dirPath;
 		{
 			char tmp[PATH_MAX];
@@ -117,42 +89,115 @@ bool Client::validate_methods()
 			return (false);
 		}
 	}
-	else if (_request._method == "DELETE" || _request._method == "POST")
+	return (true);
+}
+
+bool Client::is_method_allowed(const Route &route)
+{
+	for (size_t j = 0; j < route.get_methods().size(); ++j)
 	{
-		/* checking that the path to the file for deletion is located within the root of this route / server class */
-		char resolvedPath[PATH_MAX];
-		char resolvedRoot[PATH_MAX];
-		if (!realpath(_request._fullPathURI.c_str(), resolvedPath) || !realpath(_request._root.c_str(), resolvedRoot))
-		{
-			set_status_code(403);
-			return (false);
-		}
-		std::string resolvedFile(resolvedPath);
-		std::string resolvedRootDir(resolvedRoot);
-		if (resolvedRootDir[resolvedRootDir.size() - 1] != '/')
-			resolvedRootDir += '/';
-		if (resolvedFile.find(resolvedRootDir) != 0)
-		{
-			set_status_code(403);
-			return (false);
-		}
+		if (_request._method == route.get_methods()[j])
+			return (true);
+	}
+	set_status_code(405);
+	_response.set_allowed_methods(route.get_methods());
+	return (false);
+}
 
-		/* checking if we can delete in this directory */
-		std::string dirPath;
-		{
-			char tmp[PATH_MAX];
-			strncpy(tmp, _request._fullPathURI.c_str(), PATH_MAX);
-			tmp[PATH_MAX - 1] = '\0';
-
-			char *d = dirname(tmp);
-			dirPath = std::string(d);
-		}
-		if (access(dirPath.c_str(), W_OK) != 0)
+bool Client::check_directory_rules(const Route &route)
+{
+	if (S_ISDIR(_request._stat.st_mode) && (_request._method == "GET" || _request._method == "POST"))
+	{
+		if ((!route.get_autoindex().empty() && _request._method == "GET") || _request._method == "POST")
+			_request._isDirectory = true;
+		else
 		{
 			set_status_code(403);
 			return (false);
 		}
 	}
+	return (true);
+}
+
+bool Client::check_uri_exists()
+{
+	if (stat(_request._fullPathURI.c_str(), &_request._stat) != 0)
+	{
+		std::cout << "URI doesn't exist : " << _request._fullPathURI << std::endl;
+		set_status_code(404);
+		return (false);
+	}
+	return (true);
+}
+
+bool Client::route_matches(const std::string &uri, const std::string &route)
+{
+	if (uri.compare(0, route.size(), route) == 0)
+	{
+		if (uri.size() == route.size())
+			return (true);
+		else
+		{
+			if (uri[route.size()] == '/')
+				return (true);
+		}
+	}
+	return false;
+}
+
+int Client::find_best_route_index(std::vector<Route> &routes)
+{
+	int best_index = -1;
+	size_t best_len = 0;
+
+	for (size_t i = 0; i < routes.size(); ++i)
+	{
+		const std::string &route_path = routes[i].get_path();
+
+		if (route_matches(_request._uri, route_path))
+		{
+			if (route_path.size() >= best_len)
+			{
+				best_len = route_path.size();
+				best_index = static_cast<int>(i);
+			}
+		}
+	}
+
+	return (best_index);
+}
+
+bool Client::validate_permissions()
+{
+	std::vector<Route> routes = _server->get_routes();
+	int routeIndex = find_best_route_index(routes);
+	if (routeIndex < 0)
+	{
+		set_status_code(404);
+		return (false);
+	}
+
+	const Route &route = routes[routeIndex];
+	if (route.get_root().empty())
+		_request._root = _server->get_root();
+	else
+		_request._root = route.get_root();
+	_request._fullPathURI = _request._root + _request._uri.substr(route.get_path().size());
+
+	if (_request._method != "POST")
+	{
+		if (!check_uri_exists())
+			return (false);
+	}
+	if (!transversal_protection())
+		return (false);
+	if (!check_directory_rules(route))
+		return (false);
+	if (!is_method_allowed(route))
+		return (false);
+	if (!validate_methods())
+		return (false);
+
 	return (true);
 }
 

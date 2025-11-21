@@ -109,7 +109,7 @@ int Client::handle_read()
 	return 0;
 }
 
-void Client::processRequest()
+void Client::process_request()
 {
 	std::string methods[3] = {"GET", "POST", "DELETE"};
 	int field = -1;
@@ -121,13 +121,13 @@ void Client::processRequest()
 	switch (field)
 	{
 	case 0:
-		Method::handleGet(*this);
+		Method::handle_get(*this);
 		break;
 	case 1:
-		Method::handlePost(*this);
+		Method::handle_post(*this);
 		break;
 	case 2:
-		Method::handleDelete(*this);
+		Method::handle_delete(*this);
 		break;
 	default:
 		std::cout << "Error processing request, method is = " << _request._method << std::endl;

@@ -15,7 +15,7 @@ Method &Method::operator=(const Method &other)
 
 Method::~Method() {}
 
-void Method::getDirectory(Client &client, DIR *directory)
+void Method::get_directory(Client &client, DIR *directory)
 {
 	if (!directory)
 	{
@@ -34,7 +34,7 @@ void Method::getDirectory(Client &client, DIR *directory)
 	client.set_status_code(200);
 }
 
-void Method::getFile(Client &client, std::string filepath)
+void Method::get_file(Client &client, std::string filepath)
 {
 	int fd = open(filepath.c_str(), O_RDONLY);
 	if (fd == -1)
@@ -60,7 +60,7 @@ void Method::getFile(Client &client, std::string filepath)
 	client.set_status_code(200);
 }
 
-void Method::handleGet(Client &client)
+void Method::handle_get(Client &client)
 {
 	if (client._request._isDirectory)
 	{
@@ -71,21 +71,21 @@ void Method::handleGet(Client &client)
 			std::string attempt = client._request._fullPathURI + "/" + indices[i];
 			if (access(attempt.c_str(), R_OK) == 0)
 			{
-				getFile(client, attempt);
+				get_file(client, attempt);
 				return;
 			}
 		}
 
 		/* if not, then serves the directory list */
 		DIR *dir = opendir(client._request._fullPathURI.c_str());
-		getDirectory(client, dir);
+		get_directory(client, dir);
 	}
 	else
-		Method::getFile(client, client._request._fullPathURI);
+		Method::get_file(client, client._request._fullPathURI);
 	return;
 }
 
-void Method::handlePost(Client &client)
+void Method::handle_post(Client &client)
 {
 	//(void)client;
 	// need to parse the request body in further detail
@@ -97,7 +97,7 @@ void Method::handlePost(Client &client)
 	return;
 }
 
-void Method::handleDelete(Client &client)
+void Method::handle_delete(Client &client)
 {
 	if (S_ISREG(client._request._stat.st_mode))
 	{

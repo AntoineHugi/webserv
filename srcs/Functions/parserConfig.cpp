@@ -413,6 +413,15 @@ bool Parser::check_server(Server* server)
 		std::cout << "Config file error: max client body size missing" << std::endl;
 		return (false);
 	}
+	if (server->get_routes().empty())
+	{
+		Route default_route;
+		default_route.set_path("/");
+		std::vector<std::string> methods;
+		methods.push_back("GET");
+		default_route.set_methods(methods);
+		server->get_routes().push_back(default_route);
+	}
 	return (true);
 }
 

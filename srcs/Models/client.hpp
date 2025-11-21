@@ -108,10 +108,16 @@ class Client
 		bool	chunked_body_finished() const;
 		bool	decode_chunked_body();
 		bool	validate_permissions();
+		int		find_best_route_index(std::vector<Route>& routes);
+		bool	route_matches(const std::string &uri, const std::string &route);
+		bool	check_uri_exists();
+		bool	check_directory_rules(const Route &route);
+		bool	is_method_allowed(const Route &route);
 		bool	validate_methods();
+		bool	transversal_protection();
 
 		/* Processing section */
-		void	processRequest();
+		void	process_request();
 
 		/* Writing section */
 		int	handle_write();
