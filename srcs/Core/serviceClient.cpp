@@ -55,7 +55,7 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 		clients[poll_fds[i].fd]._request._body = "";
 	}
 	if (clients[poll_fds[i].fd].get_status_code() < 300)
-		clients[poll_fds[i].fd].processRequest();
+		clients[poll_fds[i].fd].process_request();
 	clients[poll_fds[i].fd].set_create_response();
 }
 

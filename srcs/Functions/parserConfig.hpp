@@ -23,7 +23,7 @@ class Parser
 		static bool	check_server(Server* server);
 
 		/* config file methods */ /* route */
-		static bool assign_single_keyval_route(Route* route, std::string& key, std::string& value);
+		static bool	assign_single_keyval_route(Route* route, std::string& key, std::string& value);
 		static bool	assign_vector_keyval_route(Route* route, std::string& key, std::vector <std::string> values);
 
 		/* client request methods */

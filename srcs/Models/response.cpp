@@ -54,13 +54,13 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	response += version + " " + ss.str() + " ";
 
 	reason_phrase = get_reason_phrase(status_code);
-	response += reason_phrase;
+	response += reason_phrase + "\r\n";
+
 	if (!_body.empty())
 	{
 		determine_content_type();
-		response += "Content-Type: ";
-		response += _content_type;
-		response += "\r\n";
+		//_content_type = "text/plain";
+		response += "Content-Type: " + _content_type + "\r\n";
 	}
 	if (status_code == 405)
 	{
@@ -81,7 +81,7 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 
 	//response += "Server: webserv42\r\n";
 
-	if (reason_phrase == "Internal Server Error\r\n")
+	if (reason_phrase == "Internal Server Error")
 	{
 		response += "Content-Length: 0\r\n";
 		response += "Connection: close\r\n";
@@ -106,6 +106,7 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	return response;
 }
 
+/* should be based on body, not request */
 void Response::determine_content_type()
 {
 	size_t dot = _request->_uri.find_last_of('.');

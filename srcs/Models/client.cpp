@@ -138,7 +138,7 @@ void Client::process_request()
 
 int Client::handle_write()
 {
-	if (!can_i_create_response())
+	if (!can_i_create_response() && !can_i_send_response())
 	{
 		std::cout << "@@@@@@  IMPOSSIBLE >>>>>>>>>> Client not geting a reponse!" << std::endl;
 		_status_code = 500;

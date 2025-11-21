@@ -1,11 +1,7 @@
 #include "request.hpp"
-#include <sstream>
-#include <string>
-#include <cstdlib>
 
 Request::Request() : _request_data(""),
 		     _header(""),
-		     _body(""),
 		     _method(""),
 		     _uri(""),
 		     _version(""),
@@ -16,10 +12,9 @@ Request::Request() : _request_data(""),
 		     _isDirectory(false),
 		     _stat(),
 		     _isCGI(false),
-		     _chunk_parse_index(0),
-		     _chunk_size_pending(false),
-		     _current_chunk_size(0),
-		     _decoded_body("")
+		     _body(""),
+		     _body_kv(),
+		     _multiparts()
 {
 }
 
@@ -27,7 +22,6 @@ Request::Request(const Request &other)
 {
 	_request_data = other._request_data;
 	_header = other._header;
-	_body = other._body;
 	_method = other._method;
 	_uri = other._uri;
 	_version = other._version;
@@ -38,10 +32,9 @@ Request::Request(const Request &other)
 	_isDirectory = other._isDirectory;
 	_stat = other._stat;
 	_isCGI = other._isCGI;
-	_chunk_parse_index = other._chunk_parse_index;
-	_chunk_size_pending = other._chunk_size_pending;
-	_current_chunk_size = other._current_chunk_size;
-	_decoded_body = other._decoded_body;
+	_body = other._body;
+	_body_kv = other._body_kv;
+	_multiparts = other._multiparts;
 }
 
 Request &Request::operator=(const Request &other)
@@ -50,7 +43,6 @@ Request &Request::operator=(const Request &other)
 	{
 		_request_data = other._request_data;
 		_header = other._header;
-		_body = other._body;
 		_method = other._method;
 		_uri = other._uri;
 		_version = other._version;
@@ -61,10 +53,9 @@ Request &Request::operator=(const Request &other)
 		_isDirectory = other._isDirectory;
 		_stat = other._stat;
 		_isCGI = other._isCGI;
-		_chunk_parse_index = other._chunk_parse_index;
-		_chunk_size_pending = other._chunk_size_pending;
-		_current_chunk_size = other._current_chunk_size;
-		_decoded_body = other._decoded_body;
+		_body = other._body;
+		_body_kv = other._body_kv;
+		_multiparts = other._multiparts;
 	}
 	return (*this);
 }
@@ -73,11 +64,21 @@ Request::~Request() {}
 
 void Request::flush_request_data()
 {
-	this->_request_data.clear();
-	this->_header.clear();
-	this->_body.clear();
-	this->_content_length = 0;
-	this->_header_kv.clear();
+	_request_data.clear();
+	_header.clear();
+	_method.clear();
+	_uri.clear();
+	_version.clear();
+	_header_kv.clear();
+	_content_length = 0;
+	_fullPathURI.clear();
+	_root.clear();
+	_isDirectory = false;
+	memset(&_stat, 0, sizeof(_stat));
+	_isCGI = false;
+	_body.clear();
+	_body_kv.clear();
+	_multiparts.clear();
 }
 
 int Request::http_requirements_met()
@@ -97,7 +98,7 @@ int Request::http_requirements_met()
 
 bool Request::http_can_have_body()
 {
-	if (this->_method != "POST" && this->_method != "PATCH" && this->_method != "PUT")
+	if (_method != "POST" && _method != "PATCH" && _method != "PUT")
 		return false;
 	return true;
 }
@@ -105,9 +106,9 @@ bool Request::http_can_have_body()
 int Request::parse_header()
 {
 	std::cout << "\033[34mParsing header...\n\033[0m" << std::endl;
-	std::cout << this->_request_data << std::endl;
+	std::cout << _request_data << std::endl;
 	std::string line;
-	std::istringstream stream(this->_header);
+	std::istringstream stream(_header);
 
 	std::getline(stream, line);
 	size_t first_space = line.find(" ");
@@ -115,13 +116,13 @@ int Request::parse_header()
 
 	if (first_space != std::string::npos && second_space != std::string::npos)
 	{
-		this->_method = line.substr(0, first_space);
-		this->_uri = line.substr(first_space + 1, second_space - first_space - 1);
-		if (this->_uri.size() > 2048)
+		_method = line.substr(0, first_space);
+		_uri = line.substr(first_space + 1, second_space - first_space - 1);
+		if (_uri.size() > 2048)
 			return (1);
-		this->_version = line.substr(second_space + 1);
-		if (!this->_version.empty() && this->_version.substr(this->_version.size() - 1) == "\r")
-			this->_version.erase(this->_version.size() - 1);
+		_version = line.substr(second_space + 1);
+		if (!_version.empty() && _version.substr(_version.size() - 1) == "\r")
+			_version.erase(_version.size() - 1);
 	}
 	while (std::getline(stream, line))
 	{
@@ -137,8 +138,8 @@ int Request::parse_header()
 			if (!value.empty() && value.substr(value.size() - 1) == "\r")
 				value.erase(value.size() - 1);
 
-			if (!this->_header_kv.count(key))
-				this->_header_kv[key] = value;
+			if (!_header_kv.count(key))
+				_header_kv[key] = value;
 			else
 			{
 				std::cout << "duplicate keys in header" << std::endl;
@@ -151,22 +152,22 @@ int Request::parse_header()
 		Content-Length: 123abc456  // strtol returns 123, endptr points to "abc456"
 		You accept 123 but ignore abc456 (garbage). This is technically invalid HTTP.
 	*/
-	if (!this->_header_kv.count("content-length"))
-		this->_content_length = 0;
+	if (!_header_kv.count("content-length"))
+		_content_length = 0;
 	else
 	{
 		char *endptr;
-		long val = std::strtol(this->_header_kv["content-length"].c_str(), &endptr, 10);
+		long val = std::strtol(_header_kv["content-length"].c_str(), &endptr, 10);
 		if (*endptr != '\0' && *endptr != '\r')
 		{
 			std::cout << "Bad formatting: content-length" << std::endl;
 			return (1);
 		}
-		this->_content_length = val;
+		_content_length = val;
 	}
 
 	std::map<std::string, std::string>::iterator it;
-	for (it = this->_header_kv.begin(); it != this->_header_kv.end(); ++it)
+	for (it = _header_kv.begin(); it != _header_kv.end(); ++it)
 	{
 		std::cout << "'" << it->first << "' : '" << it->second << "'" << std::endl;
 	}
@@ -175,13 +176,202 @@ int Request::parse_header()
 	return (0);
 }
 
+std::vector<std::string> Request::tokenise_url_encoded(std::string &str)
+{
+	std::vector<std::string> tokens;
+	std::istringstream iss(str);
+	std::string word;
+
+	while (iss >> word)
+	{
+		std::string current;
+
+		for (size_t i = 0; i < word.size(); ++i)
+		{
+			if (word[i] == '&' || word[i] == '=')
+			{
+				if (!current.empty())
+				{
+					tokens.push_back(current);
+					current.clear();
+				}
+				tokens.push_back(std::string(1, word[i]));
+			}
+			else
+				current += word[i];
+		}
+		if (!current.empty())
+			tokens.push_back(current);
+	}
+	return (tokens);
+}
+
+int Request::parse_url_encoded()
+{
+	std::vector<std::string> tokens = tokenise_url_encoded(_body);
+	for (size_t i = 0; i < tokens.size(); ++i)
+	{
+		if (tokens[i] == "=" || tokens[i] == "&")
+			return (1);
+		std::string key = tokens[i];
+		i++;
+		if (tokens[i] != "=")
+			return (1);
+		i++;
+		if (tokens[i] == "=" || tokens[i] == "&")
+			return (1);
+		std::string value = tokens[i];
+		_body_kv[key] = value;
+		i++;
+		if (tokens[i] != "&")
+			return (1);
+	}
+	return (0);
+}
+
+std::string Request::trimCRLF(const std::string &s)
+{
+	size_t start = 0;
+	size_t end = s.size();
+
+	while (start < end && (s[start] == '\r' || s[start] == '\n'))
+		start++;
+	while (end > start && (s[end - 1] == '\r' || s[end - 1] == '\n'))
+		end--;
+
+	return s.substr(start, end - start);
+}
+
+std::vector<MultiPart> Request::generate_multipart(const std::string &boundary)
+{
+	std::vector<MultiPart> multipart;
+
+	std::string realBoundary = "--" + boundary;
+	std::string endBoundary = realBoundary + "--";
+
+	size_t pos = 0;
+
+	while (true)
+	{
+		size_t start = _body.find(realBoundary, pos);
+		if (start == std::string::npos)
+			break;
+		start += realBoundary.size();
+		if (_body.compare(start, 2, "--") == 0)
+			break;
+		if (_body.compare(start, 2, "--") == 0)
+			break;
+		if (_body.compare(start, 2, "\r\n") == 0)
+			start += 2;
+		size_t headerEnd = _body.find("\r\n\r\n", start);
+		if (headerEnd == std::string::npos)
+			break;
+		std::string headerBlock = _body.substr(start, headerEnd - start);
+		size_t contentStart = headerEnd + 4;
+		size_t nextBoundary = _body.find(realBoundary, contentStart);
+		if (nextBoundary == std::string::npos)
+			break;
+		size_t contentEnd = nextBoundary;
+		std::vector<char> rawContent(_body.begin() + contentStart, _body.begin() + contentEnd);
+		if (rawContent.size() >= 2 && rawContent[rawContent.size() - 1] == '\n' && rawContent[rawContent.size() - 2] == '\r')
+			rawContent.erase(rawContent.end() - 2, rawContent.end());
+
+		MultiPart part;
+		std::stringstream hs(headerBlock);
+		std::string line;
+
+		while (std::getline(hs, line))
+		{
+			line = trimCRLF(line);
+
+			if (line.find("Content-Disposition:") == 0)
+			{
+				size_t namePos = line.find("name=\"");
+				if (namePos != std::string::npos)
+				{
+					namePos += 6;
+					size_t endPos = line.find("\"", namePos);
+					part.set_name(line.substr(namePos, endPos - namePos));
+				}
+
+				size_t filePos = line.find("filename=\"");
+				if (filePos != std::string::npos)
+				{
+					filePos += 10;
+					size_t endPos = line.find("\"", filePos);
+					part.set_file_name(line.substr(filePos, endPos - filePos));
+				}
+			}
+			else if (line.find("Content-Type:") == 0)
+			{
+				size_t sep = line.find(":");
+				std::string type = line.substr(sep + 1);
+				while (!type.empty() && type[0] == ' ')
+					type.erase(0, 1);
+				part.set_MIME_type(type);
+			}
+		}
+		part.set_file_data(rawContent);
+		multipart.push_back(part);
+		pos = nextBoundary;
+	}
+	return multipart;
+}
+
+std::string Request::find_boundary(std::string content_type)
+{
+	size_t pos = content_type.find("boundary");
+	if (pos == std::string::npos || content_type.size() < pos + 9)
+		return ("");
+	std::string boundary = content_type.substr(pos + 9);
+	size_t sc = boundary.find(';');
+	if (sc != std::string::npos)
+		boundary = boundary.substr(0, sc);
+	while (!boundary.empty() && (boundary[0] == ' ' || boundary[0] == '='))
+		boundary.erase(0, 1);
+	return (boundary);
+}
+
+int Request::parse_multipart(std::string content_type)
+{
+	std::string boundary = find_boundary(content_type);
+	if (boundary.empty())
+		return (1);
+	_multiparts = generate_multipart(boundary);
+	if (_multiparts.empty())
+		return (1);
+	return (0);
+}
+
+int Request::parse_json()
+{
+	return (0);
+}
+
+int Request::treat_as_raw_body()
+{
+	return (0);
+}
+
 int Request::parse_body()
 {
 	// TODO: parse Body to _body_parsed string. Specially if data is chunked
 	std::cout << "\033[36mParsing body...\n\033[0m" << std::endl;
-	std::cout << "\033[36m    Body: " << this->_body << "\n\033[0m" << std::endl;
+	std::cout << "\033[36m    Body: " << _body << "\n\033[0m" << std::endl;
 
-	return 0;
+	std::string content_type = _header_kv["content-type"];
+	if (content_type.empty())
+		return (1);
+
+	if (content_type == "application/x-www-form-urlencoded")
+		return (parse_url_encoded());
+	else if (content_type.find("multipart/form-data") != std::string::npos)
+		return (parse_multipart(content_type));
+	else if (content_type == "application/json")
+		return (parse_json());
+	else
+		return (treat_as_raw_body());
+
 	// if(this->_request._header_kv["Content-type"] == "application/json")
 	// 	parse_application_json(this);
 	// else if(this->_request._header_kv["Content-type"] == "application/x-www-form-urlencoded")

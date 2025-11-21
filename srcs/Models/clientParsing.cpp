@@ -8,6 +8,7 @@ bool Client::transversal_protection()
 	if (!realpath(_request._root.c_str(), resolved_root))
 	{
 		set_status_code(403);
+		std::cout << "failed root : " << resolved_root << std::endl;
 		return (false);
 	}
 	std::string real_root = resolved_root;
@@ -21,11 +22,15 @@ bool Client::transversal_protection()
 		if (!realpath(_request._fullPathURI.c_str(), resolved_file))
 		{
 			set_status_code(403);
+			std::cout << "failed file path : " << resolved_file << std::endl;
 			return (false);
 		}
 		std::string real_file(resolved_file);
+		if (real_file[real_file.size() - 1] != '/')
+			real_file += '/';
 		if (real_file.find(real_root) != 0)
 		{
+			std::cout << "didn't find root " << resolved_root << " | the file is " << resolved_file << std::endl;
 			set_status_code(403);
 			return (false);
 		}
@@ -42,12 +47,16 @@ bool Client::transversal_protection()
 		char resolved_parent[PATH_MAX];
 		if (!realpath(parent, resolved_parent))
 		{
+			std::cout << "failed parent " << resolved_parent << std::endl;
 			set_status_code(403);
 			return false;
 		}
 		std::string real_parent = resolved_parent;
+		if (real_parent[real_parent.size() - 1] != '/')
+			real_parent += '/';
 		if (real_parent.find(real_root) != 0)
 		{
+			std::cout << "didn't find root in parent " << resolved_parent << std::endl;
 			set_status_code(403);
 			return false;
 		}
@@ -183,20 +192,36 @@ bool Client::validate_permissions()
 	else
 		_request._root = route.get_root();
 	_request._fullPathURI = _request._root + _request._uri.substr(route.get_path().size());
+	std::cout << "full uri = " << _request._fullPathURI << std::endl;
 
 	if (_request._method != "POST")
 	{
 		if (!check_uri_exists())
+		{
+			std::cout << "failed existing uri" << std::endl;
 			return (false);
+		}
 	}
 	if (!transversal_protection())
+	{
+		std::cout << "failed transversal" << std::endl;
 		return (false);
+	}
 	if (!check_directory_rules(route))
+	{
+		std::cout << "failed directory rules" << std::endl;
 		return (false);
+	}
 	if (!is_method_allowed(route))
+	{
+		std::cout << "failed allowed methods" << std::endl;
 		return (false);
+	}
 	if (!validate_methods())
+	{
+		std::cout << "failed method validation" << std::endl;
 		return (false);
+	}
 
 	return (true);
 }
@@ -257,7 +282,6 @@ bool Client::chunked_body_finished() const
 
 bool Client::try_parse_body()
 {
-	std::cout << "try to parse body" << std::endl;
 	/* send to chunked version */
 	if (is_body_chunked())
 	{
@@ -272,6 +296,12 @@ bool Client::try_parse_body()
 			}
 			else
 			{
+				if (_request.parse_body())
+				{
+					_status_code = 400;
+					set_create_response();
+					return (1);
+				}
 				std::cout << "\033[35m  Body parsed \033[0m" << std::endl;
 				set_process_request();
 				return (0);

@@ -2,88 +2,40 @@
 
 std::string get_reason_phrase(int status_code)
 {
-	std::string response;
-
-	if (status_code / 100 == 2)
+	switch (status_code)
 	{
-		switch (status_code){
-			case 200:
-				response += "OK\r\n";
-				break;
-			case 201:
-				response += "Created\r\n";
-				break;
-			case 204:
-				response += "No Content\r\n";
-				break;
-			default:
-				response += "Internal Server Error\r\n";
-				break;
-		}
+	case 200:
+		return "OK";
+	case 201:
+		return "Created";
+	case 204:
+		return "No Content";
+	case 301:
+		return "Moved Permanently";
+	case 302:
+		return "Found";
+	case 304:
+		return "Not Modified";
+	case 400:
+		return "Bad Request";
+	case 403:
+		return "Forbidden";
+	case 404:
+		return "Not Found";
+	case 405:
+		return "Method Not Allowed";
+	case 413:
+		return "Payload Too Large";
+	case 431:
+		return "Request Header Fields Too Large";
+	case 500:
+		return "Internal Server Error";
+	case 501:
+		return "Not Implemented";
+	case 503:
+		return "Service Unavailable";
 	}
-	else if (status_code / 100 == 3)
-	{
-		switch (status_code){
-			case 301:
-				response += "Moved Permanently\r\n";
-				break;
-			case 302:
-				response += "Found\r\n";
-				break;
-			case 304:
-				response += "Not Modified\r\n";
-				break;
-			default:
-				response += "Internal Server Error\r\n";
-				break;
-		}
-	}
-	else if (status_code / 100 == 4)
-	{
-		switch (status_code){
-			case 400:
-				response += "Bad Request\r\n";
-				break;
-			case 403:
-				response += "Forbidden\r\n";
-				break;
-			case 404:
-				response += "Not Found\r\n";
-				break;
-			case 405:
-				response += "Method Not Allowed\r\n";
-				break;
-			case 413:
-				response += "Payload Too Large\r\n";
-				break;
-			case 431:
-				response += "Request Header Fields Too Large\r\n";
-				break;
-			default:
-				response += "Internal Server Error\r\n";
-				break;
-		}
-	}
-	else if (status_code / 100 == 5)
-	{
-		switch (status_code){
-			case 500:
-				response += "Internal Server Error\r\n";
-				break;
-			case 501:
-				response += "Not Implemented\r\n";
-				break;
-			case 503:
-				response += "Service Unavailable\r\n";
-				break;
-			default:
-				response += "Internal Server Error\r\n";
-				break;
-		}
-	}
-	else
-		response += "Internal Server Error\r\n";
-	return response;
+	return "Internal Server Error";
 }
 
 // void parse_application_json(Client &client)
