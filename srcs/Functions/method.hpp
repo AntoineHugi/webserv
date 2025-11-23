@@ -25,8 +25,10 @@ class Method
 
 		static void	handle_get(Client& client);
 		static void	get_file(Client &client, std::string filepath);
+		static void	determine_content_type(Client &client, std::string filepath);
 		static void	get_directory(Client &client, DIR* directory);
 		static void	handle_post(Client& client);
+		static int	saveUploadedFiles(std::vector<MultiPart>& parts, const std::string& upload_directory);
 		static void	handle_delete(Client& client);
 };
 

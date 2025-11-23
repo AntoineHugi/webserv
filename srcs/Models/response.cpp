@@ -57,11 +57,7 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	response += reason_phrase + "\r\n";
 
 	if (!_body.empty())
-	{
-		determine_content_type();
-		//_content_type = "text/plain";
 		response += "Content-Type: " + _content_type + "\r\n";
-	}
 	if (status_code == 405)
 	{
 		response += "Allowed-Methods: ";
@@ -104,31 +100,4 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	if (_body.size() != 0)
 		response += _body;
 	return response;
-}
-
-/* should be based on body, not request */
-void Response::determine_content_type()
-{
-	size_t dot = _request->_uri.find_last_of('.');
-	if (dot == std::string::npos)
-	{
-		_content_type = "application/octet-stream";
-		return;
-	}
-	std::string ext = _request->_uri.substr(dot + 1);
-	for (size_t i = 0; i < ext.size(); i++)
-		ext[i] = std::tolower(ext[i]);
-	if (ext == "html" || ext == "htm") { _content_type = "text/html"; }
-	else if (ext == "txt") { _content_type = "text/plain"; }
-	else if (ext == "json") { _content_type = "application/json"; }
-	else if (ext == "png") { _content_type = "image/png"; }
-	else if (ext == "jpg" || ext == "jpeg") { _content_type = "image/jpeg"; }
-	else if (ext == "webp") { _content_type = "image/webp"; }
-	else if (ext == "gif") { _content_type = "image/gif"; }
-	else if (ext == "pdf") { _content_type = "application/pdf"; }
-	else if (ext == "css") { _content_type = "text/css"; }
-	else if (ext == "js") { _content_type = "application/javascript"; }
-	else if (ext == "py") { _content_type = "text/x-python"; }
-	else { _content_type = "application/octet-stream"; }
-	return;
 }

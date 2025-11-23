@@ -37,6 +37,7 @@ class Request
 		std::string _body;
 		std::map<std::string, std::string> _body_kv;
 		std::vector<MultiPart> _multiparts;
+		std::vector<char> _body_data;
 
 		Request();
 		Request(const Request &other);

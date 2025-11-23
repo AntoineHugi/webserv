@@ -34,6 +34,38 @@ void Method::get_directory(Client &client, DIR *directory)
 	client.set_status_code(200);
 }
 
+/* should be based on body, not request */
+void Method::determine_content_type(Client &client, std::string filepath)
+{
+	size_t dot = filepath.find_last_of('.');
+	std::string content_type;
+	if (dot == std::string::npos)
+	{
+		client._response.set_content_type("application/octet-stream");
+		return;
+	}
+	else
+	{
+		std::string ext = filepath.substr(dot + 1);
+		for (size_t i = 0; i < ext.size(); i++)
+			ext[i] = std::tolower(ext[i]);
+		if (ext == "html" || ext == "htm") { content_type = "text/html"; }
+		else if (ext == "txt") { content_type = "text/plain"; }
+		else if (ext == "json") { content_type = "application/json"; }
+		else if (ext == "png") { content_type = "image/png"; }
+		else if (ext == "jpg" || ext == "jpeg") { content_type = "image/jpeg"; }
+		else if (ext == "webp") { content_type = "image/webp"; }
+		else if (ext == "gif") { content_type = "image/gif"; }
+		else if (ext == "pdf") { content_type = "application/pdf"; }
+		else if (ext == "css") { content_type = "text/css"; }
+		else if (ext == "js") { content_type = "application/javascript"; }
+		else if (ext == "py") { content_type = "text/x-python"; }
+		else { content_type = "application/octet-stream"; }
+	}
+	client._response.set_content_type("content_type");
+	return;
+}
+
 void Method::get_file(Client &client, std::string filepath)
 {
 	int fd = open(filepath.c_str(), O_RDONLY);
@@ -57,6 +89,7 @@ void Method::get_file(Client &client, std::string filepath)
 	}
 	client._response.set_body(body);
 	close(fd);
+	determine_content_type(client, filepath);
 	client.set_status_code(200);
 }
 
@@ -85,15 +118,46 @@ void Method::handle_get(Client &client)
 	return;
 }
 
+int	Method::saveUploadedFiles(std::vector<MultiPart>& parts, const std::string& upload_directory)
+{
+	for (size_t i = 0; i < parts.size(); ++i)
+	{
+		if (parts[i].get_file_name().empty())
+			continue;
+		std::string path = upload_directory + "/" + parts[i].get_file_name();
+		std::ofstream out(path.c_str(), std::ios::binary);
+		if (!out.is_open())
+		{
+			std::cout << "Failed to open file for writing: " << path << std::endl;
+			return (1);
+		}
+		const std::vector<char> &data = parts[i].get_file_data();
+		out.write(data.data(), data.size());
+		out.close();
+		std::cout << "Saved file: " << path << " to disc." << std::endl;
+	}
+	return (0);
+}
+
 void Method::handle_post(Client &client)
 {
-	//(void)client;
-	// need to parse the request body in further detail
-	// if (client._request._content_type == "multipart/form-data")
-	// 	multipartPost(Client& client)
-	// else if (client._request._content_type == "application/x-www-form-urlencoded")
-	// 	formPost(Client& client)
-	client.set_status_code(200);
+	std::cout << "content-type: " << client._request._header_kv["content-type"] << std::endl;
+	if (client._request._header_kv["content-type"] == "application/x-www-form-urlencoded")
+	{
+		client.set_status_code(200);
+
+		return;
+	}
+	else if (client._request._header_kv["content-type"].find("multipart/form-data") != std::string::npos)
+	{
+		if (saveUploadedFiles(client._request._multiparts, client._request._fullPathURI) == 1)
+		{
+			client.set_status_code(500);
+			return;
+		}
+		client.set_status_code(204);
+		return;
+	}
 	return;
 }
 

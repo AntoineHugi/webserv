@@ -14,7 +14,8 @@ Request::Request() : _request_data(""),
 		     _isCGI(false),
 		     _body(""),
 		     _body_kv(),
-		     _multiparts()
+		     _multiparts(),
+		     _body_data()
 {
 }
 
@@ -35,6 +36,7 @@ Request::Request(const Request &other)
 	_body = other._body;
 	_body_kv = other._body_kv;
 	_multiparts = other._multiparts;
+	_body_data = other._body_data;
 }
 
 Request &Request::operator=(const Request &other)
@@ -56,6 +58,7 @@ Request &Request::operator=(const Request &other)
 		_body = other._body;
 		_body_kv = other._body_kv;
 		_multiparts = other._multiparts;
+		_body_data = other._body_data;
 	}
 	return (*this);
 }
@@ -79,6 +82,7 @@ void Request::flush_request_data()
 	_body.clear();
 	_body_kv.clear();
 	_multiparts.clear();
+	_body_data.clear();
 }
 
 int Request::http_requirements_met()
@@ -292,6 +296,7 @@ std::vector<MultiPart> Request::generate_multipart(const std::string &boundary)
 					namePos += 6;
 					size_t endPos = line.find("\"", namePos);
 					part.set_name(line.substr(namePos, endPos - namePos));
+					std::cout << "part name = " << part.get_name() << std::endl;
 				}
 
 				size_t filePos = line.find("filename=\"");
@@ -300,6 +305,7 @@ std::vector<MultiPart> Request::generate_multipart(const std::string &boundary)
 					filePos += 10;
 					size_t endPos = line.find("\"", filePos);
 					part.set_file_name(line.substr(filePos, endPos - filePos));
+					std::cout << "file name = " << part.get_file_name() << std::endl;
 				}
 			}
 			else if (line.find("Content-Type:") == 0)
@@ -309,6 +315,7 @@ std::vector<MultiPart> Request::generate_multipart(const std::string &boundary)
 				while (!type.empty() && type[0] == ' ')
 					type.erase(0, 1);
 				part.set_MIME_type(type);
+				std::cout << "file type = " << part.get_MIME_type() << std::endl;
 			}
 		}
 		part.set_file_data(rawContent);
@@ -350,6 +357,10 @@ int Request::parse_json()
 
 int Request::treat_as_raw_body()
 {
+	std::vector<char> rawContent(_body.begin(), _body.end());
+	if (rawContent.size() >= 2 && rawContent[rawContent.size() - 1] == '\n' && rawContent[rawContent.size() - 2] == '\r')
+		rawContent.erase(rawContent.end() - 2, rawContent.end());
+	_body_data = rawContent;
 	return (0);
 }
 
@@ -360,9 +371,6 @@ int Request::parse_body()
 	std::cout << "\033[36m    Body: " << _body << "\n\033[0m" << std::endl;
 
 	std::string content_type = _header_kv["content-type"];
-	if (content_type.empty())
-		return (1);
-
 	if (content_type == "application/x-www-form-urlencoded")
 		return (parse_url_encoded());
 	else if (content_type.find("multipart/form-data") != std::string::npos)

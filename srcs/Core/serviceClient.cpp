@@ -54,9 +54,11 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 		clients[poll_fds[i].fd].set_flags_error();
 		clients[poll_fds[i].fd]._request._body = "";
 	}
+	std::cout << "sttus: " << clients[poll_fds[i].fd].get_status_code() << std::endl;
 	if (clients[poll_fds[i].fd].get_status_code() < 300)
 		clients[poll_fds[i].fd].process_request();
 	clients[poll_fds[i].fd].set_create_response();
+	std::cout << "sttus: " << clients[poll_fds[i].fd].get_status_code() << std::endl;
 }
 
 int Service::service_writing(std::vector<struct pollfd> &poll_fds, int i)

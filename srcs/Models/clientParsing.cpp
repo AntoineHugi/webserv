@@ -30,7 +30,7 @@ bool Client::transversal_protection()
 			real_file += '/';
 		if (real_file.find(real_root) != 0)
 		{
-			std::cout << "didn't find root " << resolved_root << " | the file is " << resolved_file << std::endl;
+			std::cout << "didn't find root " << real_root << " | the file is " << real_file << std::endl;
 			set_status_code(403);
 			return (false);
 		}
@@ -38,25 +38,19 @@ bool Client::transversal_protection()
 	/* checking that the path to the file parent directory is located within the root */
 	else if (_request._method == "POST")
 	{
-		char tmp[PATH_MAX];
-		strncpy(tmp, _request._fullPathURI.c_str(), PATH_MAX);
-		tmp[PATH_MAX - 1] = '\0';
-
-		char *parent = dirname(tmp);
-
 		char resolved_parent[PATH_MAX];
-		if (!realpath(parent, resolved_parent))
+		if (!realpath(_request._fullPathURI.c_str(), resolved_parent))
 		{
-			std::cout << "failed parent " << resolved_parent << std::endl;
 			set_status_code(403);
-			return false;
+			std::cout << "failed file path : " << resolved_parent << std::endl;
+			return (false);
 		}
 		std::string real_parent = resolved_parent;
 		if (real_parent[real_parent.size() - 1] != '/')
 			real_parent += '/';
 		if (real_parent.find(real_root) != 0)
 		{
-			std::cout << "didn't find root in parent " << resolved_parent << std::endl;
+			std::cout << "didn't find root: " << " | in parent: " << real_parent << std::endl;
 			set_status_code(403);
 			return false;
 		}
@@ -192,8 +186,6 @@ bool Client::validate_permissions()
 	else
 		_request._root = route.get_root();
 	_request._fullPathURI = _request._root + _request._uri.substr(route.get_path().size());
-	std::cout << "full uri = " << _request._fullPathURI << std::endl;
-
 	if (_request._method != "POST")
 	{
 		if (!check_uri_exists())
