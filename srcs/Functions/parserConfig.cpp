@@ -128,10 +128,31 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 					return (false);
 				++i;
 			}
+			else if (tokens[i] == "allow" || tokens[i] == "deny")
+			{
+				std::string key = tokens[i];
+				++i;
+				if (i >= tokens.size() || tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+				{
+					--(i);
+					std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+					return (false);
+				}
+				std::string value = tokens[i];
+				++i;
+				if (i >= tokens.size() || tokens[i] != ";")
+				{
+					--(i);
+					std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+					return (false);
+				}
+				server.set_bouncer(key, value);
+				++i;
+			}
 			else if (tokens[i] == "error_page")
 			{
 				++i;
-				if (tokens[i] == ";" && tokens[i] == "{" && tokens[i] != "}")
+				if (i >= tokens.size() || tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
 				{
 					--i;
 					std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
@@ -139,7 +160,7 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 				}
 				std::string key = tokens[i];
 				++i;
-				if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+				if (i >= tokens.size() || tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
 				{
 					--i;
 					std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
@@ -148,7 +169,7 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 				std::string value = tokens[i];
 				server.set_error_page(key, value);
 				++i;
-				if (tokens[i] != ";")
+				if (i >= tokens.size() || tokens[i] != ";")
 				{
 					--i;
 					std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
@@ -242,7 +263,7 @@ bool Parser::parse_location(Server* server, std::vector <std::string> tokens, si
 		{
 			std::string key = tokens[*i];
 			++(*i);
-			if (*i >= tokens.size() || tokens[*i] == ";" || tokens[*i] == "{")
+			if (*i >= tokens.size() || tokens[*i] == ";" || tokens[*i] == "{" || tokens[*i] == "}")
 			{
 				--(*i);
 				std::cout << "Config file error: unexpected element after " << tokens[*i] << std::endl;
@@ -251,7 +272,7 @@ bool Parser::parse_location(Server* server, std::vector <std::string> tokens, si
 			std::vector<std::string> values;
 			values.push_back(tokens[*i]);
 			++(*i);
-			while (*i < tokens.size() && tokens[*i] != ";")
+			while (*i < tokens.size() && tokens[*i] != ";" && tokens[*i] != "{" && tokens[*i] != "}")
 			{
 				values.push_back(tokens[*i]);
 				++(*i);
@@ -264,6 +285,26 @@ bool Parser::parse_location(Server* server, std::vector <std::string> tokens, si
 			}
 			if (!assign_vector_keyval_route(&route, key, values))
 				return (false);
+		}
+		else if (tokens[*i] == "allow" || tokens[*i] == "deny")
+		{
+			std::string key = tokens[*i];
+			++(*i);
+			if (*i >= tokens.size() || tokens[*i] == ";" || tokens[*i] == "{" || tokens[*i] == "}")
+			{
+				--(*i);
+				std::cout << "Config file error: unexpected element after " << tokens[*i] << std::endl;
+				return (false);
+			}
+			std::string value = tokens[*i];
+			++(*i);
+			if (*i >= tokens.size() || tokens[*i] != ";")
+			{
+				--(*i);
+				std::cout << "Config file error: expecting ';' after " << tokens[*i] << std::endl;
+				return (false);
+			}
+			route.set_bouncer(key, value);
 		}
 		else
 		{

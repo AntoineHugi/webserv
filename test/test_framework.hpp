@@ -6,6 +6,13 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <cstring>
+#include <cerrno>
+#include <cstdlib>
 
 // ============================================================================
 // TEST CONFIGURATION

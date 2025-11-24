@@ -11,14 +11,15 @@ Client::Client() : _state(READING_HEADERS),
 		   _request(),
 		   _response() {}
 
-Client::Client(int fd, Server &server) : _state(READING_HEADERS),
-					 _flags(),
-					 _fd(fd),
-					 _status_code(200),
-					 _last_interaction(std::time(0)),
-					 _server(&server),
-					 _request(),
-					 _response() {}
+Client::Client(int fd, Server &server, std::string client_ip) : _state(READING_HEADERS),
+							_flags(),
+							_fd(fd),
+							_status_code(200),
+							_last_interaction(std::time(0)),
+							_server(&server),
+							_client_ip(client_ip),
+							_request(),
+							_response() {}
 
 Client::Client(const Client &other) : _state(other._state),
 				      _flags(other._flags),
@@ -26,6 +27,7 @@ Client::Client(const Client &other) : _state(other._state),
 				      _status_code(other._status_code),
 				      _last_interaction(other._last_interaction),
 				      _server(other._server),
+				      _client_ip(other._client_ip),
 				      _request(other._request),
 				      _response(other._response) {}
 
@@ -39,6 +41,7 @@ Client &Client::operator=(const Client &other)
 		_status_code = other._status_code;
 		_last_interaction = other._last_interaction;
 		_server = other._server;
+		_client_ip = other._client_ip;
 		_request = other._request;
 		_response = other._response;
 	}

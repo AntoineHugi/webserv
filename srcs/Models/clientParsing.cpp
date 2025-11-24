@@ -122,6 +122,81 @@ bool Client::check_directory_rules(const Route &route)
 	return (true);
 }
 
+bool Client::check_subnet(const std::string& rule_target, const std::string& client_ip)
+{
+	size_t slash = rule_target.find('/');
+	if (slash != std::string::npos && rule_target.size() >= slash + 2)
+	{
+		std::string network = rule_target.substr(0, slash);
+		int prefix = std::strtol(rule_target.substr(slash + 1).c_str(), NULL, 10);
+		if (prefix < 0 || prefix > 32)
+		{
+		set_status_code(500);
+		set_create_response();
+		return false;
+		}
+
+		struct in_addr addr;
+		if (inet_pton(AF_INET, client_ip.c_str(), &addr) != 1)
+		{
+			set_status_code(500);
+			set_create_response();
+			return (false);
+		}
+		uint32_t client = ntohl(addr.s_addr); 
+
+		if (inet_pton(AF_INET, network.c_str(), &addr) != 1)
+		{
+			set_status_code(500);
+			set_create_response();
+			return (false);
+		}
+		uint32_t net = ntohl(addr.s_addr); 
+
+		uint32_t mask = 0;
+		if (prefix > 0 && prefix <= 32) {
+			mask = 0xFFFFFFFF;
+			mask <<= (32 - prefix);
+		}
+
+		if ((client & mask) == (net & mask))
+			return (true);
+	}
+	return (false);
+}
+
+bool Client::bouncer_approval(const Route &route)
+{
+	/* get highest ranking bouncer to decide on allow/deny, return if there is no bouncer */
+	std::map <std::string, std::string> bouncer = route.get_bouncer();
+	if (bouncer.empty())
+		bouncer = _server->get_bouncer();
+	if (bouncer.empty())
+		return (true);
+
+	for (std::map<std::string, std::string>::const_iterator it = bouncer.begin(); it != bouncer.end(); ++it)
+	{
+		const std::string& rule_type = it->first;
+		const std::string& rule_target = it->second;
+
+		if (rule_type == "deny")
+		{
+			if (rule_target == "all" || rule_target == _client_ip || check_subnet(rule_target, _client_ip))
+				return false;
+		}
+		else if (rule_type == "allow")
+		{
+			if (rule_target == "none")
+				return false;
+			else if (rule_target == _client_ip)
+				return (true);
+			else if (check_subnet(rule_target, _client_ip))
+				return (true);
+		}
+	}
+	return (false);
+}
+
 bool Client::check_uri_exists()
 {
 	if (stat(_request._fullPathURI.c_str(), &_request._stat) != 0)
@@ -193,6 +268,11 @@ bool Client::validate_permissions()
 			std::cout << "failed existing uri" << std::endl;
 			return (false);
 		}
+	}
+	if (!bouncer_approval(route))
+	{
+		std::cout << "failed transversal" << std::endl;
+		return (false);
 	}
 	if (!transversal_protection())
 	{
@@ -329,10 +409,10 @@ bool Client::try_parse_body()
 
 bool Client::try_parse_header()
 {
-	/* Checking if we are still chekcking the header, if we're exceeding the size and if the end of header indicator has been found */
+	/* Checking if we're exceeding the size and if the end of header indicator has been found */
 	if (_request._request_data.size() > 16384)
 	{
-		_status_code = 413;
+		_status_code = 431;
 		set_create_response();
 		return (1);
 	}
@@ -358,7 +438,7 @@ bool Client::try_parse_header()
 		set_create_response();
 		return (1);
 	}
-	if (_request.http_requirements_met() != 200)
+	if ((_status_code = _request.http_requirements_met()) != 200)
 	{
 		set_create_response();
 		std::cout << "failed requirements" << std::endl;

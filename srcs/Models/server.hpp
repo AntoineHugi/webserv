@@ -14,12 +14,12 @@
 # include <map>
 # include <algorithm>
 # include <fcntl.h>
+# include <arpa/inet.h> 
 # include <netinet/in.h>
 # include <sys/socket.h>
 # include <sys/wait.h>
 # include <libgen.h>
-// # include "client.hpp"
-// # include "../Functions/method.hpp"
+
 # include "route.hpp"
 
 class Server
@@ -31,6 +31,7 @@ class Server
 		std::string _root;
 		std::vector <std::string> _index;
 		std::map <std::string, std::string> _error_page;
+		std::map <std::string, std::string> _bouncer;
 		long long _client_max_body_size;
 		int	_sock;
 		std::vector <Route> _routes;
@@ -49,6 +50,7 @@ class Server
 		std::string	get_root();
 		std::vector <std::string>	get_index();
 		std::map <std::string, std::string>	get_error_page();
+		std::map <std::string, std::string>	get_bouncer();
 		long long	get_client_max_body_size();
 		std::vector <Route>	get_routes();
 
@@ -60,6 +62,7 @@ class Server
 		void	set_root(const std::string& root);
 		void	set_index(const std::vector <std::string>& index);
 		void	set_error_page(std::string& key, std::string& value);
+		void	set_bouncer(std::string& key, std::string& value);
 		void	set_client_max_body_size(const std::string& max);
 		void	add_route(Route route);
 

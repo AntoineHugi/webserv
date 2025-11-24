@@ -56,6 +56,7 @@ class Client
 		int _status_code;
 		std::time_t _last_interaction;
 		Server* _server;
+		std::string _client_ip;
 
 	public:
 		Request _request;
@@ -63,7 +64,7 @@ class Client
 		// TODO: add timestamp for keep-alive timeout and hanging handling
 
 		Client();
-		Client(int fd, Server& server);
+		Client(int fd, Server& server, std::string client_ip);
 		Client(const Client& other);
 		Client& operator=(const Client& other);
 		~Client();
@@ -111,6 +112,8 @@ class Client
 		int		find_best_route_index(std::vector<Route>& routes);
 		bool	route_matches(const std::string &uri, const std::string &route);
 		bool	check_uri_exists();
+		bool	bouncer_approval(const Route &route);
+		bool	check_subnet(const std::string& rule_target, const std::string& _client_ip);
 		bool	check_directory_rules(const Route &route);
 		bool	is_method_allowed(const Route &route);
 		bool	validate_methods();

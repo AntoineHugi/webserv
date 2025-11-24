@@ -1,44 +1,46 @@
 # include "route.hpp"
 
-Route::Route(): _path(""), _root(""), _autoindex(""), _cgi_path(""), _methods() {}
+Route::Route(): _path(""), _root(""), _autoindex(""), _cgi_path(""), _methods(), _bouncer() {}
 
 Route::Route(const Route& other)
 {
-	this->_path = other._path;
-	this->_root = other._root;
-	this->_autoindex = other._autoindex;
-	this->_cgi_path = other._cgi_path;
-	this->_methods = other._methods;
+	_path = other._path;
+	_root = other._root;
+	_autoindex = other._autoindex;
+	_cgi_path = other._cgi_path;
+	_methods = other._methods;
+
 }
 
 Route& Route::operator=(const Route& other)
 {
 	if (this != &other)
 	{
-		this->_path = other._path;
-		this->_root = other._root;
-		this->_autoindex = other._autoindex;
-		this->_cgi_path = other._cgi_path;
-		this->_methods = other._methods;
+		_path = other._path;
+		_root = other._root;
+		_autoindex = other._autoindex;
+		_cgi_path = other._cgi_path;
+		_methods = other._methods;
 	}
 	return (*this);
 }
 
 Route::~Route() {}
 
-std::string	Route::get_path() const { return (this->_path); }
-std::string	Route::get_root() const { return (this->_root); }
-std::string	Route::get_autoindex() const { return (this->_autoindex); }
-std::string	Route::get_cgi_path() const { return (this->_cgi_path); }
-std::vector <std::string>	Route::get_methods() const { return (this->_methods); }
+std::string	Route::get_path() const { return (_path); }
+std::string	Route::get_root() const { return (_root); }
+std::string	Route::get_autoindex() const { return (_autoindex); }
+std::string	Route::get_cgi_path() const { return (_cgi_path); }
+std::vector <std::string>	Route::get_methods() const { return (_methods); }
+std::map <std::string, std::string>	Route::get_bouncer() const { return (_bouncer); }
 
-void	Route::set_path(const std::string& path) { this->_path = path; }
-void	Route::set_root(const std::string& root) { this->_root = root; }
+void	Route::set_path(const std::string& path) { _path = path; }
+void	Route::set_root(const std::string& root) { _root = root; }
 void	Route::set_autoindex(const std::string& autoindex) 
 {
 	if (autoindex != "on" && autoindex != "off")
 			throw (std::runtime_error("Invalid autoindex: " + autoindex));
-	this->_autoindex = autoindex;
+	_autoindex = autoindex;
 }
 
 void	Route::set_methods(const std::vector <std::string>& methods) 
@@ -48,7 +50,8 @@ void	Route::set_methods(const std::vector <std::string>& methods)
 		if (methods[i] != "GET" && methods[i] != "POST" && methods[i] != "DELETE")
 			throw (std::runtime_error("Invalid method: " + methods[i]));
 	}
-	this->_methods = methods;
+	_methods = methods;
 }
 
-void	Route::set_cgi_path(const std::string& cgi_path) { this->_cgi_path = cgi_path; }
+void	Route::set_cgi_path(const std::string& cgi_path) { _cgi_path = cgi_path; }
+void	Route::set_bouncer(std::string& key, std::string& value) { _bouncer.insert(std::make_pair(key, value)); }

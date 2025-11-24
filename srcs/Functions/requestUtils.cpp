@@ -34,6 +34,8 @@ std::string get_reason_phrase(int status_code)
 		return "Not Implemented";
 	case 503:
 		return "Service Unavailable";
+	case 505:
+		return "Service Unavailable";
 	}
 	return "Internal Server Error";
 }

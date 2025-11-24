@@ -89,7 +89,7 @@ int Request::http_requirements_met()
 {
 	if (_method.empty() || _uri.empty() || _version.empty())
 	{
-		std::cout << "something is empty" << std::endl;
+		std::cout << "something is empty, _method = " << _method << "; _uri = " << _uri << ";_version = " << _version << std::endl;
 		return 505;
 	}
 	if (_version != "HTTP/1.1" && _version != "HTTP/1.0")
@@ -110,7 +110,8 @@ bool Request::http_can_have_body()
 int Request::parse_header()
 {
 	std::cout << "\033[34mParsing header...\n\033[0m" << std::endl;
-	std::cout << _request_data << std::endl;
+	while (!_header.empty() && (_header[0] == '\r' || _header[0] == '\n'))
+		_header.erase(0, 1);
 	std::string line;
 	std::istringstream stream(_header);
 
