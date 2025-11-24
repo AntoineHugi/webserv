@@ -48,7 +48,7 @@ int	Server::get_sock() { return (this->_sock); }
 std::string	Server::get_host() { return (this->_host); }
 std::string	Server::get_root() { return (this->_root); }
 std::vector <std::string>	Server::get_index() { return (this->_index); }
-std::vector <std::string>	Server::get_error_page() { return (this->_error_page); }
+std::map <std::string, std::string>	Server::get_error_page() { return (this->_error_page); }
 long long	Server::get_client_max_body_size() { return (this->_client_max_body_size); }
 std::vector <Route>	Server::get_routes() { return (this->_routes); }
 
@@ -67,7 +67,7 @@ void	Server::set_sock(int sock) { this->_sock = sock; }
 void	Server::set_host(const std::string& host) { this->_host = host; }
 void	Server::set_root(const std::string& root) { this->_root = root; }
 void	Server::set_index(const std::vector <std::string>& index) { this->_index = index; }
-void	Server::set_error_page(const std::vector <std::string>& page) { this->_error_page = page; }
+void	Server::set_error_page(std::string& key, std::string& value) { this->_error_page.insert(std::make_pair(key, value)); }
 void	Server::set_client_max_body_size(const std::string& max)
 {
 	if (max.empty())

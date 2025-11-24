@@ -373,6 +373,7 @@ bool Client::try_parse_header()
 		return (1);
 	}
 	std::cout << "\033[35m  Header parsed \033[0m" << std::endl;
+	
 	/* if validation works, check if we should read the body next or go to the processing step */
 	if (is_body_chunked())
 		set_read_body();

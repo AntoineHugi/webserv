@@ -55,7 +55,6 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 
 	reason_phrase = get_reason_phrase(status_code);
 	response += reason_phrase + "\r\n";
-
 	if (!_body.empty())
 		response += "Content-Type: " + _content_type + "\r\n";
 	if (status_code == 405)

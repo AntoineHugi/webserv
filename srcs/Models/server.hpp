@@ -30,7 +30,7 @@ class Server
 		std::string _host;
 		std::string _root;
 		std::vector <std::string> _index;
-		std::vector <std::string> _error_page;
+		std::map <std::string, std::string> _error_page;
 		long long _client_max_body_size;
 		int	_sock;
 		std::vector <Route> _routes;
@@ -48,7 +48,7 @@ class Server
 		std::string	get_host();
 		std::string	get_root();
 		std::vector <std::string>	get_index();
-		std::vector <std::string>	get_error_page();
+		std::map <std::string, std::string>	get_error_page();
 		long long	get_client_max_body_size();
 		std::vector <Route>	get_routes();
 
@@ -59,7 +59,7 @@ class Server
 		void	set_host(const std::string& host);
 		void	set_root(const std::string& root);
 		void	set_index(const std::vector <std::string>& index);
-		void	set_error_page(const std::vector <std::string>& page);
+		void	set_error_page(std::string& key, std::string& value);
 		void	set_client_max_body_size(const std::string& max);
 		void	add_route(Route route);
 

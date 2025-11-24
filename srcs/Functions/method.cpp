@@ -26,9 +26,12 @@ void Method::get_directory(Client &client, DIR *directory)
 	struct dirent *entry;
 	while ((entry = readdir(directory)) != NULL)
 	{
-		std::string current = client._response.get_body();
-		current += std::string(entry->d_name) + '\n';
-		client._response.set_body(current);
+		if (std::string(entry->d_name) != "." && std::string(entry->d_name) != "..")
+		{
+			std::string current = client._response.get_body();
+			current += std::string(entry->d_name) + '\n';
+			client._response.set_body(current);
+		}
 	}
 	closedir(directory);
 	client.set_status_code(200);
@@ -166,12 +169,7 @@ void Method::handle_delete(Client &client)
 	if (S_ISREG(client._request._stat.st_mode))
 	{
 		if (std::remove(client._request._fullPathURI.c_str()) != 0)
-		{
-			if (errno == ENOENT)
-				client.set_status_code(404);
-			else
 				client.set_status_code(500);
-		}
 		else
 			client.set_status_code(204);
 	}

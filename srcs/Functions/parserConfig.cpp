@@ -102,7 +102,7 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 				if (!parse_location(&server, tokens, &i))
 					return (false);
 			}
-			else if (tokens[i] == "index" || tokens[i] == "error_page")
+			else if (tokens[i] == "index")
 			{
 				std::string key = tokens[i];
 				++i;
@@ -126,6 +126,34 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 				}
 				if (!assign_vector_keyval_server(&server, key, values))
 					return (false);
+				++i;
+			}
+			else if (tokens[i] == "error_page")
+			{
+				++i;
+				if (tokens[i] == ";" && tokens[i] == "{" && tokens[i] != "}")
+				{
+					--i;
+					std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+					return (false);
+				}
+				std::string key = tokens[i];
+				++i;
+				if (tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+				{
+					--i;
+					std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+					return (false);
+				}
+				std::string value = tokens[i];
+				server.set_error_page(key, value);
+				++i;
+				if (tokens[i] != ";")
+				{
+					--i;
+					std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+					return (false);
+				}
 				++i;
 			}
 			else
@@ -334,7 +362,7 @@ bool Parser::assign_single_keyval_server(Server* server, std::string& key, std::
 			}
 			break;
 		default:
-				std::cout << "Config file error: field not valid" << std::endl;
+				std::cout << "Config file error: field not valid : " << key << std::endl;
 				return (false);
 	}
 	return (true);
@@ -342,10 +370,10 @@ bool Parser::assign_single_keyval_server(Server* server, std::string& key, std::
 
 bool Parser::assign_vector_keyval_server(Server* server, std::string& key, std::vector <std::string> values)
 {
-	std::string fields[2] = {"index", "error_page"};
+	std::string fields[1] = {"index"};
 	int field = -1;
 
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		if (key == fields[i])
 			field = i;
@@ -359,14 +387,6 @@ bool Parser::assign_vector_keyval_server(Server* server, std::string& key, std::
 				return (false);
 			}
 			server->set_index(values);
-			break ;
-		case 1:
-			if (!server->get_error_page().empty())
-			{
-				std::cout << "Config file error: duplicate error page" << std::endl;
-				return (false);
-			}
-			server->set_error_page(values);
 			break ;
 		default:
 			return (false);

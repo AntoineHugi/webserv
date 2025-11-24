@@ -3,31 +3,31 @@
 #include "clientParsing.cpp"
 
 Client::Client() : _state(READING_HEADERS),
-				   _flags(),
-				   _fd(-1),
-				   _status_code(200),
-				   _last_interaction(std::time(0)),
-				   _server(),
-				   _request(),
-				   _response() {}
+		   _flags(),
+		   _fd(-1),
+		   _status_code(200),
+		   _last_interaction(std::time(0)),
+		   _server(),
+		   _request(),
+		   _response() {}
 
 Client::Client(int fd, Server &server) : _state(READING_HEADERS),
-										 _flags(),
-										 _fd(fd),
-										 _status_code(200),
-										 _last_interaction(std::time(0)),
-										 _server(&server),
-										 _request(),
-										 _response() {}
+					 _flags(),
+					 _fd(fd),
+					 _status_code(200),
+					 _last_interaction(std::time(0)),
+					 _server(&server),
+					 _request(),
+					 _response() {}
 
 Client::Client(const Client &other) : _state(other._state),
-									  _flags(other._flags),
-									  _fd(other._fd),
-									  _status_code(other._status_code),
-									  _last_interaction(other._last_interaction),
-									  _server(other._server),
-									  _request(other._request),
-									  _response(other._response) {}
+				      _flags(other._flags),
+				      _fd(other._fd),
+				      _status_code(other._status_code),
+				      _last_interaction(other._last_interaction),
+				      _server(other._server),
+				      _request(other._request),
+				      _response(other._response) {}
 
 Client &Client::operator=(const Client &other)
 {
@@ -47,12 +47,10 @@ Client &Client::operator=(const Client &other)
 
 Client::~Client() {}
 
-
 /*####################################################################################################*/
 /*####################################################################################################*/
 /*####################################################################################################*/
 /*####################################################################################################*/
-
 
 int Client::handle_read()
 {
@@ -88,7 +86,16 @@ int Client::handle_read()
 	if (can_i_read_header())
 	{
 		if (try_parse_header() == 1)
+		{
+			if (get_status_code() == 404)
+			{
+				std::cout << "error page is " << get_server()->get_error_page()["404"] << std::endl;
+				Method::get_file(*this, get_server()->get_error_page()["404"]);
+				set_status_code(404);
+			}
 			return (1);
+		}
+
 		else
 		{
 			if (can_i_process_request())
@@ -154,8 +161,8 @@ int Client::handle_write()
 	std::cout << "==>>  Client will receive answer" << std::endl;
 	std::string res = _response.get_response_data(_response.get_bytes_sent()).substr(0, 1024);
 	std::cout << "Response to be sent:\n-----\n"
-			  << res << "-----\n\n"
-			  << std::endl;
+		  << res << "-----\n\n"
+		  << std::endl;
 	ssize_t bytes_sent = send(_fd, res.c_str(), res.size(), 0);
 	if (bytes_sent == -1)
 	{
