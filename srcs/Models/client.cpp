@@ -90,11 +90,11 @@ int Client::handle_read()
 	{
 		if (try_parse_header() == 1)
 		{
-			if (get_status_code() == 404)
+			if (get_status_code() > 400)
 			{
-				std::cout << "error page is " << get_server()->get_error_page()["404"] << std::endl;
-				Method::get_file(*this, get_server()->get_error_page()["404"]);
-				set_status_code(404);
+				int status_code = get_status_code();
+				Method::get_file(*this, get_server()->get_error_page()[status_code]);
+				set_status_code(status_code);
 			}
 			return (1);
 		}

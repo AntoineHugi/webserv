@@ -1,12 +1,13 @@
 #include "parserConfig.hpp"
 
-std::vector<std::string> Parser::tokenise(std::string& str)
+std::vector<std::string> Parser::tokenise(std::string &str)
 {
 	std::vector<std::string> tokens;
 	std::istringstream iss(str);
 	std::string word;
 
-	while (iss >> word) {
+	while (iss >> word)
+	{
 		std::string current;
 
 		for (size_t i = 0; i < word.size(); ++i)
@@ -29,11 +30,11 @@ std::vector<std::string> Parser::tokenise(std::string& str)
 	return (tokens);
 }
 
-bool	Parser::open_config_file(char *arg, Service* service)
+bool Parser::open_config_file(char *arg, Service *service)
 {
 	std::string filename = arg;
-	std::string	line;
-	std::string	config = "";
+	std::string line;
+	std::string config = "";
 
 	if (filename.empty())
 	{
@@ -66,9 +67,9 @@ bool	Parser::open_config_file(char *arg, Service* service)
 	}
 }
 
-bool	Parser::parse_config_file(std::string config, Service* service)
+bool Parser::parse_config_file(std::string config, Service *service)
 {
-	std::vector <std::string> tokens = Parser::tokenise(config);
+	std::vector<std::string> tokens = Parser::tokenise(config);
 	size_t i = 0;
 
 	while (i < tokens.size() && tokens[i] == "server")
@@ -112,7 +113,7 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 					std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
 					return (false);
 				}
-				std::vector <std::string> values;
+				std::vector<std::string> values;
 				while (tokens[i] != ";" && i < tokens.size())
 				{
 					values.push_back(tokens[i]);
@@ -146,7 +147,7 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 					std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
 					return (false);
 				}
-				server.set_bouncer(key, value);
+				server.add_bouncer(key, value);
 				++i;
 			}
 			else if (tokens[i] == "error_page")
@@ -158,7 +159,13 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 					std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
 					return (false);
 				}
-				std::string key = tokens[i];
+				char *end;
+				int key = static_cast<int>(std::strtol(tokens[i].c_str(), &end, 10));
+				if (*end != '\0')
+				{
+					std::cout << "Config file error: invalid error code: " << tokens[i] << std::endl;
+					return (false);
+				}
 				++i;
 				if (i >= tokens.size() || tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
 				{
@@ -167,7 +174,7 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 					return (false);
 				}
 				std::string value = tokens[i];
-				server.set_error_page(key, value);
+				server.add_error_page(key, value);
 				++i;
 				if (i >= tokens.size() || tokens[i] != ";")
 				{
@@ -219,7 +226,7 @@ bool	Parser::parse_config_file(std::string config, Service* service)
 	return (true);
 }
 
-bool Parser::parse_location(Server* server, std::vector <std::string> tokens, size_t* i)
+bool Parser::parse_location(Server *server, std::vector<std::string> tokens, size_t *i)
 {
 	Route route;
 
@@ -237,7 +244,7 @@ bool Parser::parse_location(Server* server, std::vector <std::string> tokens, si
 			return (false);
 		}
 	}
-	route.set_path(tokens[*i]); //server->get_root() + 
+	route.set_path(tokens[*i]);
 	++(*i);
 	if (*i >= tokens.size() || tokens[*i] != "{")
 	{
@@ -340,7 +347,7 @@ bool Parser::parse_location(Server* server, std::vector <std::string> tokens, si
 	return (true);
 }
 
-bool Parser::assign_single_keyval_server(Server* server, std::string& key, std::string& value)
+bool Parser::assign_single_keyval_server(Server *server, std::string &key, std::string &value)
 {
 	std::string fields[5] = {"server_name", "listen", "host", "root", "client_max_body_size"};
 	int field = -1;
@@ -352,64 +359,70 @@ bool Parser::assign_single_keyval_server(Server* server, std::string& key, std::
 	}
 	switch (field)
 	{
-		case 0:
-			if (!server->get_name().empty())
-			{
-				std::cout << "Config file error: duplicate server name" << std::endl;
-				return (false);
-			}
-			server->set_name(value);
-			break ;
-		case 1:
-			if (server->get_port() != -1)
-			{
-				std::cout << "Config file error: duplicate port" << std::endl;
-				return (false);
-			}
-			try {
-				server->set_port(value);
-			} catch (const std::exception& e) {
-				std::cout << "Config file error: " << e.what() << std::endl;
-				return (false);
-			}
-			break ;
-		case 2:
-			if (!server->get_host().empty())
-			{
-				std::cout << "Config file error: duplicate host" << std::endl;
-				return (false);
-			}
-			server->set_host(value);
-			break ;
-		case 3:
-			if (!server->get_root().empty())
-			{
-				std::cout << "Config file error: duplicate root" << std::endl;
-				return (false);
-			}
-			server->set_root(value);
-			break ;
-		case 4:
-			if (server->get_client_max_body_size() != -1)
-			{
-				std::cout << "Config file error: duplicate max body size" << std::endl;
-				return (false);
-			}
-			try {
-				server->set_client_max_body_size(value);
-			} catch (const std::exception& e) {
-				std::cout << "Config file error: " << e.what() << std::endl;
-				return (false);
-			}
-			break;
-		default:
-				std::cout << "Config file error: field not valid : " << key << std::endl;
-				return (false);
+	case 0:
+		if (!server->get_name().empty())
+		{
+			std::cout << "Config file error: duplicate server name" << std::endl;
+			return (false);
+		}
+		server->set_name(value);
+		break;
+	case 1:
+		if (server->get_port() != -1)
+		{
+			std::cout << "Config file error: duplicate port" << std::endl;
+			return (false);
+		}
+		try
+		{
+			server->set_port(value);
+		}
+		catch (const std::exception &e)
+		{
+			std::cout << "Config file error: " << e.what() << std::endl;
+			return (false);
+		}
+		break;
+	case 2:
+		if (!server->get_host().empty())
+		{
+			std::cout << "Config file error: duplicate host" << std::endl;
+			return (false);
+		}
+		server->set_host(value);
+		break;
+	case 3:
+		if (!server->get_root().empty())
+		{
+			std::cout << "Config file error: duplicate root" << std::endl;
+			return (false);
+		}
+		server->set_root(value);
+		break;
+	case 4:
+		if (server->get_client_max_body_size() != 0)
+		{
+			std::cout << "Config file error: duplicate max body size" << std::endl;
+			return (false);
+		}
+		try
+		{
+			server->set_client_max_body_size(value);
+		}
+		catch (const std::exception &e)
+		{
+			std::cout << "Config file error: " << e.what() << std::endl;
+			return (false);
+		}
+		break;
+	default:
+		std::cout << "Config file error: field not valid : " << key << std::endl;
+		return (false);
 	}
 	return (true);
 }
 
-bool Parser::assign_vector_keyval_server(Server* server, std::string& key, std::vector <std::string> values)
+bool Parser::assign_vector_keyval_server(Server *server, std::string &key, std::vector<std::string> values)
 {
 	std::string fields[1] = {"index"};
 	int field = -1;
@@ -421,21 +434,21 @@ bool Parser::assign_vector_keyval_server(Server* server, std::string& key, std::
 	}
 	switch (field)
 	{
-		case 0:
-			if (!server->get_index().empty())
-			{
-				std::cout << "Config file error: duplicate index" << std::endl;
-				return (false);
-			}
-			server->set_index(values);
-			break ;
-		default:
+	case 0:
+		if (!server->get_index().empty())
+		{
+			std::cout << "Config file error: duplicate index" << std::endl;
 			return (false);
+		}
+		server->set_index(values);
+		break;
+	default:
+		return (false);
 	}
 	return (true);
 }
 
-bool Parser::check_server(Server* server)
+bool Parser::check_server(Server *server)
 {
 	if (server->get_name().empty())
 	{
@@ -469,7 +482,7 @@ bool Parser::check_server(Server* server)
 		std::cout << "Config file error: error page missing" << std::endl;
 		return (false);
 	}
-	if (server->get_client_max_body_size() == -1)
+	if (server->get_client_max_body_size() == 0)
 	{
 		std::cout << "Config file error: max client body size missing" << std::endl;
 		return (false);
@@ -486,7 +499,7 @@ bool Parser::check_server(Server* server)
 	return (true);
 }
 
-bool Parser::assign_single_keyval_route(Route* route, std::string& key, std::string& value)
+bool Parser::assign_single_keyval_route(Route *route, std::string &key, std::string &value)
 {
 	std::string fields[3] = {"root", "autoindex", "cgi_path"};
 	int field = -1;
@@ -498,43 +511,46 @@ bool Parser::assign_single_keyval_route(Route* route, std::string& key, std::str
 	}
 	switch (field)
 	{
-		case 0:
-			if (route->get_root().empty() -1)
-			{
-				std::cout << "Config file error: duplicate root line in location" << std::endl;
-				return (false);
-			}
-			route->set_root(value);
-			break ;
-		case 1:
-			if (!route->get_autoindex().empty())
-			{
-				std::cout << "Config file error: duplicate autoindex line in location" << std::endl;
-				return (false);
-			}
-			try {
-				route->set_autoindex(value);
-			} catch (const std::exception& e) {
-				std::cout << "Config file error: " << e.what() << std::endl;
-				return (false);
-			}
-			break ;
-		case 2:
-			if (!route->get_cgi_path().empty())
-			{
-				std::cout << "Config file error: duplicate cgi path line in location" << std::endl;
-				return (false);
-			}
-			route->set_cgi_path(value);
-			break ;
-		default:
-				std::cout << "Config file error: location field not valid" << std::endl;
-				return (false);
+	case 0:
+		if (route->get_root().empty() - 1)
+		{
+			std::cout << "Config file error: duplicate root line in location" << std::endl;
+			return (false);
+		}
+		route->set_root(value);
+		break;
+	case 1:
+		if (!route->get_autoindex().empty())
+		{
+			std::cout << "Config file error: duplicate autoindex line in location" << std::endl;
+			return (false);
+		}
+		try
+		{
+			route->set_autoindex(value);
+		}
+		catch (const std::exception &e)
+		{
+			std::cout << "Config file error: " << e.what() << std::endl;
+			return (false);
+		}
+		break;
+	case 2:
+		if (!route->get_cgi_path().empty())
+		{
+			std::cout << "Config file error: duplicate cgi path line in location" << std::endl;
+			return (false);
+		}
+		route->set_cgi_path(value);
+		break;
+	default:
+		std::cout << "Config file error: location field not valid" << std::endl;
+		return (false);
 	}
 	return (true);
 }
 
-bool	Parser::assign_vector_keyval_route(Route* route, std::string& key, std::vector <std::string> values)
+bool Parser::assign_vector_keyval_route(Route *route, std::string &key, std::vector<std::string> values)
 {
 	std::string fields[1] = {"methods"};
 	int field = -1;
@@ -546,21 +562,24 @@ bool	Parser::assign_vector_keyval_route(Route* route, std::string& key, std::vec
 	}
 	switch (field)
 	{
-		case 0:
-			if (!route->get_methods().empty())
-			{
-				std::cout << "Config file error: duplicate methods line in location" << std::endl;
-				return (false);
-			}
-			try {
-				route->set_methods(values);
-			} catch (const std::exception& e) {
-				std::cout << "Config file error: " << e.what() << std::endl;
-				return (false);
-			}
-			break ;
-		default:
+	case 0:
+		if (!route->get_methods().empty())
+		{
+			std::cout << "Config file error: duplicate methods line in location" << std::endl;
 			return (false);
+		}
+		try
+		{
+			route->set_methods(values);
+		}
+		catch (const std::exception &e)
+		{
+			std::cout << "Config file error: " << e.what() << std::endl;
+			return (false);
+		}
+		break;
+	default:
+		return (false);
 	}
 	return (true);
 }

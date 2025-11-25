@@ -13,6 +13,7 @@
 #include <cstring>
 #include <cerrno>
 #include <cstdlib>
+#include <cstdio>
 
 // ============================================================================
 // TEST CONFIGURATION

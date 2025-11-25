@@ -10,7 +10,6 @@ class Client;
 # include <sstream>
 # include <ctime>
 
-# include "../Functions/requestUtils.hpp"
 # include "request.hpp"
 
 class Response
@@ -55,7 +54,7 @@ public:
 
 	void flush_response_data();
 	std::string format_response(int status_code, bool should_keep_alive, std::string version);
-	void	determine_content_type();
+	std::string get_reason_phrase(int status_code);
 };
 
 #endif

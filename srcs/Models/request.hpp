@@ -44,23 +44,24 @@ class Request
 		Request &operator=(const Request &other);
 		~Request();
 
-		void flush_request_data();
+		void	flush_request_data();
 
 		/* Header parsing */
-		int parse_header();
-		int http_requirements_met();
-		bool http_can_have_body();
+		int		parse_header();
+		int		http_requirements_met();
+		bool	http_can_have_body();
 
 		/* Body parsing */
-		int parse_body();
-		int parse_url_encoded();
-		std::vector<std::string> tokenise_url_encoded(std::string &str);
-		int parse_multipart(std::string content_type);
-		std::string find_boundary(std::string content_type);
-		std::vector<MultiPart> generate_multipart(const std::string &boundary);
-		std::string trimCRLF(const std::string &s);
-		int parse_json();
-		int treat_as_raw_body();
+		int		parse_body();
+		int		parse_url_encoded();
+		std::vector<std::string>	tokenise_url_encoded(std::string &str);
+		int		parse_multipart(std::string content_type);
+		std::string	find_boundary(std::string content_type);
+		std::vector<MultiPart>	generate_multipart(const std::string &boundary);
+		std::string	trimCRLF(const std::string &s);
+		int		parse_json();
+		std::vector<std::string>	tokenise_json(std::string &str);
+		int		treat_as_raw_body();
 
 		// size_t get_reading_length() const { return _reading_lenght; };
 		// void set_reading_length(size_t length) { _reading_lenght = length; };

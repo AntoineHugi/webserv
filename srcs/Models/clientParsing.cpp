@@ -38,8 +38,18 @@ bool Client::transversal_protection()
 	/* checking that the path to the file parent directory is located within the root */
 	else if (_request._method == "POST")
 	{
+		std::string parent = _request._fullPathURI;
+		size_t lastSlash = parent.find_last_of('/');
+		std::string lastComponent = (lastSlash == std::string::npos) ? parent : parent.substr(lastSlash + 1);
+		if (lastComponent.find('.') != std::string::npos)
+		{
+			char *cpath = strdup(parent.c_str());
+			parent = dirname(cpath);
+			free(cpath);
+		}
+
 		char resolved_parent[PATH_MAX];
-		if (!realpath(_request._fullPathURI.c_str(), resolved_parent))
+		if (!realpath(parent.c_str(), resolved_parent))
 		{
 			set_status_code(403);
 			std::cout << "failed file path : " << resolved_parent << std::endl;
@@ -50,7 +60,7 @@ bool Client::transversal_protection()
 			real_parent += '/';
 		if (real_parent.find(real_root) != 0)
 		{
-			std::cout << "didn't find root: " << " | in parent: " << real_parent << std::endl;
+			std::cout << "didn't find root: " << real_root << " | in parent: " << real_parent << std::endl;
 			set_status_code(403);
 			return false;
 		}
@@ -122,7 +132,7 @@ bool Client::check_directory_rules(const Route &route)
 	return (true);
 }
 
-bool Client::check_subnet(const std::string& rule_target, const std::string& client_ip)
+bool Client::check_subnet(const std::string &rule_target, const std::string &client_ip)
 {
 	size_t slash = rule_target.find('/');
 	if (slash != std::string::npos && rule_target.size() >= slash + 2)
@@ -131,9 +141,9 @@ bool Client::check_subnet(const std::string& rule_target, const std::string& cli
 		int prefix = std::strtol(rule_target.substr(slash + 1).c_str(), NULL, 10);
 		if (prefix < 0 || prefix > 32)
 		{
-		set_status_code(500);
-		set_create_response();
-		return false;
+			set_status_code(500);
+			set_create_response();
+			return false;
 		}
 
 		struct in_addr addr;
@@ -143,7 +153,7 @@ bool Client::check_subnet(const std::string& rule_target, const std::string& cli
 			set_create_response();
 			return (false);
 		}
-		uint32_t client = ntohl(addr.s_addr); 
+		uint32_t client = ntohl(addr.s_addr);
 
 		if (inet_pton(AF_INET, network.c_str(), &addr) != 1)
 		{
@@ -151,10 +161,11 @@ bool Client::check_subnet(const std::string& rule_target, const std::string& cli
 			set_create_response();
 			return (false);
 		}
-		uint32_t net = ntohl(addr.s_addr); 
+		uint32_t net = ntohl(addr.s_addr);
 
 		uint32_t mask = 0;
-		if (prefix > 0 && prefix <= 32) {
+		if (prefix > 0 && prefix <= 32)
+		{
 			mask = 0xFFFFFFFF;
 			mask <<= (32 - prefix);
 		}
@@ -168,7 +179,7 @@ bool Client::check_subnet(const std::string& rule_target, const std::string& cli
 bool Client::bouncer_approval(const Route &route)
 {
 	/* get highest ranking bouncer to decide on allow/deny, return if there is no bouncer */
-	std::map <std::string, std::string> bouncer = route.get_bouncer();
+	std::map<std::string, std::string> bouncer = route.get_bouncer();
 	if (bouncer.empty())
 		bouncer = _server->get_bouncer();
 	if (bouncer.empty())
@@ -176,8 +187,8 @@ bool Client::bouncer_approval(const Route &route)
 
 	for (std::map<std::string, std::string>::const_iterator it = bouncer.begin(); it != bouncer.end(); ++it)
 	{
-		const std::string& rule_type = it->first;
-		const std::string& rule_target = it->second;
+		const std::string &rule_type = it->first;
+		const std::string &rule_target = it->second;
 
 		if (rule_type == "deny")
 		{
@@ -300,7 +311,7 @@ bool Client::validate_permissions()
 
 int Client::read_to_buffer()
 {
-	char buf[50];
+	char buf[1024];
 	ssize_t n = recv(_fd, buf, sizeof(buf), 0);
 
 	if (n > 0)
@@ -355,6 +366,14 @@ bool Client::chunked_body_finished() const
 bool Client::try_parse_body()
 {
 	/* send to chunked version */
+	// add option for route max body size
+	if (_request._request_data.size() > get_server()->get_client_max_body_size())
+	{
+		_status_code = 413;
+		set_create_response();
+		return (1);
+	}
+
 	if (is_body_chunked())
 	{
 		std::cout << "body is chunked" << std::endl;
@@ -432,7 +451,7 @@ bool Client::try_parse_header()
 	set_flags();
 	if (_request._request_data.size() > _request._content_length)
 		_flags._leftover_chunk = true;
-	if (static_cast<long long>(_request._content_length) > _server->get_client_max_body_size())
+	if (static_cast<unsigned long>(_request._content_length) > _server->get_client_max_body_size())
 	{
 		_status_code = 413;
 		set_create_response();
@@ -453,7 +472,7 @@ bool Client::try_parse_header()
 		return (1);
 	}
 	std::cout << "\033[35m  Header parsed \033[0m" << std::endl;
-	
+
 	/* if validation works, check if we should read the body next or go to the processing step */
 	if (is_body_chunked())
 		set_read_body();

@@ -30,7 +30,7 @@ void test_chunked_request_simple(const TestConfig &config, TestStats &stats)
 	multipart += "--" + boundary + "--\r\n";
 
 	std::string request;
-	request += "POST /upload HTTP/1.1\r\n";
+	request += "POST /upload-list HTTP/1.1\r\n";
 	request += "Host: localhost:8080\r\n";
 	request += "Content-Type: multipart/form-data; boundary=" + boundary + "\r\n";
 	request += "Transfer-Encoding: chunked\r\n";
@@ -84,7 +84,7 @@ void test_chunked_request_multiple_chunks(const TestConfig &config, TestStats &s
 		return;
 	}
 
-	std::string request = "POST /upload HTTP/1.1\r\n";
+	std::string request = "POST /upload-list HTTP/1.1\r\n";
 	request += "Host: localhost:8080\r\n";
 	request += "Transfer-Encoding: chunked\r\n";
 	request += "Connection: close\r\n";
@@ -136,7 +136,7 @@ void test_chunked_with_keepalive(const TestConfig &config, TestStats &stats)
 		return;
 	}
 
-	std::string request = "POST /upload HTTP/1.1\r\n";
+	std::string request = "POST /upload-list HTTP/1.1\r\n";
 	request += "Host: localhost:8080\r\n";
 	request += "Transfer-Encoding: chunked\r\n";
 	request += "Connection: keep-alive\r\n";

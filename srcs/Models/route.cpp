@@ -39,7 +39,7 @@ void	Route::set_root(const std::string& root) { _root = root; }
 void	Route::set_autoindex(const std::string& autoindex) 
 {
 	if (autoindex != "on" && autoindex != "off")
-			throw (std::runtime_error("Invalid autoindex: " + autoindex));
+		throw (std::runtime_error("Invalid autoindex: " + autoindex));
 	_autoindex = autoindex;
 }
 

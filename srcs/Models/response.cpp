@@ -41,6 +41,42 @@ void Response::flush_response_data()
 	_bytes_sent = 0;
 }
 
+std::string Response::get_reason_phrase(int status_code)
+{
+	switch (status_code)
+	{
+	case 200:
+		return "OK";
+	case 201:
+		return "Created";
+	case 204:
+		return "No Content";
+	// case 301:
+	// 	return "Moved Permanently";
+	// case 302:
+	// 	return "Found";					// we don't use these currently
+	// case 304:
+	// 	return "Not Modified";
+	case 400:
+		return "Bad Request";
+	case 403:
+		return "Forbidden";
+	case 404:
+		return "Not Found";
+	case 405:
+		return "Method Not Allowed";
+	case 413:
+		return "Payload Too Large";
+	case 431:
+		return "Request Header Fields Too Large";
+	case 500:
+		return "Internal Server Error";
+	case 505:
+		return "HTTP Version Not Supported";
+	}
+	return "Internal Server Error";
+}
+
 std::string Response::format_response(int status_code, bool should_keep_alive, std::string version)
 {
 	std::string response;
@@ -50,7 +86,6 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	ss << status_code;
 	if (version.empty() || (version != "HTTP/1.1" && version != "HTTP/1.0"))
 		version = "HTTP/1.1";
-	// response += client._request._header_kv["Version"] + ss.str() + " ";
 	response += version + " " + ss.str() + " ";
 
 	reason_phrase = get_reason_phrase(status_code);
@@ -64,8 +99,8 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 			response += get_allowed_methods()[i];
 		response += "\r\n";
 	}
-	response += "Server: webserv42\r\n";
 
+	response += "Server: webserv42\r\n";
 	std::time_t now = std::time(0);
 	std::tm* gmt_time = std::gmtime(&now);
 	char date_buf[100];
@@ -74,17 +109,12 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	response += date_buf;
 	response += "\r\n";
 
-	//response += "Server: webserv42\r\n";
-
 	if (reason_phrase == "Internal Server Error")
 	{
 		response += "Content-Length: 0\r\n";
 		response += "Connection: close\r\n";
 		return response;
 	}
-
-	//response += "Content-Type: application/json\r\n"; // TODO: to be dynamic based on body
-
 	if (should_keep_alive)
 			response += "Connection: keep-alive\r\n";
 	else
@@ -93,9 +123,8 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	ss.str("");
 	ss << _body.size();
 	response += "Content-Length: " + ss.str() + "\r\n";
-	response += "\r\n"; // close headers
+	response += "\r\n";
 
-	// Append body if present
 	if (_body.size() != 0)
 		response += _body;
 	return response;

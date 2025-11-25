@@ -37,7 +37,6 @@ void Method::get_directory(Client &client, DIR *directory)
 	client.set_status_code(200);
 }
 
-/* should be based on body, not request */
 void Method::determine_content_type(Client &client, std::string filepath)
 {
 	size_t dot = filepath.find_last_of('.');
@@ -65,7 +64,7 @@ void Method::determine_content_type(Client &client, std::string filepath)
 		else if (ext == "py") { content_type = "text/x-python"; }
 		else { content_type = "application/octet-stream"; }
 	}
-	client._response.set_content_type("content_type");
+	client._response.set_content_type(content_type);
 	return;
 }
 
@@ -148,7 +147,6 @@ void Method::handle_post(Client &client)
 	if (client._request._header_kv["content-type"] == "application/x-www-form-urlencoded")
 	{
 		client.set_status_code(200);
-
 		return;
 	}
 	else if (client._request._header_kv["content-type"].find("multipart/form-data") != std::string::npos)
@@ -159,6 +157,16 @@ void Method::handle_post(Client &client)
 			return;
 		}
 		client.set_status_code(204);
+		return;
+	}
+	else if (client._request._header_kv["content-type"].empty())
+	{
+		client.set_status_code(200);
+		return;
+	}
+	else
+	{
+		client.set_status_code(400);
 		return;
 	}
 	return;

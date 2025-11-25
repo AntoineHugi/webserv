@@ -5,7 +5,6 @@
 # include "../Models/response.hpp"
 # include "../Models/server.hpp"
 # include "../Functions/method.hpp"
-# include "../Functions/requestUtils.hpp"
 
 # include <string>
 # include <vector>
@@ -61,7 +60,6 @@ class Client
 	public:
 		Request _request;
 		Response _response;
-		// TODO: add timestamp for keep-alive timeout and hanging handling
 
 		Client();
 		Client(int fd, Server& server, std::string client_ip);
@@ -93,14 +91,6 @@ class Client
 		void set_handle_error() {_state = HANDLE_ERROR; };
 		void update_last_interaction() { _last_interaction = std::time(0);}
 
-
-		void set_flags();
-		void set_flags_error();
-		bool is_body_chunked() { return _flags._body_chunked; };
-		bool should_keep_alive() const { return _flags._should_keep_alive; };
-		bool leftover_chunk() const { return _flags._leftover_chunk; };
-		bool request_complete() const { return _state == PROCESSING_REQUEST; };
-
 		/* Read section */
 		int		handle_read();
 		int		read_to_buffer();
@@ -123,9 +113,16 @@ class Client
 		void	process_request();
 
 		/* Writing section */
-		int	handle_write();
+		int		handle_write();
 
-		void refresh_client();
+		/* Utils section */
+		void	set_flags();
+		void	set_flags_error();
+		void	refresh_client();
+		bool	is_body_chunked() { return _flags._body_chunked; };
+		bool	should_keep_alive() const { return _flags._should_keep_alive; };
+		bool	leftover_chunk() const { return _flags._leftover_chunk; };
+		bool	request_complete() const { return _state == PROCESSING_REQUEST; };
 };
 
 

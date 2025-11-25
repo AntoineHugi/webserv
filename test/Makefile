@@ -8,7 +8,7 @@ TARGET := test_suite
 
 # Source files
 FRAMEWORK_SRCS := test_framework.cpp
-CATEGORY_SRCS := test_basic.cpp test_keepalive.cpp test_chunked.cpp test_pipelining.cpp
+CATEGORY_SRCS := test_basic.cpp test_error_codes.cpp test_keepalive.cpp test_chunked.cpp test_pipelining.cpp test_post_delete.cpp
 MAIN_SRC := test_suite.cpp
 
 SRCS := $(FRAMEWORK_SRCS) $(CATEGORY_SRCS) $(MAIN_SRC)

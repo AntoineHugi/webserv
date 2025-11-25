@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Files</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+        }
+
+        #file-list {
+            margin-top: 20px;
+        }
+
+        input,
+        button {
+            padding: 8px;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Upload a File</h1>
+
+    <label>Destination filename:</label>
+    <input type="text" id="path" placeholder="choose a new name"><br><br>
+    <input type="file" id="fileInput">
+    <button onclick="uploadFile()">Upload</button>
+
+    <h2>Files in /upload</h2>
+    <ul id="file-list">
+        <li>Loading...</li>
+    </ul>
+
+    <script>
+        async function fetchFiles() {
+            try {
+                const res = await fetch("/upload-list");
+                const text = await res.text();
+
+                const lines = text.split("\n").filter(l => l && l !== "." && l !== "..");
+                const list = document.getElementById('file-list');
+                list.innerHTML = '';
+
+                lines.forEach(name => {
+                    const li = document.createElement('li');
+                    li.textContent = name;
+
+                    // Delete button
+                    const del = document.createElement('button');
+                    del.textContent = 'Delete';
+                    del.style.marginLeft = '10px';
+                    del.onclick = () => deleteFile(name);
+                    li.appendChild(del);
+
+                    // Show button
+                    const show = document.createElement('button');
+                    show.textContent = 'Show';
+                    show.style.marginLeft = '10px';
+                    show.onclick = () => {
+                        // Opens the file in a new tab/window
+                        window.open("/upload-list/" + encodeURIComponent(name), "_blank");
+                    };
+                    li.appendChild(show);
+
+                    list.appendChild(li);
+                });
+
+            } catch (err) {
+                document.getElementById('file-list').innerHTML = '<li>Error loading file list</li>';
+            }
+        }
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const pathInput = document.getElementById('path');
+
+            if (fileInput.files.length === 0) {
+                alert("Please select a file.");
+                return;
+            }
+
+            const file = fileInput.files[0];
+
+            // Extract extension from the selected file
+            const originalName = file.name;
+            const dotIndex = originalName.lastIndexOf('.');
+            const extension = dotIndex !== -1 ? originalName.slice(dotIndex) : '';
+
+            // Take user input for the base name only
+            let baseName = pathInput.value.trim();
+            if (!baseName) baseName = originalName.slice(0, dotIndex); // fallback to original base name
+
+            // Combine base name and original extension
+            const filename = baseName + extension;
+
+            const formData = new FormData();
+            formData.append("file", file, filename);
+
+            try {
+                const res = await fetch("/upload-list", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    alert("Upload failed: " + res.status);
+                } else {
+                    alert("File uploaded successfully!");
+                    fetchFiles();
+                }
+            } catch (err) {
+                alert("Error uploading file: " + err);
+            }
+        }
+
+        async function deleteFile(filename) {
+            if (!confirm(`Delete ${filename}?`)) return;
+
+            try {
+                const res = await fetch("/upload-list/" + encodeURIComponent(filename), {
+                    method: "DELETE"
+                });
+                if (!res.ok) {
+                    alert("Delete failed: " + res.status);
+                } else {
+                    fetchFiles();
+                }
+            } catch (err) {
+                alert("Error deleting file: " + err);
+            }
+        }
+
+        // Load files on page load
+        fetchFiles();
+    </script>
+
+</body>
+
+</html>
