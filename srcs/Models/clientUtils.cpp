@@ -24,6 +24,11 @@ void Client::set_flags()
 		_flags._body_chunked = true;
 	else
 		_flags._body_chunked = false;
+
+	if (_request._uri.find(".py") != std::string::npos) // TODO: check that this is by the end of the URI not in the middle
+		_flags._is_CGI = true;
+	else
+		_flags._is_CGI = false;
 }
 
 void Client::refresh_client()

@@ -18,8 +18,6 @@
 # include <sys/socket.h>
 # include <sys/wait.h>
 # include <libgen.h>
-// # include "client.hpp"
-// # include "../Functions/method.hpp"
 # include "route.hpp"
 
 class Server

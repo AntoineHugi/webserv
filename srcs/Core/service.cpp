@@ -42,14 +42,9 @@ void handle_shutdown(int sig)
 /*####################################################################################################*/
 /*####################################################################################################*/
 
-
-
 void Service::poll_service()
 {
-	std::vector<struct pollfd> poll_fds;
-	std::vector<struct pollfd> server_fds;
-	std::vector<struct pollfd> cgi_fds;
-	set_polls(poll_fds, server_fds, this->servers);
+	this->set_polls();
 
 	while (g_shutdown == 0)
 	{
@@ -63,7 +58,7 @@ void Service::poll_service()
 				break;
 			}
 		}
-		int ret = poll(poll_fds.data(), poll_fds.size(), timeout);
+		int ret = poll(this->fds["poll_fds"].data(), this->fds["poll_fds"].size(), timeout);
 		if (ret < 0)
 		{
 			if (errno == EINTR)
@@ -71,47 +66,43 @@ void Service::poll_service()
 			perror("poll failed");
 			break;
 		}
-		for (int i = poll_fds.size() - 1; i >= 0; i--)
+
+		for (int i = this->fds["poll_fds"].size() - 1; i >= 0; i--)
 		{
-			bool new_client = false;
-			int server_index;
-			for (size_t j = 0; j < server_fds.size(); j++)
+
+			int server_fd_if_new_client = server_fd_for_new_client(this->fds["poll_fds"][i].fd , this->fds["server_fds"]);
+			int cgi_fd_if_cgi = cgi_fd_for_cgi(this->fds["poll_fds"][i].fd , this->fds["cgi_fds"]);
+
+			if (this->fds["poll_fds"][i].revents == 0)
 			{
-				if (poll_fds[i].fd == server_fds[j].fd)
-				{
-					server_index = j;
-					new_client = true;
-					break;
-				}
-			}
-			if (poll_fds[i].revents == 0)
-			{
-				if (new_client || (!new_client && clients[poll_fds[i].fd].leftover_chunk() == false))
+				if (server_fd_if_new_client != -1 || (server_fd_if_new_client == -1 && clients[this->fds["poll_fds"][i].fd].leftover_chunk() == false))
 					continue;
-				else if (clients[poll_fds[i].fd].is_inactive() && poll_fds[i].revents & POLLIN)
-					handle_disconnection(poll_fds, i);
+				else if (clients[this->fds["poll_fds"][i].fd].is_inactive() && this->fds["poll_fds"][i].revents & POLLIN)
+					handle_disconnection(this->fds["poll_fds"], i);
 			}
-			if (new_client)
+			if (server_fd_if_new_client != -1)
 			{
-				add_client_to_polls(poll_fds, this->clients, i, this->servers[server_index]);
-				std::cout << "\033[32m New client connected. Total clients: " << (poll_fds.size() - server_fds.size()) << "\033[0m" << std::endl;
+				add_client_to_polls(this->fds["poll_fds"], this->clients, this->fds["poll_fds"][i].fd, this->servers[server_fd_if_new_client]);
+				std::cout << "\033[32m New client connected. Total clients: " << (this->fds["poll_fds"].size() - this->fds["server_fds"].size()) << "\033[0m" << std::endl;
 			}
+			else if(cgi_fd_if_cgi != -1)
+				cgi_handler(i);
 			else
 			{
-				Client &client = clients[poll_fds[i].fd];
+				Client &client = clients[this->fds["poll_fds"][i].fd];
 				client.update_last_interaction();
-				if (client.leftover_chunk() == false && poll_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
+				if (client.leftover_chunk() == false && this->fds["poll_fds"][i].revents & (POLLERR | POLLHUP | POLLNVAL))
 				{
-					std::cout << "poll_fds[i].revents : " << poll_fds[i].revents << std::endl;
-					handle_disconnection(poll_fds, i);
+					std::cout << "this->fds['poll_fds'][i].revents : " << this->fds["poll_fds"][i].revents << std::endl;
+					handle_disconnection(this->fds["poll_fds"], i);
 					continue;
 				}
-				if ((poll_fds[i].revents & POLLIN || client.leftover_chunk()) && (client.can_i_read_header() == true || client.can_i_read_body() == true))
-					service_reading(poll_fds, i);
-				if (i < (int)poll_fds.size() && (poll_fds[i].revents & POLLOUT) && client.can_i_process_request() == true)
-					service_processing(poll_fds, i);
-				if (i < (int)poll_fds.size() && (poll_fds[i].revents & POLLOUT) && (client.can_i_create_response() == true || client.can_i_send_response() == true))
-					service_writing(poll_fds, i);
+				if ((this->fds["poll_fds"][i].revents & POLLIN || client.leftover_chunk()) && (client.can_i_read_header() == true || client.can_i_read_body() == true))
+					service_reading(this->fds["poll_fds"], i);
+				if (i < (int)this->fds["poll_fds"].size() && (this->fds["poll_fds"][i].revents & POLLOUT) && client.can_i_process_request() == true)
+					service_processing(this->fds["poll_fds"], i);
+				if (i < (int)this->fds["poll_fds"].size() && (this->fds["poll_fds"][i].revents & POLLOUT) && (client.can_i_create_response() == true || client.can_i_send_response() == true))
+					service_writing(this->fds["poll_fds"], i);
 			}
 		}
 	}

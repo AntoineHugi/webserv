@@ -37,6 +37,7 @@ class Client
 			bool _should_keep_alive;
 			bool _body_chunked;
 			bool _leftover_chunk;
+			bool _is_CGI;
 
 			flags():
 				_should_keep_alive(false),
@@ -96,6 +97,7 @@ class Client
 		void set_flags();
 		void set_flags_error();
 		bool is_body_chunked() { return _flags._body_chunked; };
+		bool is_CGI_request() { return _flags._is_CGI; };
 		bool should_keep_alive() const { return _flags._should_keep_alive; };
 		bool leftover_chunk() const { return _flags._leftover_chunk; };
 		bool request_complete() const { return _state == PROCESSING_REQUEST; };

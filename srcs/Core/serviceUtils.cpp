@@ -1,6 +1,6 @@
 #include "service.hpp"
 
-void add_client_to_polls(std::vector<struct pollfd> &poll_fds, std::map<int, Client> &clients, size_t i, Server& server)
+void add_client_to_polls(std::vector<struct pollfd> &poll_fds, std::map<int, Client> &clients, int fd, Server& server)
 {
 	std::cout << "\n###################################################" << std::endl;
 	std::cout << "################## ADDING CLIENT ##################" << std::endl;
@@ -8,7 +8,7 @@ void add_client_to_polls(std::vector<struct pollfd> &poll_fds, std::map<int, Cli
 			  << std::endl;
 	std::cout << "\033[32m New connection! \033[0m" << std::endl;
 
-	int client_fd = accept(poll_fds[i].fd, NULL, NULL);
+	int client_fd = accept(fd, NULL, NULL);
 
 	if (client_fd < 0)
 	{
@@ -31,14 +31,41 @@ void add_client_to_polls(std::vector<struct pollfd> &poll_fds, std::map<int, Cli
 	}
 }
 
-void set_polls(std::vector<struct pollfd> &poll_fds, std::vector<struct pollfd> &server_fds, std::vector<Server> &servers)
+void Service::set_polls()
 {
-	for (size_t i = 0; i < servers.size(); i++)
+	std::vector<struct pollfd> poll_fds;
+	std::vector<struct pollfd> server_fds;
+	std::vector<struct pollfd> cgi_fds;
+
+	this->fds.insert(std::pair< std::string, std::vector<struct pollfd> >("poll_fds", poll_fds));
+	this->fds.insert(std::pair< std::string, std::vector<struct pollfd> >("server_fds", server_fds));
+	this->fds.insert(std::pair< std::string, std::vector<struct pollfd> >("cgi_fds", cgi_fds));
+
+	for (size_t i = 0; i < this->servers.size(); i++)
 	{
 		struct pollfd pfd;
 		pfd.fd = servers[i].get_sock();
 		pfd.events = POLLIN;
-		poll_fds.push_back(pfd);
-		server_fds.push_back(pfd);
+		this->fds["poll_fds"].push_back(pfd);
+		this->fds["server_fds"].push_back(pfd);
 	}
+}
+
+int Service::server_fd_for_new_client(int fd, std::vector<struct pollfd> &fds_vector)
+{
+	for (size_t i = 0; i < fds_vector.size(); i++)
+	{
+		if (fds_vector[i].fd == fd)
+			return (i);
+	}
+	return (-1);
+}
+int Service::cgi_fd_for_cgi(int fd, std::vector<struct pollfd> &fds_vector)
+{
+	for (size_t i = 0; i < fds_vector.size(); i++)
+	{
+		if (fds_vector[i].fd == fd)
+			return (fd);
+	}
+	return (-1);
 }
