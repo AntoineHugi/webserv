@@ -234,7 +234,27 @@ bool Client::route_matches(const std::string &uri, const std::string &route)
 	return false;
 }
 
-int Client::find_best_route_index(std::vector<Route> &routes)
+void Client::overwrite_with_route(const Route& route)
+{
+	if (route.get_client_max_body_size() > 0)
+		_request._client_max_body_size = route.get_client_max_body_size();
+	else
+		_request._client_max_body_size = get_server()->get_client_max_body_size();
+
+	if (!route.get_index().empty())
+		_request._index = route.get_index();
+	else
+		_request._index = _server->get_index();
+	
+	if (!route.get_root().empty())
+		_request._root = route.get_root();
+	else
+		_request._root = _server->get_root();
+
+	
+}
+
+int Client::find_best_route_index(std::vector<Route>& routes)
 {
 	int best_index = -1;
 	size_t best_len = 0;
@@ -252,7 +272,6 @@ int Client::find_best_route_index(std::vector<Route> &routes)
 			}
 		}
 	}
-
 	return (best_index);
 }
 
@@ -267,11 +286,11 @@ bool Client::validate_permissions()
 	}
 
 	const Route &route = routes[routeIndex];
-	if (route.get_root().empty())
-		_request._root = _server->get_root();
-	else
-		_request._root = route.get_root();
+	overwrite_with_route(route);
+
 	_request._fullPathURI = _request._root + _request._uri.substr(route.get_path().size());
+	std::cout << "full path URI = " << _request._fullPathURI << "| from root : " << _request._root << " and sub : " << _request._uri.substr(route.get_path().size()) << std::endl;
+	std::cout << "base URI = " << _request._uri << std::endl;
 	if (_request._method != "POST")
 	{
 		if (!check_uri_exists())
@@ -366,8 +385,7 @@ bool Client::chunked_body_finished() const
 bool Client::try_parse_body()
 {
 	/* send to chunked version */
-	// add option for route max body size
-	if (_request._request_data.size() > get_server()->get_client_max_body_size())
+	if (_request._request_data.size() > _request._client_max_body_size)
 	{
 		_status_code = 413;
 		set_create_response();

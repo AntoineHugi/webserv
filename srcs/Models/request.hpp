@@ -32,6 +32,8 @@ class Request
 		bool _isDirectory;
 		struct stat _stat;
 		bool _isCGI;
+		unsigned long	_client_max_body_size;
+		std::vector<std::string> _index;
 
 		/* body attributes */
 		std::string _body;

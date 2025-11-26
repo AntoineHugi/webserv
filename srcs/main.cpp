@@ -11,7 +11,7 @@ int	main(int argc, char **argv)
 	if (argc == 2)
 	{
 		Service	service;
-		if (!Parser::open_config_file(argv[1], &service))
+		if (!Parser::open_config_file(argv[1], service))
 		{
 			std::cout << "config parsing failed" << std::endl;
 			return (1);

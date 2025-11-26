@@ -77,18 +77,20 @@ int Request::parse_url_encoded()
 	std::vector<std::string> tokens = tokenise_url_encoded(_body);
 	for (size_t i = 0; i < tokens.size(); ++i)
 	{
-		if (tokens[i] == "=" || tokens[i] == "&")
+		if (i >= tokens.size() || tokens[i] == "=" || tokens[i] == "&")
 			return (1);
 		std::string key = tokens[i];
-		i++;
-		if (tokens[i] != "=")
+		++i;
+		if (i >= tokens.size() || tokens[i] != "=")
 			return (1);
-		i++;
-		if (tokens[i] == "=" || tokens[i] == "&")
+		++i;
+		if (i >= tokens.size() || tokens[i] == "=" || tokens[i] == "&")
 			return (1);
 		std::string value = tokens[i];
 		_body_kv[key] = value;
-		i++;
+		++i;
+		if (i >= tokens.size())
+			return (0);
 		if (tokens[i] != "&")
 			return (1);
 	}

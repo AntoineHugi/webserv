@@ -100,6 +100,7 @@ class Client
 		bool	decode_chunked_body();
 		bool	validate_permissions();
 		int		find_best_route_index(std::vector<Route>& routes);
+		void	overwrite_with_route(const Route& route);
 		bool	route_matches(const std::string &uri, const std::string &route);
 		bool	check_uri_exists();
 		bool	bouncer_approval(const Route &route);
