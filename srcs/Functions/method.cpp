@@ -23,17 +23,36 @@ void Method::get_directory(Client &client, DIR *directory)
 		client.set_status_code(500);
 		return;
 	}
+	std::string html;
+	html += "<!DOCTYPE html>\n";
+	html += "<html><head><title>Index of ";
+	html += client._request._uri;
+	html += "</title></head><body>\n";
+	html += "<ul>\n";
+
 	struct dirent *entry;
 	while ((entry = readdir(directory)) != NULL)
 	{
-		if (std::string(entry->d_name) != "." && std::string(entry->d_name) != "..")
-		{
-			std::string current = client._response.get_body();
-			current += std::string(entry->d_name) + '\n';
-			client._response.set_body(current);
-		}
+		std::string name(entry->d_name);
+
+		if (name == "." || name == "..")
+			continue;
+
+		html += "  <li><a href=\"";
+		html += client._request._uri;  // requested directory (guaranteed to end with /)
+		html += name; // file/directory name
+		html += "\">";
+		html += name;
+		html += "</a></li>\n";
 	}
+
+	html += "</ul>\n";
+	html += "</body></html>\n";
+
 	closedir(directory);
+
+	client._response.set_body(html);
+	client._response.set_content_type("text/html");
 	client.set_status_code(200);
 }
 

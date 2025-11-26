@@ -1,73 +1,6 @@
 
 #include "client.hpp"
 
-bool Client::transversal_protection()
-{
-	/* checking that the absolute path to the root exists */
-	char resolved_root[PATH_MAX];
-	if (!realpath(_request._root.c_str(), resolved_root))
-	{
-		set_status_code(403);
-		std::cout << "failed root : " << resolved_root << std::endl;
-		return (false);
-	}
-	std::string real_root = resolved_root;
-	if (real_root[real_root.size() - 1] != '/')
-		real_root += '/';
-
-	/* checking that the path to the file is located within the root */
-	if (_request._method == "GET" || _request._method == "DELETE")
-	{
-		char resolved_file[PATH_MAX];
-		if (!realpath(_request._fullPathURI.c_str(), resolved_file))
-		{
-			set_status_code(403);
-			std::cout << "failed file path : " << resolved_file << std::endl;
-			return (false);
-		}
-		std::string real_file(resolved_file);
-		if (real_file[real_file.size() - 1] != '/')
-			real_file += '/';
-		if (real_file.find(real_root) != 0)
-		{
-			std::cout << "didn't find root " << real_root << " | the file is " << real_file << std::endl;
-			set_status_code(403);
-			return (false);
-		}
-	}
-	/* checking that the path to the file parent directory is located within the root */
-	else if (_request._method == "POST")
-	{
-		std::string parent = _request._fullPathURI;
-		size_t lastSlash = parent.find_last_of('/');
-		std::string lastComponent = (lastSlash == std::string::npos) ? parent : parent.substr(lastSlash + 1);
-		if (lastComponent.find('.') != std::string::npos)
-		{
-			char *cpath = strdup(parent.c_str());
-			parent = dirname(cpath);
-			free(cpath);
-		}
-
-		char resolved_parent[PATH_MAX];
-		if (!realpath(parent.c_str(), resolved_parent))
-		{
-			set_status_code(403);
-			std::cout << "failed file path : " << resolved_parent << std::endl;
-			return (false);
-		}
-		std::string real_parent = resolved_parent;
-		if (real_parent[real_parent.size() - 1] != '/')
-			real_parent += '/';
-		if (real_parent.find(real_root) != 0)
-		{
-			std::cout << "didn't find root: " << real_root << " | in parent: " << real_parent << std::endl;
-			set_status_code(403);
-			return false;
-		}
-	}
-	return (true);
-}
-
 bool Client::validate_methods()
 {
 	if (_request._method == "GET")
@@ -174,6 +107,69 @@ bool Client::check_subnet(const std::string &rule_target, const std::string &cli
 			return (true);
 	}
 	return (false);
+}
+
+bool Client::transversal_protection()
+{
+	/* checking that the absolute path to the root exists */
+	char resolved_root[PATH_MAX];
+	if (!realpath(_request._root.c_str(), resolved_root))
+	{
+		std::cout << "failed root : " << resolved_root << std::endl;
+		return (false);
+	}
+	std::string real_root = resolved_root;
+	if (real_root[real_root.size() - 1] != '/')
+		real_root += '/';
+
+
+	/* checking that the path to the file is located within the root */
+	if (_request._method == "GET" || _request._method == "DELETE")
+	{
+		char resolved_file[PATH_MAX];
+		if (!realpath(_request._fullPathURI.c_str(), resolved_file))
+		{
+			std::cout << "failed file path : " << resolved_file << std::endl;
+			return (false);
+		}
+		std::string real_file(resolved_file);
+		if (real_file[real_file.size() - 1] != '/')
+			real_file += '/';
+		if (real_file.find(real_root) != 0)
+		{
+			std::cout << "didn't find root " << real_root << " | the file is " << real_file << std::endl;
+			return (false);
+		}
+	}
+	/* checking that the path to the file parent directory is located within the root */
+	else if (_request._method == "POST")
+	{
+		std::string parent = _request._fullPathURI;
+		size_t lastSlash = parent.find_last_of('/');
+		std::string lastComponent = (lastSlash == std::string::npos) ? parent : parent.substr(lastSlash + 1);
+		if (lastComponent.find('.') != std::string::npos)
+		{
+			char *cpath = strdup(parent.c_str());
+			parent = dirname(cpath);
+			free(cpath);
+		}
+
+		char resolved_parent[PATH_MAX];
+		if (!realpath(parent.c_str(), resolved_parent))
+		{
+			std::cout << "failed file path : " << resolved_parent << std::endl;
+			return (false);
+		}
+		std::string real_parent = resolved_parent;
+		if (real_parent[real_parent.size() - 1] != '/')
+			real_parent += '/';
+		if (real_parent.find(real_root) != 0)
+		{
+			std::cout << "didn't find root: " << real_root << " | in parent: " << real_parent << std::endl;
+			return false;
+		}
+	}
+	return (true);
 }
 
 bool Client::bouncer_approval(const Route &route)
@@ -289,8 +285,6 @@ bool Client::validate_permissions()
 	overwrite_with_route(route);
 
 	_request._fullPathURI = _request._root + _request._uri.substr(route.get_path().size());
-	std::cout << "full path URI = " << _request._fullPathURI << "| from root : " << _request._root << " and sub : " << _request._uri.substr(route.get_path().size()) << std::endl;
-	std::cout << "base URI = " << _request._uri << std::endl;
 	if (_request._method != "POST")
 	{
 		if (!check_uri_exists())
@@ -301,12 +295,14 @@ bool Client::validate_permissions()
 	}
 	if (!bouncer_approval(route))
 	{
-		std::cout << "failed transversal" << std::endl;
+		std::cout << "failed bouncer" << std::endl;
+		set_status_code(403);
 		return (false);
 	}
 	if (!transversal_protection())
 	{
 		std::cout << "failed transversal" << std::endl;
+		set_status_code(403);
 		return (false);
 	}
 	if (!check_directory_rules(route))

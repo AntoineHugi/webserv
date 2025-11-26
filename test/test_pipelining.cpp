@@ -27,7 +27,7 @@ void test_pipeline_chunked_get(const TestConfig& config, TestStats& stats) {
 
 	// Send both requests in one TCP send
 	std::string request;
-	request += "POST /upload HTTP/1.1\r\n";
+	request += "POST /upload-list HTTP/1.1\r\n";
 	request += "Host: localhost:8080\r\n";
 	request += "Transfer-Encoding: chunked\r\n";
 	request += "Connection: keep-alive\r\n";
@@ -95,7 +95,7 @@ void test_pipeline_content_length_get(const TestConfig& config, TestStats& stats
 
 	std::string body = "Hello, World!";
 	std::string request;
-	request += "POST /submit HTTP/1.1\r\n";
+	request += "POST /upload-list HTTP/1.1\r\n";
 	request += "Host: localhost:8080\r\n";
 	request += "Content-Length: 13\r\n";
 	request += "Connection: keep-alive\r\n";
@@ -154,9 +154,9 @@ void test_pipeline_three_requests(const TestConfig& config, TestStats& stats) {
 	}
 
 	std::string request;
-	request += "GET /1 HTTP/1.1\r\nHost: localhost:8080\r\nConnection: keep-alive\r\n\r\n";
-	request += "GET /2 HTTP/1.1\r\nHost: localhost:8080\r\nConnection: keep-alive\r\n\r\n";
-	request += "GET /3 HTTP/1.1\r\nHost: localhost:8080\r\nConnection: close\r\n\r\n";
+	request += "GET / HTTP/1.1\r\nHost: localhost:8080\r\nConnection: keep-alive\r\n\r\n";
+	request += "GET / HTTP/1.1\r\nHost: localhost:8080\r\nConnection: keep-alive\r\n\r\n";
+	request += "GET / HTTP/1.1\r\nHost: localhost:8080\r\nConnection: close\r\n\r\n";
 
 	print_info("Sending 3 pipelined GETs");
 	send(sock, request.c_str(), request.size(), 0);

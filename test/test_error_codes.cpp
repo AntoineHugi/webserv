@@ -5,6 +5,97 @@
 // CATEGORY: ERROR CODES
 // ============================================================================
 
+void test_400_bad_request(const TestConfig &config, TestStats &stats)
+{
+	print_test("400 Bad Request");
+
+	int sock = connect_to_server(config.server_host.c_str(), config.server_port);
+	if (sock < 0)
+	{
+		stats.add_skip();
+		print_skip("Connection failed");
+		return;
+	}
+
+	std::string raw_request = " /index.html HTTP/1.1\r\nHost: example.com\r\n\r\n";
+	std::string response = send_raw_request(sock, raw_request);
+	HttpResponse resp = parse_response(response);
+	print_test(" - Missing method");
+	if (assert_status(resp, 400, stats))
+		stats.add_pass();
+	else
+		stats.add_fail();
+	close(sock);
+
+	sock = connect_to_server(config.server_host.c_str(), config.server_port);
+	if (sock < 0)
+	{
+		stats.add_skip();
+		print_skip("Connection failed");
+		return;
+	}
+	raw_request = "GET  HTTP/1.1\r\nHost: example.com\r\n\r\n";
+	response = send_raw_request(sock, raw_request);
+	resp = parse_response(response);
+	print_test(" - Missing URI");
+	if (assert_status(resp, 400, stats))
+		stats.add_pass();
+	else
+		stats.add_fail();
+	close(sock);
+
+	sock = connect_to_server(config.server_host.c_str(), config.server_port);
+	if (sock < 0)
+	{
+		stats.add_skip();
+		print_skip("Connection failed");
+		return;
+	}
+	raw_request = "GET /index.html \r\nHost: example.com\r\n\r\n";
+	response = send_raw_request(sock, raw_request);
+	resp = parse_response(response);
+	print_test(" - Missing version");
+	if (assert_status(resp, 400, stats))
+		stats.add_pass();
+	else
+		stats.add_fail();
+	close(sock);
+
+	sock = connect_to_server(config.server_host.c_str(), config.server_port);
+	if (sock < 0)
+	{
+		stats.add_skip();
+		print_skip("Connection failed");
+		return;
+	}
+	raw_request = "GET /index.html HTTP/1.1\r\n\r\n";
+	response = send_raw_request(sock, raw_request);
+	resp = parse_response(response);
+	print_test(" - Missing host header");
+	if (assert_status(resp, 400, stats))
+		stats.add_pass();
+	else
+		stats.add_fail();
+	close(sock);
+
+	sock = connect_to_server(config.server_host.c_str(), config.server_port);
+	if (sock < 0)
+	{
+		stats.add_skip();
+		print_skip("Connection failed");
+		return;
+	}
+	raw_request = "GET/index.htmlHTTP/1.1\r\nHost: example.com\r\n\r\n";
+	response = send_raw_request(sock, raw_request);
+	resp = parse_response(response);
+	print_test(" - Malformed request line");
+	if (assert_status(resp, 400, stats))
+		stats.add_pass();
+	else
+		stats.add_fail();
+	close(sock);
+}
+
 void test_403_forbidden(const TestConfig &config, TestStats &stats)
 {
 	print_test("403 Forbidden");
@@ -172,14 +263,71 @@ void test_505_http_version_not_supported(const TestConfig &config, TestStats &st
 	close(sock);
 }
 
+void test_custom_error_page(const TestConfig &config, TestStats &stats)
+{
+	print_test("Custom Error Page Content");
+
+	int sock = connect_to_server(config.server_host.c_str(), config.server_port);
+	if (sock < 0)
+	{
+		stats.add_skip();
+		return;
+	}
+
+	std::string response = send_request(sock, "GET", "/forbidden_folder");
+	HttpResponse resp = parse_response(response);
+
+	assert_status(resp, 403, stats);
+
+	if (resp.body.find("403") != std::string::npos)
+	{
+		stats.add_pass();
+		print_pass("Custom 403 page served");
+	}
+	else
+	{
+		stats.add_fail();
+		print_fail("Custom error page missing");
+	}
+
+	close(sock);
+}
+
+void test_default_error_page(const TestConfig &config, TestStats &stats)
+{
+	print_test("Default Error Page");
+
+	int sock = connect_to_server(config.server_host.c_str(), config.server_port);
+	if (sock < 0)
+	{
+		stats.add_skip();
+		return;
+	}
+
+	std::string response = send_request(sock, "GET", "/definitely_missing");
+	HttpResponse resp = parse_response(response);
+
+	assert_status(resp, 404, stats);
+	assert_body_exists(resp, stats);
+
+	close(sock);
+}
+
+// ============================================================================
+// CATEGORY RUNNER
+// ============================================================================
+
 void run_error_tests(const TestConfig &config, TestStats &stats)
 {
-	print_category("ERROR CODES");
+	print_category("ERROR CODES & ERROR PAGES");
 
+	test_400_bad_request(config, stats);
 	test_403_forbidden(config, stats);
 	test_404_not_found(config, stats);
 	test_405_method_not_allowed(config, stats);
 	test_413_payload_too_large(config, stats);
 	test_431_request_header_too_large(config, stats);
 	test_505_http_version_not_supported(config, stats);
+	test_custom_error_page(config, stats);
+	test_default_error_page(config, stats);
 }

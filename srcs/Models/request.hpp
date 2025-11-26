@@ -25,6 +25,7 @@ class Request
 		std::string _method;
 		std::string _uri;
 		std::string _version;
+		std::string _host;
 		std::map<std::string, std::string> _header_kv;
 		size_t _content_length;
 		std::string _fullPathURI;

@@ -2,10 +2,10 @@
 
 int Request::http_requirements_met()
 {
-	if (_method.empty() || _uri.empty() || _version.empty())
+	if (_method.empty() || _uri.empty() || _version.empty() || _host.empty())
 	{
-		std::cout << "something is empty, _method = " << _method << "; _uri = " << _uri << ";_version = " << _version << std::endl;
-		return 505;
+		std::cout << "something is empty, _method = " << _method << "; _uri = " << _uri << ";_version = " << _version << ";_host = " << _host << std::endl;
+		return 400;
 	}
 	if (_version != "HTTP/1.1" && _version != "HTTP/1.0")
 	{
