@@ -2,9 +2,14 @@
 
 void Service::cgi_handler(int i)
 {
-	std::cout << "HANDLING cgi HERE " << std::endl;
+	std::cout << "\n###################################################" << std::endl;
+	std::cout << "################## CGI REQUEST #######################" << std::endl;
+	std::cout << "###################################################\n"
+			  << std::endl;
+
 	CGIProcess &cgi = cgi_processes[cgi_fd_for_cgi(fds["poll_fds"][i].fd , fds["cgi_fds"])];
 	Client &client = clients[fds["poll_fds"][i].fd];
+
 
 	if (fds["poll_fds"][i].fd == cgi.get_pipe_to_cgi())
 	{
@@ -22,18 +27,14 @@ void Service::cgi_handler(int i)
 		}
 		else if (bytes_sent == 0)
 		{
-			close(cgi.get_pipe_to_cgi());
-			cgi_processes.erase(fds["poll_fds"][i].fd);
-			// poll_fds.erase(poll_fds.begin() + i); // Remove from poll
-			cgi.set_processing();
+			remove_fd(cgi.get_pipe_to_cgi());
+			cgi.set_processing_and_writing();
 		}
 		else
 			cgi.update_bytes_written(bytes_sent);
 	}
-	else if (fds["poll_fds"][i].fd == cgi.get_pipe_from_cgi())
+	else if (fds["poll_fds"][i].fd == cgi.get_pipe_from_cgi() && cgi.can_i_process_and_write())
 	{
-		/* handle reading from CGI */
-
 		char buffer[1024];
 		ssize_t n = read(cgi.get_pipe_from_cgi(), buffer, sizeof(buffer));
 
@@ -41,26 +42,20 @@ void Service::cgi_handler(int i)
 			cgi.append_to_output(buffer, n);
 		else if (n == 0)  // EOF
 		{
-			// Child finished!
-
-			// REAP CHILD HERE
 			int status;
 			waitpid(cgi.get_pid(), &status, 0);
+			client._response.set_response_data(cgi.get_output_buffer());
 
 		// 	// Parse CGI output and send to client
 		// 	Client& client = clients[cgi._client_fd];
 		// 	parse_cgi_output(cgi._output_buffer, client);
 		// 	client.set_send_response();
-		// // cgi.set_finish();
 			// Cleanup
-			close(cgi.get_pipe_from_cgi());
-			delete &cgi;
-			fds["cgi_fds"].erase(fds["poll_fds"][i].fd);
-			fds["poll_fds"].erase(this->fds["poll_fds"].begin() + i);
+			remove_fd(cgi.get_pipe_from_cgi());
+			cgi.set_finish();
+			client.set_create_response();
 		}
 	}
-
-
 	return;
 }
 
@@ -102,10 +97,29 @@ void Service::setup_cgi_request(int i)
 		close(pipe_from_cgi[1]);
 		// Execute CGI program
 		// For demonstration, we'll use /usr/bin/env to simulate a CGI script
-		//  char *argv[] = {"/usr/bin/python3", "/path/to/script.py", NULL};
-		char *argv[] = {"/usr/bin/env", NULL};
+		char path_buf[PATH_MAX];
+
+		// Get the current executable path
+		ssize_t count = readlink("/proc/self/exe", path_buf, PATH_MAX);
+		if (count == -1) {
+				perror("Error getting executable path");
+				return;
+		}
+
+		// Null-terminate the string
+		path_buf[count] = '\0';
+
+		// Get the directory part from the full path
+		std::string dir_path = std::string(path_buf);
+		dir_path = dir_path.substr(0, dir_path.find_last_of("/"));  // Get the directory
+
+		// Construct the full path for the command to execute
+		std::string exec_path = dir_path + "/cgi/test.py";
+
+		std::string arg0 = "/usr/bin/python3";
+		char *argv[] = {strdup(arg0.c_str()), strdup(exec_path.c_str()), NULL };
 		char *envp[] = {NULL};
-		execve("/usr/bin/env", argv, envp);
+		execve(argv[0], argv, envp);
 		exit(1); // TODO: handle error
 
 	}
@@ -138,104 +152,3 @@ void Service::setup_cgi_request(int i)
 	}
 	return;
 }
-
-/*
-CGIProcess Service::find_cgi_for_this_client(int i)
-{
-	std::map<int, CGIProcess>::iterator it = cgi_processes.begin();
-	for (; it != cgi_processes.end(); ++it)
-	{
-		if (it->second.can_i_process() && it->second.get_client_fd() == this->fds["poll_fds"][i].fd)
-		{
-			// Found the CGI process for this client
-			// Read output from CGI
-			char buffer[1024];
-			ssize_t bytes_read = read(it->second._pipe_from_cgi, buffer, sizeof(buffer) - 1);
-			if (bytes_read > 0)
-			{
-				buffer[bytes_read] = '\0';
-				clients[client_fd].response_append_body(std::string(buffer));
-			}
-			else if (bytes_read == 0)
-			{
-				// CGI finished
-				it->second.set_writing();
-			}
-			else
-			{
-				// Handle read error
-			}
-			return;
-		}
-	}
-}
-*/
-	// waitpid(pid, &status, WNOHANG);
-
-	// This is for the CGI fd triggered in poll
-	/*
-
-	  Currently just prints a message. This should:
-  - Identify which CGI process triggered the event
-  - If POLLIN on pipe_from_cgi: read CGI output
-  - If POLLOUT on pipe_to_cgi: write request body to CGI
-  - If POLLHUP: CGI finished, call waitpid(), parse output, send response to client
-
-	                **SHOULD DO:**
-                • Find CGIProcess by fd
-                • write() client._request._body to pipe_to_cgi[1]
-                • If all written:
-                    - close(pipe_to_cgi[1])
-                    - Remove from poll_fds
-                    - Mark cgi.finished_writing = true
-
-	CGIProcess& cgi = cgi_processes[fd];  // or find it
-
-	if (revents & POLLOUT && fd == cgi.pipe_to_cgi)
-	{
-			// Write request body to CGI stdin
-			// ...
-			if (finished_writing)
-			{
-					close(cgi.pipe_to_cgi);
-					cgi.finished_writing = true;
-					remove_from_poll(cgi.pipe_to_cgi);
-			}
-	}
-
-	if (revents & POLLIN && fd == cgi.pipe_from_cgi)
-	{
-			// Read CGI output
-			char buffer[4096];
-			ssize_t n = read(fd, buffer, sizeof(buffer));
-			if (n > 0)
-					cgi.output_buffer.append(buffer, n);
-			else if (n == 0)
-			{
-					// EOF - CGI finished
-					close(cgi.pipe_from_cgi);
-					int status;
-					waitpid(cgi.pid, &status, 0);  // Reap child
-
-					// Parse cgi.output_buffer and create HTTP response
-					Client& client = clients[cgi.client_fd];
-					parse_cgi_output_to_response(client, cgi.output_buffer);
-					client.set_send_response();
-
-					// Cleanup
-					remove_from_poll(cgi.pipe_from_cgi);
-					cgi_processes.erase(fd);
-			}
-	}
-
-	// Check timeout
-	if (time(NULL) - cgi.start_time > 30)
-	{
-			kill(cgi.pid, SIGKILL);
-			waitpid(cgi.pid, NULL, 0);
-			// Send 504 Gateway Timeout to client
-			cleanup_cgi(cgi);
-	}
-
-
-	*/

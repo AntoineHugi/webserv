@@ -37,11 +37,14 @@ class Service
 		void	cgi_handler(int i);
 		// void	new_client_handler(int fd);
 		void	client_handler();
-		void	setup_cgi_request(int i);
 		CGIProcess	find_cgi_for_this_client(int i);
+		void 	remove_fd(int fd);
+		void	setup_cgi_request(int i);
+
 };
 
 void handle_shutdown(int sig);
+int find_fd_index_in_vector(int fd, std::vector<struct pollfd> &fds_vector);
 
 // struct pollfd {
 //     int fd;        // File descriptor to monitor

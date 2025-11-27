@@ -22,7 +22,8 @@ SRCS =	srcs/main.cpp  \
 		srcs/Models/request.cpp \
 		srcs/Models/response.cpp \
 		srcs/Models/route.cpp \
-		srcs/Models/server.cpp
+		srcs/Models/server.cpp \
+		srcs/Models/CGIProcess.cpp
 
 OBJDIR := build
 

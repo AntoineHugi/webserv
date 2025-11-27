@@ -13,8 +13,7 @@ class CGIProcess
 	private:
 		enum State {
 			CGI_READING_DATA,
-			CGI_PROCESSING_DATA,
-			CGI_WRITING_DATA,
+			CGI_PROCESSING_AND_WRITING_DATA,
 			FINISH,
 			HANDLE_ERROR
 		};
@@ -37,12 +36,10 @@ class CGIProcess
 
 
 		void set_reading() { _state = CGI_READING_DATA; };
-		void set_processing() { _state = CGI_PROCESSING_DATA; };
-		void set_writing() { _state = CGI_WRITING_DATA; };
+		void set_processing_and_writing() { _state = CGI_PROCESSING_AND_WRITING_DATA; };
 		void set_finish() { _state = FINISH; };
 		bool can_i_read() const { return _state == CGI_READING_DATA; };
-		bool can_i_process() const { return _state == CGI_PROCESSING_DATA; };
-		bool can_i_write() const { return _state == CGI_WRITING_DATA; };
+		bool can_i_process_and_write() const { return _state == CGI_PROCESSING_AND_WRITING_DATA; };
 		bool am_i_finish() const { return _state == FINISH; };
 
 		void update_bytes_written(int res) { _bytes_written += res; };
@@ -53,6 +50,7 @@ class CGIProcess
 		int get_pipe_to_cgi() const { return _pipe_to_cgi; };
 		int get_pipe_from_cgi() const { return _pipe_from_cgi; };
 		int get_bytes_written() const { return _bytes_written; };
+		std::string get_output_buffer() const { return _output_buffer; };
 
 };
 

@@ -69,3 +69,31 @@ int Service::cgi_fd_for_cgi(int fd, std::vector<struct pollfd> &fds_vector)
 	}
 	return (-1);
 }
+
+int find_fd_index_in_vector(int fd, std::vector<struct pollfd> &fds_vector)
+{
+	for (size_t i = 0; i < fds_vector.size(); i++)
+	{
+		if (fds_vector[i].fd == fd)
+			return (i);
+	}
+	return (-1);
+}
+
+void Service::remove_fd(int fd)
+{
+	// Closing fd
+	close(fd);
+
+	// Removing from poll vectors
+	int index = find_fd_index_in_vector(fd, this->fds["poll_fds"]);
+	if (index != -1)
+		this->fds["poll_fds"].erase(this->fds["poll_fds"].begin() + index);
+	index = find_fd_index_in_vector(fd, this->fds["cgi_fds"]);
+	if (index != -1)
+		this->fds["cgi_fds"].erase(this->fds["cgi_fds"].begin() + index);
+
+	// Removing from clients and cgi_processes maps
+	clients.erase(fd);
+	cgi_processes.erase(fd);
+}

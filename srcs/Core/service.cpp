@@ -1,6 +1,7 @@
 #include "service.hpp"
 #include "serviceUtils.cpp"
 #include "serviceClient.cpp"
+#include "serviceCGI.cpp"
 #include "serviceHandleConnection.cpp"
 
 #include <iostream>

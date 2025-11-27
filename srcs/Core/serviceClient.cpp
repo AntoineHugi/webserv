@@ -51,12 +51,11 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 		if (clients[poll_fds[i].fd].can_i_process_request())
 		{
 			this->setup_cgi_request(i);
-			clients[poll_fds[i].fd].set_create_response();
+			clients[poll_fds[i].fd].set_wait_cgi();
 		}
-		else if (clients[poll_fds[i].fd].can_i_create_response()) // todo: changer state to wait for CGI
+		else if (clients[poll_fds[i].fd].am_i_waiting_cgi())
 		{
-			CGIProcess &cgi = this->cgi_processes[cgi_fd_for_cgi(this->fds["poll_fds"][i].fd , this->fds["cgi_fds"])];
-			if (cgi.am_i_finish())
+			if (cgi_processes[cgi_fd_for_cgi(this->fds["poll_fds"][i].fd , this->fds["cgi_fds"])].am_i_finish())
 				clients[poll_fds[i].fd].can_i_create_response();
 		}
 		return;
