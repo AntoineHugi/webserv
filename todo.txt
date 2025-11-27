@@ -16,3 +16,11 @@ Missing tests :
 	- CGI tests
 	- Static files (various mime types)
 	- CGI-specific edge cases (no content-length, chunked input, env vars, working directory)
+
+
+
+
+	GET /cgi/specific.py HTTP
+
+	POST /cgi/specific.py HTTP
+	data.txt

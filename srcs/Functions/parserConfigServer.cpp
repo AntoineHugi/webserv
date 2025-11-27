@@ -342,8 +342,8 @@ bool Parser::check_server(Server &server)
 		server.set_root(server.get_root() + "/");
 	if (server.get_index().empty())
 		return (missing_config("index"));
-	if (server.get_error_page().empty())
-		return (missing_config("error page"));
+	/*if (server.get_error_page().empty())
+		return (missing_config("error page"));*/
 	if (server.get_client_max_body_size() == 0)
 		return (missing_config("max client body size"));
 	if (server.get_routes().empty())

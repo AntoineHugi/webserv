@@ -122,7 +122,6 @@ bool Client::transversal_protection()
 	if (real_root[real_root.size() - 1] != '/')
 		real_root += '/';
 
-
 	/* checking that the path to the file is located within the root */
 	if (_request._method == "GET" || _request._method == "DELETE")
 	{
@@ -215,6 +214,24 @@ bool Client::check_uri_exists()
 	return (true);
 }
 
+void Client::overwrite_with_route(const Route &route)
+{
+	if (route.get_client_max_body_size() > 0)
+		_request._client_max_body_size = route.get_client_max_body_size();
+	else
+		_request._client_max_body_size = get_server()->get_client_max_body_size();
+
+	if (!route.get_index().empty())
+		_request._index = route.get_index();
+	else
+		_request._index = _server->get_index();
+
+	if (!route.get_root().empty())
+		_request._root = route.get_root();
+	else
+		_request._root = _server->get_root();
+}
+
 bool Client::route_matches(const std::string &uri, const std::string &route)
 {
 	if (uri.compare(0, route.size(), route) == 0)
@@ -230,27 +247,91 @@ bool Client::route_matches(const std::string &uri, const std::string &route)
 	return false;
 }
 
-void Client::overwrite_with_route(const Route& route)
+std::vector<std::string> Client::fetch_extensions(const std::string &cgi_path)
 {
-	if (route.get_client_max_body_size() > 0)
-		_request._client_max_body_size = route.get_client_max_body_size();
-	else
-		_request._client_max_body_size = get_server()->get_client_max_body_size();
+	std::vector<std::string> extensions;
 
-	if (!route.get_index().empty())
-		_request._index = route.get_index();
-	else
-		_request._index = _server->get_index();
-	
-	if (!route.get_root().empty())
-		_request._root = route.get_root();
-	else
-		_request._root = _server->get_root();
+	if (cgi_path.size() < 3)
+		return extensions;
 
-	
+	if (!(cgi_path[0] == '\\' && cgi_path[1] == '.'))
+		return extensions;
+	size_t pos = 2;
+
+	bool multiple = false;
+	if (pos < cgi_path.size() && cgi_path[pos] == '(')
+	{
+		multiple = true;
+		++pos;
+	}
+
+	std::string current = ".";
+	while (pos < cgi_path.size())
+	{
+		char c = cgi_path[pos];
+		if (!std::isalnum(c) && c != '_' && c != '-' && c != '|' && c != ')' && c != '$')
+			return (std::vector<std::string>());
+		if (multiple == true)
+		{
+			if (c == ')')
+			{
+				++pos;
+				if (pos >= cgi_path.size() || cgi_path[pos] != '$')
+					return (std::vector<std::string>());
+				if (current.size() > 1)
+					extensions.push_back(current);
+				return extensions;
+			}
+			if (c == '|')
+			{
+				if (current.size() > 1)
+				{
+					extensions.push_back(current);
+					current = ".";
+				}
+			}
+			/* this case is invalid inside a parenthesis */
+			else if (c == '$')
+				return std::vector<std::string>();
+			else
+				current += c;
+		}
+		else
+		{
+			if (c == ')' || c == '|')
+				return std::vector<std::string>();
+			if (c == '$')
+			{
+				if (current.size() > 1)
+					extensions.push_back(current);
+				return extensions;
+			}
+			if (c == '|' || c == ')')
+				return std::vector<std::string>();
+			current += c;
+		}
+		++pos;
+	}
+	return (std::vector<std::string>());
 }
 
-int Client::find_best_route_index(std::vector<Route>& routes)
+bool Client::cgi_matches(const std::string &uri, const std::string &cgi_path)
+{
+	std::vector<std::string> extensions = fetch_extensions(cgi_path);
+	if (extensions.empty())
+		return false;
+
+	for (size_t i = 0; i < extensions.size(); ++i)
+	{
+		const std::string &extension = extensions[i];
+
+		if (uri.size() >= extension.size() && uri.compare(uri.size() - extension.size(), extension.size(), extension) == 0)
+			return true;
+	}
+	return false;
+}
+
+int Client::find_best_route_index(std::vector<Route> &routes)
 {
 	int best_index = -1;
 	size_t best_len = 0;
@@ -258,13 +339,20 @@ int Client::find_best_route_index(std::vector<Route>& routes)
 	for (size_t i = 0; i < routes.size(); ++i)
 	{
 		const std::string &route_path = routes[i].get_path();
-
-		if (route_matches(_request._uri, route_path))
+		if (routes[i].get_cgi())
 		{
-			if (route_path.size() >= best_len)
+			if (cgi_matches(_request._uri, route_path))
+				return (static_cast<int>(i));
+		}
+		else
+		{
+			if (route_matches(_request._uri, route_path))
 			{
-				best_len = route_path.size();
-				best_index = static_cast<int>(i);
+				if (route_path.size() >= best_len)
+				{
+					best_len = route_path.size();
+					best_index = static_cast<int>(i);
+				}
 			}
 		}
 	}
@@ -284,7 +372,23 @@ bool Client::validate_permissions()
 	const Route &route = routes[routeIndex];
 	overwrite_with_route(route);
 
-	_request._fullPathURI = _request._root + _request._uri.substr(route.get_path().size());
+	if (!route.get_cgi())
+		_request._fullPathURI = _request._root + _request._uri.substr(route.get_path().size());
+	else
+	{
+		size_t pos = _request._uri.find_last_of('/');
+		std::string last;
+
+		if (pos == std::string::npos)
+			last = _request._uri;
+		else if (pos + 1 < _request._uri.size())
+			last = _request._uri.substr(pos + 1);
+		else
+			last = "";
+
+		_request._fullPathURI = _request._root + '/' + last;
+	}
+	_request._fullPathURI = _request._root + '/' + _request._uri.substr(_request._uri.find_last_of('/') + 1);
 	if (_request._method != "POST")
 	{
 		if (!check_uri_exists())

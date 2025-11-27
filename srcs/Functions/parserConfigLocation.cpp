@@ -222,10 +222,18 @@ bool Parser::parse_location(Server *server, std::vector<std::string> &tokens, si
 		std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
 		return (false);
 	}
+	bool cgi = false;
+	if (tokens[i] == "~")
+	{
+		cgi = true;
+		++i;
+	}
+
 	if (!check_duplicates(server, tokens[i]))
 		return (false);
 
 	Route route;
+	route.set_cgi(cgi);
 	route.set_path(tokens[i]);
 	++i;
 	if (i >= tokens.size() || tokens[i] != "{")
