@@ -1,73 +1,6 @@
 
 #include "client.hpp"
 
-bool Client::transversal_protection()
-{
-	/* checking that the absolute path to the root exists */
-	char resolved_root[PATH_MAX];
-	if (!realpath(_request._root.c_str(), resolved_root))
-	{
-		set_status_code(403);
-		std::cout << "failed root : " << resolved_root << std::endl;
-		return (false);
-	}
-	std::string real_root = resolved_root;
-	if (real_root[real_root.size() - 1] != '/')
-		real_root += '/';
-
-	/* checking that the path to the file is located within the root */
-	if (_request._method == "GET" || _request._method == "DELETE")
-	{
-		char resolved_file[PATH_MAX];
-		if (!realpath(_request._fullPathURI.c_str(), resolved_file))
-		{
-			set_status_code(403);
-			std::cout << "failed file path : " << resolved_file << std::endl;
-			return (false);
-		}
-		std::string real_file(resolved_file);
-		if (real_file[real_file.size() - 1] != '/')
-			real_file += '/';
-		if (real_file.find(real_root) != 0)
-		{
-			std::cout << "didn't find root " << real_root << " | the file is " << real_file << std::endl;
-			set_status_code(403);
-			return (false);
-		}
-	}
-	/* checking that the path to the file parent directory is located within the root */
-	else if (_request._method == "POST")
-	{
-		std::string parent = _request._fullPathURI;
-		size_t lastSlash = parent.find_last_of('/');
-		std::string lastComponent = (lastSlash == std::string::npos) ? parent : parent.substr(lastSlash + 1);
-		if (lastComponent.find('.') != std::string::npos)
-		{
-			char *cpath = strdup(parent.c_str());
-			parent = dirname(cpath);
-			free(cpath);
-		}
-
-		char resolved_parent[PATH_MAX];
-		if (!realpath(parent.c_str(), resolved_parent))
-		{
-			set_status_code(403);
-			std::cout << "failed file path : " << resolved_parent << std::endl;
-			return (false);
-		}
-		std::string real_parent = resolved_parent;
-		if (real_parent[real_parent.size() - 1] != '/')
-			real_parent += '/';
-		if (real_parent.find(real_root) != 0)
-		{
-			std::cout << "didn't find root: " << real_root << " | in parent: " << real_parent << std::endl;
-			set_status_code(403);
-			return false;
-		}
-	}
-	return (true);
-}
-
 bool Client::validate_methods()
 {
 	if (_request._method == "GET")
@@ -176,6 +109,68 @@ bool Client::check_subnet(const std::string &rule_target, const std::string &cli
 	return (false);
 }
 
+bool Client::transversal_protection()
+{
+	/* checking that the absolute path to the root exists */
+	char resolved_root[PATH_MAX];
+	if (!realpath(_request._root.c_str(), resolved_root))
+	{
+		std::cout << "failed root : " << resolved_root << std::endl;
+		return (false);
+	}
+	std::string real_root = resolved_root;
+	if (real_root[real_root.size() - 1] != '/')
+		real_root += '/';
+
+	/* checking that the path to the file is located within the root */
+	if (_request._method == "GET" || _request._method == "DELETE")
+	{
+		char resolved_file[PATH_MAX];
+		if (!realpath(_request._fullPathURI.c_str(), resolved_file))
+		{
+			std::cout << "failed file path : " << resolved_file << std::endl;
+			return (false);
+		}
+		std::string real_file(resolved_file);
+		if (real_file[real_file.size() - 1] != '/')
+			real_file += '/';
+		if (real_file.find(real_root) != 0)
+		{
+			std::cout << "didn't find root " << real_root << " | the file is " << real_file << std::endl;
+			return (false);
+		}
+	}
+	/* checking that the path to the file parent directory is located within the root */
+	else if (_request._method == "POST")
+	{
+		std::string parent = _request._fullPathURI;
+		size_t lastSlash = parent.find_last_of('/');
+		std::string lastComponent = (lastSlash == std::string::npos) ? parent : parent.substr(lastSlash + 1);
+		if (lastComponent.find('.') != std::string::npos)
+		{
+			char *cpath = strdup(parent.c_str());
+			parent = dirname(cpath);
+			free(cpath);
+		}
+
+		char resolved_parent[PATH_MAX];
+		if (!realpath(parent.c_str(), resolved_parent))
+		{
+			std::cout << "failed file path : " << resolved_parent << std::endl;
+			return (false);
+		}
+		std::string real_parent = resolved_parent;
+		if (real_parent[real_parent.size() - 1] != '/')
+			real_parent += '/';
+		if (real_parent.find(real_root) != 0)
+		{
+			std::cout << "didn't find root: " << real_root << " | in parent: " << real_parent << std::endl;
+			return false;
+		}
+	}
+	return (true);
+}
+
 bool Client::bouncer_approval(const Route &route)
 {
 	/* get highest ranking bouncer to decide on allow/deny, return if there is no bouncer */
@@ -219,6 +214,24 @@ bool Client::check_uri_exists()
 	return (true);
 }
 
+void Client::overwrite_with_route(const Route &route)
+{
+	if (route.get_client_max_body_size() > 0)
+		_request._client_max_body_size = route.get_client_max_body_size();
+	else
+		_request._client_max_body_size = get_server()->get_client_max_body_size();
+
+	if (!route.get_index().empty())
+		_request._index = route.get_index();
+	else
+		_request._index = _server->get_index();
+
+	if (!route.get_root().empty())
+		_request._root = route.get_root();
+	else
+		_request._root = _server->get_root();
+}
+
 bool Client::route_matches(const std::string &uri, const std::string &route)
 {
 	if (uri.compare(0, route.size(), route) == 0)
@@ -234,6 +247,90 @@ bool Client::route_matches(const std::string &uri, const std::string &route)
 	return false;
 }
 
+std::vector<std::string> Client::fetch_extensions(const std::string &cgi_path)
+{
+	std::vector<std::string> extensions;
+
+	if (cgi_path.size() < 3)
+		return extensions;
+
+	if (!(cgi_path[0] == '\\' && cgi_path[1] == '.'))
+		return extensions;
+	size_t pos = 2;
+
+	bool multiple = false;
+	if (pos < cgi_path.size() && cgi_path[pos] == '(')
+	{
+		multiple = true;
+		++pos;
+	}
+
+	std::string current = ".";
+	while (pos < cgi_path.size())
+	{
+		char c = cgi_path[pos];
+		if (!std::isalnum(c) && c != '_' && c != '-' && c != '|' && c != ')' && c != '$')
+			return (std::vector<std::string>());
+		if (multiple == true)
+		{
+			if (c == ')')
+			{
+				++pos;
+				if (pos >= cgi_path.size() || cgi_path[pos] != '$')
+					return (std::vector<std::string>());
+				if (current.size() > 1)
+					extensions.push_back(current);
+				return extensions;
+			}
+			if (c == '|')
+			{
+				if (current.size() > 1)
+				{
+					extensions.push_back(current);
+					current = ".";
+				}
+			}
+			/* this case is invalid inside a parenthesis */
+			else if (c == '$')
+				return std::vector<std::string>();
+			else
+				current += c;
+		}
+		else
+		{
+			if (c == ')' || c == '|')
+				return std::vector<std::string>();
+			if (c == '$')
+			{
+				if (current.size() > 1)
+					extensions.push_back(current);
+				return extensions;
+			}
+			if (c == '|' || c == ')')
+				return std::vector<std::string>();
+			current += c;
+		}
+		++pos;
+	}
+	return (std::vector<std::string>());
+}
+
+bool Client::cgi_matches(const std::string &uri, const std::string &cgi_path)
+{
+	std::vector<std::string> extensions = fetch_extensions(cgi_path);
+	if (extensions.empty())
+		return false;
+
+	for (size_t i = 0; i < extensions.size(); ++i)
+	{
+		const std::string &extension = extensions[i];
+
+		if (uri.size() >= extension.size() && uri.compare(uri.size() - extension.size(), extension.size(), extension) == 0)
+			return true;
+	}
+	return false;
+}
+
 int Client::find_best_route_index(std::vector<Route> &routes)
 {
 	int best_index = -1;
@@ -242,17 +339,23 @@ int Client::find_best_route_index(std::vector<Route> &routes)
 	for (size_t i = 0; i < routes.size(); ++i)
 	{
 		const std::string &route_path = routes[i].get_path();
-
-		if (route_matches(_request._uri, route_path))
+		if (routes[i].get_cgi())
 		{
-			if (route_path.size() >= best_len)
+			if (cgi_matches(_request._uri, route_path))
+				return (static_cast<int>(i));
+		}
+		else
+		{
+			if (route_matches(_request._uri, route_path))
 			{
-				best_len = route_path.size();
-				best_index = static_cast<int>(i);
+				if (route_path.size() >= best_len)
+				{
+					best_len = route_path.size();
+					best_index = static_cast<int>(i);
+				}
 			}
 		}
 	}
-
 	return (best_index);
 }
 
@@ -267,11 +370,30 @@ bool Client::validate_permissions()
 	}
 
 	const Route &route = routes[routeIndex];
-	if (route.get_root().empty())
-		_request._root = _server->get_root();
+	overwrite_with_route(route);
+	if (!route.get_redirect().empty())
+	{
+		set_status_code(route.get_redirect().begin()->first);
+		_response.set_location(route.get_redirect().begin()->second);
+		return (false);
+	}
+
+	if (!route.get_cgi())
+		_request._fullPathURI = _request._root + _request._uri.substr(route.get_path().size());
 	else
-		_request._root = route.get_root();
-	_request._fullPathURI = _request._root + _request._uri.substr(route.get_path().size());
+	{
+		size_t pos = _request._uri.find_last_of('/');
+		std::string last;
+
+		if (pos == std::string::npos)
+			last = _request._uri;
+		else if (pos + 1 < _request._uri.size())
+			last = _request._uri.substr(pos + 1);
+		else
+			last = "";
+
+		_request._fullPathURI = _request._root + '/' + last;
+	}
 	if (_request._method != "POST")
 	{
 		if (!check_uri_exists())
@@ -282,12 +404,14 @@ bool Client::validate_permissions()
 	}
 	if (!bouncer_approval(route))
 	{
-		std::cout << "failed transversal" << std::endl;
+		std::cout << "failed bouncer" << std::endl;
+		set_status_code(403);
 		return (false);
 	}
 	if (!transversal_protection())
 	{
 		std::cout << "failed transversal" << std::endl;
+		set_status_code(403);
 		return (false);
 	}
 	if (!check_directory_rules(route))
@@ -366,8 +490,7 @@ bool Client::chunked_body_finished() const
 bool Client::try_parse_body()
 {
 	/* send to chunked version */
-	// add option for route max body size
-	if (_request._request_data.size() > get_server()->get_client_max_body_size())
+	if (_request._request_data.size() > _request._client_max_body_size)
 	{
 		_status_code = 413;
 		set_create_response();

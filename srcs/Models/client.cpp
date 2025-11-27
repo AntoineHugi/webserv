@@ -93,8 +93,11 @@ int Client::handle_read()
 			if (get_status_code() > 400)
 			{
 				int status_code = get_status_code();
-				Method::get_file(*this, get_server()->get_error_page()[status_code]);
-				set_status_code(status_code);
+				if (!get_server()->get_error_page().empty() && !get_server()->get_error_page()[status_code].empty())
+				{
+					Method::get_file(*this, get_server()->get_error_page()[status_code]);
+					set_status_code(status_code);
+				}
 			}
 			return (1);
 		}
@@ -155,7 +158,7 @@ int Client::handle_write()
 		set_create_response();
 		return 1;
 	}
-	if (_status_code >= 500)
+	if (_status_code >= 400)
 		set_flags_error();
 	_response.set_request(&_request);
 	std::string response = _response.format_response(get_status_code(), should_keep_alive(), _request._version);

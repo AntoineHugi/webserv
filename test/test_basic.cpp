@@ -1,5 +1,4 @@
 #include "test_framework.hpp"
-#include <unistd.h>
 
 // ============================================================================
 // CATEGORY: BASIC CONNECTIVITY & SIMPLE REQUESTS
@@ -44,8 +43,6 @@ void test_simple_get(const TestConfig &config, TestStats &stats)
 
 	close(sock);
 }
-
-
 
 void test_http_version(const TestConfig &config, TestStats &stats)
 {
@@ -101,6 +98,28 @@ void test_required_headers(const TestConfig &config, TestStats &stats)
 	close(sock);
 }
 
+void test_per_route_method_limits(const TestConfig &config, TestStats &stats)
+{
+	print_test("Per-Route Method Restrictions");
+
+	int sock = connect_to_server(config.server_host.c_str(), config.server_port);
+	if (sock < 0)
+	{
+		stats.add_skip();
+		return;
+	}
+
+	std::map<std::string, std::string> headers;
+
+	std::string raw_response = send_request(sock, "POST", "/about", headers);
+
+	HttpResponse resp = parse_response(raw_response);
+
+	assert_status(resp, 405, stats);
+
+	close(sock);
+}
+
 // ============================================================================
 // CATEGORY RUNNER
 // ============================================================================
@@ -113,4 +132,5 @@ void run_basic_tests(const TestConfig &config, TestStats &stats)
 	test_simple_get(config, stats);
 	test_http_version(config, stats);
 	test_required_headers(config, stats);
+	test_per_route_method_limits(config, stats);
 }

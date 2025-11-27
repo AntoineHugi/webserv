@@ -2,10 +2,10 @@
 
 int Request::http_requirements_met()
 {
-	if (_method.empty() || _uri.empty() || _version.empty())
+	if (_method.empty() || _uri.empty() || _version.empty() || _host.empty())
 	{
-		std::cout << "something is empty, _method = " << _method << "; _uri = " << _uri << ";_version = " << _version << std::endl;
-		return 505;
+		std::cout << "something is empty, _method = " << _method << "; _uri = " << _uri << ";_version = " << _version << ";_host = " << _host << std::endl;
+		return 400;
 	}
 	if (_version != "HTTP/1.1" && _version != "HTTP/1.0")
 	{
@@ -80,20 +80,19 @@ int Request::parse_url_encoded()
 	std::cout << "after tokenizer, tokens.size(): " << tokens.size() << std::endl;
 	for (size_t i = 0; i < tokens.size(); ++i)
 	{
-		std::cout << "checking this token: " << tokens[i] << std::endl;
-		if (tokens[i] == "=" || tokens[i] == "&")
+		if (i >= tokens.size() || tokens[i] == "=" || tokens[i] == "&")
 			return (1);
 		std::string key = tokens[i];
-		i++;
-		if (tokens[i] != "=")
+		++i;
+		if (i >= tokens.size() || tokens[i] != "=")
 			return (1);
-		i++;
-		if (tokens[i] == "=" || tokens[i] == "&")
+		++i;
+		if (i >= tokens.size() || tokens[i] == "=" || tokens[i] == "&")
 			return (1);
 		std::string value = tokens[i];
 		_body_kv[key] = value;
-		i++;
-		if (i == tokens.size())
+		++i;
+		if (i >= tokens.size())
 			return (0);
 		if (tokens[i] != "&")
 			return (1);

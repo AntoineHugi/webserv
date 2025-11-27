@@ -105,7 +105,10 @@ class Client
 		bool	decode_chunked_body();
 		bool	validate_permissions();
 		int		find_best_route_index(std::vector<Route>& routes);
+		bool	cgi_matches(const std::string &uri, const std::string &route);
+		std::vector<std::string> fetch_extensions(const std::string &cgi_path);
 		bool	route_matches(const std::string &uri, const std::string &route);
+		void	overwrite_with_route(const Route& route);
 		bool	check_uri_exists();
 		bool	bouncer_approval(const Route &route);
 		bool	check_subnet(const std::string& rule_target, const std::string& _client_ip);

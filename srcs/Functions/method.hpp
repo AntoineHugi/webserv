@@ -24,12 +24,19 @@ class Method
 		Method& operator=(const Method& other);
 		~Method();
 
+		/* GET method */
 		static void	handle_get(Client& client);
 		static void	get_file(Client &client, std::string filepath);
 		static void	determine_content_type(Client &client, std::string filepath);
 		static void	get_directory(Client &client, DIR* directory);
+
+		/* POST method */
 		static void	handle_post(Client& client);
-		static int	saveUploadedFiles(std::vector<MultiPart>& parts, const std::string& upload_directory);
+		static int	input_data(Client& client);
+		static std::string	double_quote_handling(const std::string& string);
+		static int	save_uploaded_files(Client& client, std::vector<MultiPart>& parts, const std::string& upload_directory);
+
+		/* DELETE method */
 		static void	handle_delete(Client& client);
 };
 

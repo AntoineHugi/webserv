@@ -5,12 +5,15 @@
 
 // Forward declarations of test category runners
 void run_basic_tests(const TestConfig &config, TestStats &stats);
+void run_directory_tests(const TestConfig &config, TestStats &stats);
 void run_error_tests(const TestConfig &config, TestStats &stats);
 void run_keepalive_tests(const TestConfig &config, TestStats &stats);
+void run_multiport_tests(const TestConfig &config, TestStats &stats);
 void run_chunked_tests(const TestConfig &config, TestStats &stats);
 void run_pipelining_tests(const TestConfig &config, TestStats &stats);
 void run_post_delete(const TestConfig &config, TestStats &stats);
 void run_cgi_tests(const TestConfig &config, TestStats &stats);
+void run_redirect_test(const TestConfig &config, TestStats &stats);
 
 // ============================================================================
 // CONFIGURATION & COMMAND LINE PARSING
@@ -30,12 +33,15 @@ void print_usage(const char *program_name)
 	std::cout << "  --help               Show this help message\n\n";
 	std::cout << "Categories:\n";
 	std::cout << "  basic                Basic connectivity and requests\n";
-	std::cout << "  error                Error codes\n";
+	std::cout << "  error                Error codes & pages\n";
+	std::cout << "  directory            Directory rules and file mapping\n";
 	std::cout << "  keepalive            Connection persistence (keep-alive)\n";
+	std::cout << "  multiport            Connection from various ports\n";
 	std::cout << "  chunked              Chunked transfer encoding\n";
 	std::cout << "  pipeline             Pipelined requests\n";
 	std::cout << "  post-delete          Post and Delete functionalities\n";
 	std::cout << "  cgi                  CGI script execution\n";
+	std::cout << "  redirect             redirection\n";
 	std::cout << "  all                  All categories (default)\n\n";
 	std::cout << "Examples:\n";
 	std::cout << "  " << program_name << "                    # Run all tests\n";
@@ -54,12 +60,15 @@ TestConfig parse_args(int argc, char **argv)
 
 	// Enable all categories by default
 	config.enabled_categories["basic"] = true;
+	config.enabled_categories["directory"] = true;
 	config.enabled_categories["error"] = true;
 	config.enabled_categories["keepalive"] = true;
+	config.enabled_categories["multiport"] = true;
 	config.enabled_categories["chunked"] = true;
 	config.enabled_categories["pipeline"] = true;
 	config.enabled_categories["post-delete"] = true;
 	config.enabled_categories["cgi"] = true;
+	config.enabled_categories["redirect"] = true;
 
 	for (int i = 1; i < argc; i++)
 	{
@@ -74,11 +83,14 @@ TestConfig parse_args(int argc, char **argv)
 		{
 			std::cout << "Available test categories:\n";
 			std::cout << "  - basic\n";
+			std::cout << "  - directory\n";
 			std::cout << "  - error\n";
 			std::cout << "  - keepalive\n";
+			std::cout << "  - multiport\n";
 			std::cout << "  - chunked\n";
 			std::cout << "  - pipeline\n";
 			std::cout << "  - post-delete\n";
+			std::cout << "  - redirect\n";
 			exit(0);
 		}
 		else if (arg == "--host" && i + 1 < argc)
@@ -101,12 +113,15 @@ TestConfig parse_args(int argc, char **argv)
 		{
 			// Disable all, then enable specified
 			config.enabled_categories["basic"] = false;
+			config.enabled_categories["directory"] = false;
 			config.enabled_categories["error"] = false;
 			config.enabled_categories["keepalive"] = false;
+			config.enabled_categories["multiport"] = false;
 			config.enabled_categories["chunked"] = false;
 			config.enabled_categories["pipeline"] = false;
 			config.enabled_categories["post-delete"] = false;
 			config.enabled_categories["cgi"] = false;
+			config.enabled_categories["redirect"] = false;
 			config.enabled_categories[argv[++i]] = true;
 		}
 		else if (arg == "--skip" && i + 1 < argc)
@@ -194,6 +209,16 @@ int main(int argc, char **argv)
 		}
 	}
 
+	if (config.enabled_categories["directory"])
+	{
+		run_directory_tests(config, stats);
+		if (config.stop_on_fail && stats.failed > 0)
+		{
+			print_summary(stats);
+			return 1;
+		}
+	}
+
 	if (config.enabled_categories["error"])
 	{
 		run_error_tests(config, stats);
@@ -247,6 +272,25 @@ int main(int argc, char **argv)
 	if (config.enabled_categories["cgi"])
 	{
 		run_cgi_tests(config, stats);
+		if (config.stop_on_fail && stats.failed > 0)
+		{
+			print_summary(stats);
+			return 1;
+		}
+	}
+	if (config.enabled_categories["multiport"])
+	{
+		run_multiport_tests(config, stats);
+		if (config.stop_on_fail && stats.failed > 0)
+		{
+			print_summary(stats);
+			return 1;
+		}
+	}
+
+	if (config.enabled_categories["redirect"])
+	{
+		run_redirect_test(config, stats);
 		if (config.stop_on_fail && stats.failed > 0)
 		{
 			print_summary(stats);

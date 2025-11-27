@@ -1,21 +1,22 @@
 #include "request.hpp"
 
 Request::Request() : _request_data(""),
-					 _header(""),
-					 _method(""),
-					 _uri(""),
-					 _version(""),
-					 _header_kv(),
-					 _content_length(0),
-					 _fullPathURI(""),
-					 _root(""),
-					 _isDirectory(false),
-					 _stat(),
-					 _isCGI(false),
-					 _body(""),
-					 _body_kv(),
-					 _multiparts(),
-					 _body_data()
+		     _header(""),
+		     _method(""),
+		     _uri(""),
+		     _version(""),
+		     _host(""),
+		     _header_kv(),
+		     _content_length(0),
+		     _fullPathURI(""),
+		     _root(""),
+		     _isDirectory(false),
+		     _stat(),
+		     _isCGI(false),
+		     _body(""),
+		     _body_kv(),
+		     _multiparts(),
+		     _body_data()
 {
 }
 
@@ -26,6 +27,7 @@ Request::Request(const Request &other)
 	_method = other._method;
 	_uri = other._uri;
 	_version = other._version;
+	_host = other._host;
 	_header_kv = other._header_kv;
 	_content_length = other._content_length;
 	_fullPathURI = other._fullPathURI;
@@ -48,6 +50,7 @@ Request &Request::operator=(const Request &other)
 		_method = other._method;
 		_uri = other._uri;
 		_version = other._version;
+		_host = other._host;
 		_header_kv = other._header_kv;
 		_content_length = other._content_length;
 		_fullPathURI = other._fullPathURI;
@@ -64,7 +67,6 @@ Request &Request::operator=(const Request &other)
 }
 
 Request::~Request() {}
-
 
 int Request::parse_header()
 {
@@ -111,6 +113,7 @@ int Request::parse_header()
 			}
 		}
 	}
+	_host = _header_kv["host"];
 	if (!_header_kv.count("content-length"))
 		_content_length = 0;
 	else
@@ -130,6 +133,7 @@ int Request::parse_header()
 	std::cout << "'method: '" << _method << "'" << std::endl;
 	std::cout << "'uri: '" << _uri << "'" << std::endl;
 	std::cout << "'version : '" << _version << "'" << std::endl;
+	// std::cout << "'host : '" << _host << "'" << std::endl;
 	for (it = _header_kv.begin(); it != _header_kv.end(); ++it)
 	{
 		std::cout << "'" << it->first << "' : '" << it->second << "'" << std::endl;

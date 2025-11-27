@@ -25,6 +25,7 @@ class Request
 		std::string _method;
 		std::string _uri;
 		std::string _version;
+		std::string _host;
 		std::map<std::string, std::string> _header_kv;
 		size_t _content_length;
 		std::string _fullPathURI;
@@ -32,6 +33,8 @@ class Request
 		bool _isDirectory;
 		struct stat _stat;
 		bool _isCGI;
+		unsigned long	_client_max_body_size;
+		std::vector<std::string> _index;
 
 		/* body attributes */
 		std::string _body;
