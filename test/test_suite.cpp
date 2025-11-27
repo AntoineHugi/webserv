@@ -13,6 +13,7 @@ void run_chunked_tests(const TestConfig &config, TestStats &stats);
 void run_pipelining_tests(const TestConfig &config, TestStats &stats);
 void run_post_delete(const TestConfig &config, TestStats &stats);
 void run_cgi_tests(const TestConfig &config, TestStats &stats);
+void run_cgi_env_tests(const TestConfig &config, TestStats &stats);
 void run_redirect_test(const TestConfig &config, TestStats &stats);
 
 // ============================================================================
@@ -41,6 +42,7 @@ void print_usage(const char *program_name)
 	std::cout << "  pipeline             Pipelined requests\n";
 	std::cout << "  post-delete          Post and Delete functionalities\n";
 	std::cout << "  cgi                  CGI script execution\n";
+	std::cout << "  cgi-env              CGI environment variables\n";
 	std::cout << "  redirect             redirection\n";
 	std::cout << "  all                  All categories (default)\n\n";
 	std::cout << "Examples:\n";
@@ -68,6 +70,7 @@ TestConfig parse_args(int argc, char **argv)
 	config.enabled_categories["pipeline"] = true;
 	config.enabled_categories["post-delete"] = true;
 	config.enabled_categories["cgi"] = true;
+	config.enabled_categories["cgi-env"] = true;
 	config.enabled_categories["redirect"] = true;
 
 	for (int i = 1; i < argc; i++)
@@ -90,6 +93,8 @@ TestConfig parse_args(int argc, char **argv)
 			std::cout << "  - chunked\n";
 			std::cout << "  - pipeline\n";
 			std::cout << "  - post-delete\n";
+			std::cout << "  - cgi\n";
+			std::cout << "  - cgi-env\n";
 			std::cout << "  - redirect\n";
 			exit(0);
 		}
@@ -121,6 +126,7 @@ TestConfig parse_args(int argc, char **argv)
 			config.enabled_categories["pipeline"] = false;
 			config.enabled_categories["post-delete"] = false;
 			config.enabled_categories["cgi"] = false;
+			config.enabled_categories["cgi-env"] = false;
 			config.enabled_categories["redirect"] = false;
 			config.enabled_categories[argv[++i]] = true;
 		}
@@ -278,6 +284,17 @@ int main(int argc, char **argv)
 			return 1;
 		}
 	}
+
+	if (config.enabled_categories["cgi-env"])
+	{
+		run_cgi_env_tests(config, stats);
+		if (config.stop_on_fail && stats.failed > 0)
+		{
+			print_summary(stats);
+			return 1;
+		}
+	}
+
 	if (config.enabled_categories["multiport"])
 	{
 		run_multiport_tests(config, stats);
