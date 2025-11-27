@@ -34,7 +34,7 @@ class Method
 		static void	handle_post(Client& client);
 		static int	input_data(Client& client);
 		static std::string	double_quote_handling(const std::string& string);
-		static int	save_uploaded_files(std::vector<MultiPart>& parts, const std::string& upload_directory);
+		static int	save_uploaded_files(Client& client, std::vector<MultiPart>& parts, const std::string& upload_directory);
 
 		/* DELETE method */
 		static void	handle_delete(Client& client);

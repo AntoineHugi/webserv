@@ -1,22 +1,20 @@
 #include "response.hpp"
 
-Response::Response():
-	_header(""),
-	_content_length(0),
-	_bytes_sent(0),
-	_response_data(""),
-	_body(""),
-	_allowedMethods() {}
+Response::Response() : _header(""),
+					   _content_length(0),
+					   _bytes_sent(0),
+					   _response_data(""),
+					   _body(""),
+					   _allowedMethods() {}
 
-Response::Response(const Response& other) :
-	_header (other._header),
-	_content_length (other._content_length),
-	_bytes_sent (other._bytes_sent),
-	_response_data (other._response_data),
-	_body (other._body),
-	_allowedMethods(other._allowedMethods) {}
+Response::Response(const Response &other) : _header(other._header),
+											_content_length(other._content_length),
+											_bytes_sent(other._bytes_sent),
+											_response_data(other._response_data),
+											_body(other._body),
+											_allowedMethods(other._allowedMethods) {}
 
-Response& Response::operator=(const Response& other)
+Response &Response::operator=(const Response &other)
 {
 	if (this != &other)
 	{
@@ -51,12 +49,10 @@ std::string Response::get_reason_phrase(int status_code)
 		return "Created";
 	case 204:
 		return "No Content";
-	// case 301:
-	// 	return "Moved Permanently";
-	// case 302:
-	// 	return "Found";					// we don't use these currently
-	// case 304:
-	// 	return "Not Modified";
+	case 301:
+		return "Moved Permanently";
+	case 302:
+		return "Found";
 	case 400:
 		return "Bad Request";
 	case 403:
@@ -92,6 +88,8 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	response += reason_phrase + "\r\n";
 	if (!_body.empty())
 		response += "Content-Type: " + _content_type + "\r\n";
+	if (status_code == 301 || status_code == 302)
+		response += "Location: " + get_location() + "\r\n";
 	if (status_code == 405)
 	{
 		response += "Allowed-Methods: ";
@@ -102,7 +100,7 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 
 	response += "Server: webserv42\r\n";
 	std::time_t now = std::time(0);
-	std::tm* gmt_time = std::gmtime(&now);
+	std::tm *gmt_time = std::gmtime(&now);
 	char date_buf[100];
 	strftime(date_buf, sizeof(date_buf), "%a, %d %b %Y %H:%M:%S GMT", gmt_time);
 	response += "Date: ";
@@ -116,9 +114,9 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 		return response;
 	}
 	if (should_keep_alive)
-			response += "Connection: keep-alive\r\n";
+		response += "Connection: keep-alive\r\n";
 	else
-			response += "Connection: close\r\n";
+		response += "Connection: close\r\n";
 
 	ss.str("");
 	ss << _body.size();

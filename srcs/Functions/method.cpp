@@ -37,13 +37,9 @@ void Method::get_directory(Client &client, DIR *directory)
 
 		if (name == "." || name == "..")
 			continue;
-
-		html += "  <li><a href=\"";
-		html += client._request._uri;  // requested directory (guaranteed to end with /)
-		html += name; // file/directory name
-		html += "\">";
+		html += "  <li>";
 		html += name;
-		html += "</a></li>\n";
+		html += "</li>\n";
 	}
 
 	html += "</ul>\n";
@@ -165,7 +161,6 @@ void Method::handle_get(Client &client)
 				return;
 			}
 		}
-
 		/* if not, then serves the directory list */
 		DIR *dir = opendir(client._request._fullPathURI.c_str());
 		get_directory(client, dir);
@@ -175,7 +170,7 @@ void Method::handle_get(Client &client)
 	return;
 }
 
-int Method::save_uploaded_files(std::vector<MultiPart> &parts, const std::string &upload_directory)
+int Method::save_uploaded_files(Client& client, std::vector<MultiPart> &parts, const std::string &upload_directory)
 {
 	for (size_t i = 0; i < parts.size(); ++i)
 	{
@@ -192,6 +187,7 @@ int Method::save_uploaded_files(std::vector<MultiPart> &parts, const std::string
 		out.write(data.data(), data.size());
 		out.close();
 		std::cout << "Saved file: " << path << " to disc." << std::endl;
+		client._response.set_location(path);
 	}
 	return (0);
 }
@@ -245,17 +241,17 @@ void Method::handle_post(Client &client)
 	{
 		if (input_data(client))
 			return;
-		client.set_status_code(200);
+		client.set_status_code(204);
 		return;
 	}
 	else if (client._request._header_kv["content-type"].find("multipart/form-data") != std::string::npos)
 	{
-		if (save_uploaded_files(client._request._multiparts, client._request._fullPathURI) == 1)
+		if (save_uploaded_files(client, client._request._multiparts, client._request._fullPathURI) == 1)
 		{
 			client.set_status_code(500);
 			return;
 		}
-		client.set_status_code(204);
+		client.set_status_code(201);
 		return;
 	}
 	else if (client._request._header_kv["content-type"].empty())

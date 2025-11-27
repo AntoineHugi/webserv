@@ -371,6 +371,12 @@ bool Client::validate_permissions()
 
 	const Route &route = routes[routeIndex];
 	overwrite_with_route(route);
+	if (!route.get_redirect().empty())
+	{
+		set_status_code(route.get_redirect().begin()->first);
+		_response.set_location(route.get_redirect().begin()->second);
+		return (false);
+	}
 
 	if (!route.get_cgi())
 		_request._fullPathURI = _request._root + _request._uri.substr(route.get_path().size());
@@ -388,7 +394,6 @@ bool Client::validate_permissions()
 
 		_request._fullPathURI = _request._root + '/' + last;
 	}
-	_request._fullPathURI = _request._root + '/' + _request._uri.substr(_request._uri.find_last_of('/') + 1);
 	if (_request._method != "POST")
 	{
 		if (!check_uri_exists())

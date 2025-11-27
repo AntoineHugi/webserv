@@ -7,7 +7,6 @@ bool Parser::assign_single_keyval_route(Route& route, std::string &key, std::str
 	fields.push_back("root");
 	fields.push_back("autoindex");
 	fields.push_back("cgi_path");
-	fields.push_back("redirect");
 	fields.push_back("client_max_body_size");
 
 	for (size_t i = 0; i < fields.size(); i++)
@@ -50,14 +49,6 @@ bool Parser::assign_single_keyval_route(Route& route, std::string &key, std::str
 		route.set_cgi_path(value);
 		break;
 	case 3:
-		if (!route.get_redirect().empty())
-		{
-			std::cout << "Config file error: duplicate cgi path line in location" << std::endl;
-			return (false);
-		}
-		route.set_redirect(value);
-		break;
-	case 4:
 		if (route.get_client_max_body_size() > 0)
 		{
 			std::cout << "Config file error: duplicate cgi path line in location" << std::endl;
@@ -160,6 +151,41 @@ bool Parser::handle_location_index(Route &route, std::vector<std::string> &token
 	return (true);
 }
 
+bool Parser::handle_location_return(Route &route, std::vector<std::string> &tokens, size_t &i)
+{
+	++i;
+	if (i >= tokens.size() || tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+	{
+		--i;
+		std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+		return (false);
+	}
+	char *end;
+	int key = static_cast<int>(std::strtol(tokens[i].c_str(), &end, 10));
+	if (*end != '\0')
+	{
+		std::cout << "Config file error: invalid error code: " << tokens[i] << std::endl;
+		return (false);
+	}
+	++i;
+	if (i >= tokens.size() || tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
+	{
+		--i;
+		std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+		return (false);
+	}
+	std::string value = tokens[i];
+	route.set_redirect(key, value);
+	++i;
+	if (i >= tokens.size() || tokens[i] != ";")
+	{
+		--i;
+		std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+		return (false);
+	}
+	return (true);
+}
+
 bool Parser::handle_location_method(Route &route, std::vector<std::string> &tokens, size_t &i)
 {
 	++i;
@@ -259,6 +285,11 @@ bool Parser::parse_location(Server *server, std::vector<std::string> &tokens, si
 		if (tokens[i] == "methods")
 		{
 			if (!handle_location_method(route, tokens, i))
+				return (false);
+		}
+		else if (tokens[i] == "return")
+		{
+			if (!handle_location_return(route, tokens, i))
 				return (false);
 		}
 		else if (tokens[i] == "index")

@@ -1,9 +1,9 @@
 #include "route.hpp"
 
 Route::Route() : _path(""), _root(""), _autoindex(""),
-				 _cgi_path(""), _redirect(""), _client_max_body_size(0),
-				 _methods(), _index(), _bouncer(),
-				 _cgi(false) {}
+				 _cgi_path(""), _client_max_body_size(0), _methods(), 
+				 _index(), _bouncer(), _cgi(false), 
+				 _redirect() {}
 
 Route::Route(const Route &other)
 {
@@ -11,12 +11,12 @@ Route::Route(const Route &other)
 	_root = other._root;
 	_autoindex = other._autoindex;
 	_cgi_path = other._cgi_path;
-	_redirect = other._redirect;
 	_client_max_body_size = other._client_max_body_size;
 	_methods = other._methods;
 	_index = other._index;
 	_bouncer = other._bouncer;
 	_cgi = other._cgi;
+	_redirect = other._redirect;
 }
 
 Route &Route::operator=(const Route &other)
@@ -27,12 +27,12 @@ Route &Route::operator=(const Route &other)
 		_root = other._root;
 		_autoindex = other._autoindex;
 		_cgi_path = other._cgi_path;
-		_redirect = other._redirect;
 		_client_max_body_size = other._client_max_body_size;
 		_methods = other._methods;
 		_index = other._index;
 		_bouncer = other._bouncer;
 		_cgi = other._cgi;
+		_redirect = other._redirect;
 	}
 	return (*this);
 }
@@ -43,7 +43,6 @@ std::string Route::get_path() const { return (_path); }
 std::string Route::get_root() const { return (_root); }
 std::string Route::get_autoindex() const { return (_autoindex); }
 std::string Route::get_cgi_path() const { return (_cgi_path); }
-std::string Route::get_redirect() const { return (_redirect); }
 unsigned long Route::get_client_max_body_size() const { return (_client_max_body_size); }
 std::vector<std::string> Route::get_methods() const { return (_methods); }
 std::vector<std::string> Route::get_index() const { return (_index); }
@@ -58,9 +57,9 @@ void Route::set_autoindex(const std::string &autoindex)
 		throw(std::runtime_error("Invalid autoindex: " + autoindex));
 	_autoindex = autoindex;
 }
+std::map<int, std::string> Route::get_redirect() const { return (_redirect); }
 
 void Route::set_cgi_path(const std::string &cgi_path) { _cgi_path = cgi_path; }
-void Route::set_redirect(const std::string &redirect) { _redirect = redirect; }
 void Route::set_client_max_body_size(const std::string &max)
 {
 	if (max.empty())
@@ -100,3 +99,4 @@ void Route::set_methods(const std::vector<std::string> &methods)
 void Route::set_index(std::vector<std::string> index) { _index = index; }
 void Route::add_bouncer(std::string &key, std::string &value) { _bouncer.insert(std::make_pair(key, value)); }
 void Route::set_cgi(bool cgi) { _cgi = cgi; }
+void Route::set_redirect(int key, std::string& value) { _redirect.insert(std::make_pair(key, value)); }

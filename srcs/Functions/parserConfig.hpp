@@ -29,6 +29,7 @@ class Parser
 		static bool	parse_location(Server* server, std::vector <std::string>& tokens, size_t& i);
 		static bool	check_duplicates(Server *server, std::string route);
 		static bool	handle_location_method(Route& route, std::vector <std::string>& tokens, size_t& i);
+		static bool	handle_location_return(Route &route, std::vector<std::string> &tokens, size_t &i);
 		static bool	handle_location_index(Route& route, std::vector <std::string>& tokens, size_t& i);
 		static bool	handle_location_allowance(Route &route, std::vector<std::string> &tokens, size_t &i);
 		static bool	handle_location_keyval(Route &route, std::vector<std::string> &tokens, size_t &i);
