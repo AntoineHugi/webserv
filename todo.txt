@@ -1,26 +1,13 @@
-- changed server based on URI (find if the route exist in another server with same host)
+- changed server based on URI (find if the route exist in another server with same host) (optional)
 
-- massive amount of request (& how to deal with it)
+- massive amount of request (& how to deal with it) we are good.
+
+
 - run tester from school
 
-
-- find eval sheet
-	- found old one
-
-
-- what to do if post has wrong headers, but is still sending the body? should we close? 
-	- YES
 
 - send subject to chat gpt and ask what tests we should past
 Missing tests : 
 	- CGI tests
 	- Static files (various mime types)
 	- CGI-specific edge cases (no content-length, chunked input, env vars, working directory)
-
-
-
-
-	GET /cgi/specific.py HTTP
-
-	POST /cgi/specific.py HTTP
-	data.txt

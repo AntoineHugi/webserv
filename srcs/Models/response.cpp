@@ -88,7 +88,7 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	response += reason_phrase + "\r\n";
 	if (!_body.empty())
 		response += "Content-Type: " + _content_type + "\r\n";
-	if (status_code == 301 || status_code == 302)
+	if (!get_location().empty())
 		response += "Location: " + get_location() + "\r\n";
 	if (status_code == 405)
 	{
