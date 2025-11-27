@@ -1,25 +1,21 @@
 #include "request.hpp"
-#include <sstream>
-#include <string>
-#include <cstdlib>
 
 Request::Request() : _request_data(""),
-		     _header(""),
-		     _body(""),
-		     _method(""),
-		     _uri(""),
-		     _version(""),
-		     _header_kv(),
-		     _content_length(0),
-		     _fullPathURI(""),
-		     _root(""),
-		     _isDirectory(false),
-		     _stat(),
-		     _isCGI(false),
-		     _chunk_parse_index(0),
-		     _chunk_size_pending(false),
-		     _current_chunk_size(0),
-		     _decoded_body("")
+					 _header(""),
+					 _method(""),
+					 _uri(""),
+					 _version(""),
+					 _header_kv(),
+					 _content_length(0),
+					 _fullPathURI(""),
+					 _root(""),
+					 _isDirectory(false),
+					 _stat(),
+					 _isCGI(false),
+					 _body(""),
+					 _body_kv(),
+					 _multiparts(),
+					 _body_data()
 {
 }
 
@@ -27,7 +23,6 @@ Request::Request(const Request &other)
 {
 	_request_data = other._request_data;
 	_header = other._header;
-	_body = other._body;
 	_method = other._method;
 	_uri = other._uri;
 	_version = other._version;
@@ -38,10 +33,10 @@ Request::Request(const Request &other)
 	_isDirectory = other._isDirectory;
 	_stat = other._stat;
 	_isCGI = other._isCGI;
-	_chunk_parse_index = other._chunk_parse_index;
-	_chunk_size_pending = other._chunk_size_pending;
-	_current_chunk_size = other._current_chunk_size;
-	_decoded_body = other._decoded_body;
+	_body = other._body;
+	_body_kv = other._body_kv;
+	_multiparts = other._multiparts;
+	_body_data = other._body_data;
 }
 
 Request &Request::operator=(const Request &other)
@@ -50,7 +45,6 @@ Request &Request::operator=(const Request &other)
 	{
 		_request_data = other._request_data;
 		_header = other._header;
-		_body = other._body;
 		_method = other._method;
 		_uri = other._uri;
 		_version = other._version;
@@ -61,53 +55,24 @@ Request &Request::operator=(const Request &other)
 		_isDirectory = other._isDirectory;
 		_stat = other._stat;
 		_isCGI = other._isCGI;
-		_chunk_parse_index = other._chunk_parse_index;
-		_chunk_size_pending = other._chunk_size_pending;
-		_current_chunk_size = other._current_chunk_size;
-		_decoded_body = other._decoded_body;
+		_body = other._body;
+		_body_kv = other._body_kv;
+		_multiparts = other._multiparts;
+		_body_data = other._body_data;
 	}
 	return (*this);
 }
 
 Request::~Request() {}
 
-void Request::flush_request_data()
-{
-	this->_request_data.clear();
-	this->_header.clear();
-	this->_body.clear();
-	this->_content_length = 0;
-	this->_header_kv.clear();
-}
-
-int Request::http_requirements_met()
-{
-	if (_method.empty() || _uri.empty() || _version.empty())
-	{
-		std::cout << "something is empty" << std::endl;
-		return 505;
-	}
-	if (_version != "HTTP/1.1" && _version != "HTTP/1.0")
-	{
-		std::cout << "version is " << _version << std::endl;
-		return 505;
-	}
-	return 200;
-}
-
-bool Request::http_can_have_body()
-{
-	if (this->_method != "POST" && this->_method != "PATCH" && this->_method != "PUT")
-		return false;
-	return true;
-}
 
 int Request::parse_header()
 {
 	std::cout << "\033[34mParsing header...\n\033[0m" << std::endl;
-	std::cout << this->_request_data << std::endl;
+	while (!_header.empty() && (_header[0] == '\r' || _header[0] == '\n'))
+		_header.erase(0, 1);
 	std::string line;
-	std::istringstream stream(this->_header);
+	std::istringstream stream(_header);
 
 	std::getline(stream, line);
 	size_t first_space = line.find(" ");
@@ -115,13 +80,13 @@ int Request::parse_header()
 
 	if (first_space != std::string::npos && second_space != std::string::npos)
 	{
-		this->_method = line.substr(0, first_space);
-		this->_uri = line.substr(first_space + 1, second_space - first_space - 1);
-		if (this->_uri.size() > 2048)
+		_method = line.substr(0, first_space);
+		_uri = line.substr(first_space + 1, second_space - first_space - 1);
+		if (_uri.size() > 2048)
 			return (1);
-		this->_version = line.substr(second_space + 1);
-		if (!this->_version.empty() && this->_version.substr(this->_version.size() - 1) == "\r")
-			this->_version.erase(this->_version.size() - 1);
+		_version = line.substr(second_space + 1);
+		if (!_version.empty() && _version.substr(_version.size() - 1) == "\r")
+			_version.erase(_version.size() - 1);
 	}
 	while (std::getline(stream, line))
 	{
@@ -137,8 +102,8 @@ int Request::parse_header()
 			if (!value.empty() && value.substr(value.size() - 1) == "\r")
 				value.erase(value.size() - 1);
 
-			if (!this->_header_kv.count(key))
-				this->_header_kv[key] = value;
+			if (!_header_kv.count(key))
+				_header_kv[key] = value;
 			else
 			{
 				std::cout << "duplicate keys in header" << std::endl;
@@ -146,27 +111,26 @@ int Request::parse_header()
 			}
 		}
 	}
-	/*
-		However, there's a robustness issue with strtol parsing:
-		Content-Length: 123abc456  // strtol returns 123, endptr points to "abc456"
-		You accept 123 but ignore abc456 (garbage). This is technically invalid HTTP.
-	*/
-	if (!this->_header_kv.count("content-length"))
-		this->_content_length = 0;
+	if (!_header_kv.count("content-length"))
+		_content_length = 0;
 	else
 	{
 		char *endptr;
-		long val = std::strtol(this->_header_kv["content-length"].c_str(), &endptr, 10);
+		long val = std::strtol(_header_kv["content-length"].c_str(), &endptr, 10);
 		if (*endptr != '\0' && *endptr != '\r')
 		{
 			std::cout << "Bad formatting: content-length" << std::endl;
 			return (1);
 		}
-		this->_content_length = val;
+		_content_length = val;
 	}
 
+	/* printing header */
 	std::map<std::string, std::string>::iterator it;
-	for (it = this->_header_kv.begin(); it != this->_header_kv.end(); ++it)
+	std::cout << "'method: '" << _method << "'" << std::endl;
+	std::cout << "'uri: '" << _uri << "'" << std::endl;
+	std::cout << "'version : '" << _version << "'" << std::endl;
+	for (it = _header_kv.begin(); it != _header_kv.end(); ++it)
 	{
 		std::cout << "'" << it->first << "' : '" << it->second << "'" << std::endl;
 	}
@@ -177,152 +141,16 @@ int Request::parse_header()
 
 int Request::parse_body()
 {
-	// TODO: parse Body to _body_parsed string. Specially if data is chunked
 	std::cout << "\033[36mParsing body...\n\033[0m" << std::endl;
-	std::cout << "\033[36m    Body: " << this->_body << "\n\033[0m" << std::endl;
+	std::cout << "\033[36m    Body: " << _body << "\n\033[0m" << std::endl;
 
-	return 0;
-	// if(this->_request._header_kv["Content-type"] == "application/json")
-	// 	parse_application_json(this);
-	// else if(this->_request._header_kv["Content-type"] == "application/x-www-form-urlencoded")
-	// 	parse_application_x_www_form_urlencoded(this);
-	// else if(this->_request._header_kv["Content-type"].find("multipart/form-data") != std::string::npos)
-	// 	parse_multipart_form_data(this);
-	// else if(this->_request._header_kv["Content-type"] == "image/png")
-	// 	parse_img(this);
-	// else
-	// {
-	// 	if(this->_request._header_kv["Content-type"] != "text/plain")
-	// 		std::cout << "Unknown or missing Content-Type. Treating body as plain text." << std::endl;
-	// 	parse_text_plain(this);
-	// }
-
-	/* WIP */
-	/*
-
-	Content-Type: text/html
-	Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
-	Content-Type: image/png
-	Content-Type: text/plain
-
-	//// EXAMPLE 1. **application/json** (JSON data)
-	```
-				POST /api/items HTTP/1.1
-				Host: example.com
-				Content-Type: application/json
-				Content-Length: 45
-
-				{
-					"name": "New Item",
-					"price": 19.99
-				}
-	```
-
-		//// EXAMPLE 2. **application/xml** (XML data)
-	```
-				POST /api/soap HTTP/1.1
-				Host: example.com
-				Content-Type: text/xml
-				Content-Length: 85
-
-				<?xml version="1.0" encoding="UTF-8"?>
-				<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-					<soap:Body>
-						<MyRequest>
-							<Parameter>Value</Parameter>
-						</MyRequest>
-					</soap:Body>
-				</soap:Envelope>
-	```
-
-	//// EXAMPLE 3. **application/x-www-form-urlencoded** (Form data)
-	```
-				POST /submit-form HTTP/1.1
-				Host: example.com
-				Content-Type: application/x-www-form-urlencoded
-				Content-Length: 38
-
-				name=John+Doe&age=30
-	```
-
-	//// EXAMPLE 3.1 **application/x-www-form-urlencoded** (Form data)
-
-	```
-				POST /api/search?q=example+search HTTP/1.1
-				Host: example.com
-				Content-Type: application/x-www-form-urlencoded
-				Content-Length: 0
-	```
-	Like query strings: `key=value` pairs separated by `&`.
-	Used by HTML forms by default.
-
-	//// EXAMPLE 4. **text/plain** (Raw text)
-	```
-				POST /upload HTTP/1.1
-				Host: example.com
-				Content-Type: text/plain
-				Content-Length: 11
-
-				Hello World
-	```
-
-	Just plain text.
-
-	//// EXAMPLE 5. **multipart/form-data** (File uploads + form fields)
-	```
-
-				POST /upload HTTP/1.1
-				Host: example.com
-				Content-Type: multipart/form-data; boundary=---011000010111000001110010
-
-				-----011000010111000001110010
-				Content-Disposition: form-data; name="file"; filename="example.txt"
-				Content-Type: text/plain
-
-				Content of the file goes here.
-				-----011000010111000001110010
-				Content-Disposition: form-data; name="description"
-
-				This is an example file upload.
-				-----011000010111000001110010--
-
-	Complex format for uploading files. Each part has its own headers.
-
-
-	//// EXAMPLE 6. **chunked transfer encoding**
-	```
-				POST /api/items HTTP/1.1
-				Host: example.com
-				Transfer-Encoding: chunked
-				Content-Type: application/json
-
-				7
-				{
-					"name":
-				8
-					"New Item",
-				7
-					"price":
-				9
-					19.99
-				0
-	```
-
-	//// EXAMPLE 7. **No Content-Type** (Treat as binary or text)
-	```
-				POST /upload HTTP/1.1
-				Host: example.com
-				// Content-Type: text/plain
-				Content-Length: 11
-
-				Hello World
-	```
-
-	If no Content-Type, you can:
-	- Treat as plain text
-	- Treat as binary data
-	- Return error (400 Bad Request)
-
-
-	*/
+	std::string content_type = _header_kv["content-type"];
+	if (content_type == "application/x-www-form-urlencoded")
+		return (parse_url_encoded());
+	else if (content_type.find("multipart/form-data") != std::string::npos)
+		return (parse_multipart(content_type));
+	else if (content_type == "application/json")
+		return (parse_json());
+	else
+		return (treat_as_raw_body());
 }

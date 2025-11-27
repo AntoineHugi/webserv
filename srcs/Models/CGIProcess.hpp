@@ -43,7 +43,7 @@ class CGIProcess
 		bool am_i_finish() const { return _state == FINISH; };
 
 		void update_bytes_written(int res) { _bytes_written += res; };
-		void append_to_output(const std::string& buf, int n) { _output_buffer.append(buf, n); };
+		void append_to_output(const std::string& buf, int n) { _output_buffer = _output_buffer.append(buf, 0, n); };
 
 		int get_client_fd() const { return _client_fd; };
 		pid_t get_pid() const { return _pid; };

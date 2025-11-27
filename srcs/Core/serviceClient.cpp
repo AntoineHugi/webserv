@@ -48,6 +48,7 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 
 	if (clients[poll_fds[i].fd].is_CGI_request() && clients[poll_fds[i].fd].get_status_code() < 300) // TODO: check status too otherwise infinite loop
 	{
+		std::cout << "will create CGI processes " << std::endl;
 		if (clients[poll_fds[i].fd].can_i_process_request())
 		{
 			this->setup_cgi_request(i);
@@ -55,7 +56,7 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 		}
 		else if (clients[poll_fds[i].fd].am_i_waiting_cgi())
 		{
-			if (cgi_processes[cgi_fd_for_cgi(this->fds["poll_fds"][i].fd , this->fds["cgi_fds"])].am_i_finish())
+			if ((*cgi_processes[cgi_fd_for_cgi(this->fds["poll_fds"][i].fd , this->fds["cgi_fds"])]).am_i_finish())
 				clients[poll_fds[i].fd].can_i_create_response();
 		}
 		return;
@@ -71,7 +72,7 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 			clients[poll_fds[i].fd]._request._body = "";
 		}
 		if (clients[poll_fds[i].fd].get_status_code() < 300)
-			clients[poll_fds[i].fd].processRequest();
+			clients[poll_fds[i].fd].process_request();
 		clients[poll_fds[i].fd].set_create_response();
 	}
 

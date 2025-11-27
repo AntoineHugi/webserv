@@ -1,86 +1,71 @@
 
 #include "client.hpp"
 
-bool Client::validate_permissions()
+bool Client::transversal_protection()
 {
-	/* looks the best matching route for that uri */
-	std::vector<Route> routes = _server->get_routes();
-	if (routes.empty())
+	/* checking that the absolute path to the root exists */
+	char resolved_root[PATH_MAX];
+	if (!realpath(_request._root.c_str(), resolved_root))
 	{
-		Route default_route;
-		std::vector<std::string> methods;
-		methods.push_back("GET");
-		default_route.set_path("/");
-		default_route.set_methods(methods);
-		routes.push_back(default_route);
+		set_status_code(403);
+		std::cout << "failed root : " << resolved_root << std::endl;
+		return (false);
 	}
-	int index = -1;
-	std::string matchedPath;
-	for (size_t i = 0; i < routes.size(); ++i)
+	std::string real_root = resolved_root;
+	if (real_root[real_root.size() - 1] != '/')
+		real_root += '/';
+
+	/* checking that the path to the file is located within the root */
+	if (_request._method == "GET" || _request._method == "DELETE")
 	{
-		std::string path = routes[i].get_path();
-		if (_request._uri.compare(0, path.size(), path) == 0)
+		char resolved_file[PATH_MAX];
+		if (!realpath(_request._fullPathURI.c_str(), resolved_file))
 		{
-			if (path.size() >= matchedPath.size())
-			{
-				matchedPath = path;
-				index = i;
-			}
+			set_status_code(403);
+			std::cout << "failed file path : " << resolved_file << std::endl;
+			return (false);
 		}
-	}
-	if (matchedPath.empty() || index == -1)
-	{
-		set_status_code(404);
-		return (false);
-	}
-
-	/* sets the right root for security: default or specific to the route and creates the full path root + uri */
-	if (!routes[index].get_root().empty())
-	{
-		_request._root = routes[index].get_root();
-		_request._fullPathURI = routes[index].get_root() + _request._uri.substr(matchedPath.size());
-	}
-	else
-	{
-		_request._root = _server->get_root();
-		_request._fullPathURI = _server->get_root() + _request._uri.substr(matchedPath.size());
-	}
-
-	/* checks that the target uri exists */
-	if (stat(_request._fullPathURI.c_str(), &_request._stat) != 0)
-	{
-		std::cout << "URI doesn't exist : " << _request._fullPathURI << std::endl;
-		set_status_code(404);
-		return (false);
-	}
-	std::cout << "URI exists : " << _request._fullPathURI << std::endl;
-
-	/* checks if it's a directory */
-	if (S_ISDIR(_request._stat.st_mode) && (_request._method == "GET" || _request._method == "POST"))
-	{
-		if ((!routes[index].get_autoindex().empty() && _request._method == "GET") || _request._method == "POST")
-			_request._isDirectory = true;
-		else
+		std::string real_file(resolved_file);
+		if (real_file[real_file.size() - 1] != '/')
+			real_file += '/';
+		if (real_file.find(real_root) != 0)
 		{
+			std::cout << "didn't find root " << real_root << " | the file is " << real_file << std::endl;
 			set_status_code(403);
 			return (false);
 		}
 	}
-
-	/* checks that the method is allowed by that route, and then validates that method's permissions */
-	for (size_t j = 0; j < routes[index].get_methods().size(); ++j)
+	/* checking that the path to the file parent directory is located within the root */
+	else if (_request._method == "POST")
 	{
-		if (_request._method == routes[index].get_methods()[j])
+		std::string parent = _request._fullPathURI;
+		size_t lastSlash = parent.find_last_of('/');
+		std::string lastComponent = (lastSlash == std::string::npos) ? parent : parent.substr(lastSlash + 1);
+		if (lastComponent.find('.') != std::string::npos)
 		{
-			if (validate_methods())
-				return (true);
-			else
-				return (false);
+			char *cpath = strdup(parent.c_str());
+			parent = dirname(cpath);
+			free(cpath);
+		}
+
+		char resolved_parent[PATH_MAX];
+		if (!realpath(parent.c_str(), resolved_parent))
+		{
+			set_status_code(403);
+			std::cout << "failed file path : " << resolved_parent << std::endl;
+			return (false);
+		}
+		std::string real_parent = resolved_parent;
+		if (real_parent[real_parent.size() - 1] != '/')
+			real_parent += '/';
+		if (real_parent.find(real_root) != 0)
+		{
+			std::cout << "didn't find root: " << real_root << " | in parent: " << real_parent << std::endl;
+			set_status_code(403);
+			return false;
 		}
 	}
-	set_status_code(405);
-	_response.set_allowed_methods(routes[index].get_methods());
-	return (false);
+	return (true);
 }
 
 bool Client::validate_methods()
@@ -99,45 +84,9 @@ bool Client::validate_methods()
 			return (false);
 		}
 	}
-	else if (_request._method == "POST")
+	else if (_request._method == "POST" || _request._method == "DELETE")
 	{
-		/* checking if we can post in this directory */
-		std::string dirPath;
-		{
-			char tmp[PATH_MAX];
-			strncpy(tmp, _request._fullPathURI.c_str(), PATH_MAX);
-			tmp[PATH_MAX - 1] = '\0';
-
-			char *d = dirname(tmp);
-			dirPath = std::string(d);
-		}
-		if (access(dirPath.c_str(), W_OK) != 0)
-		{
-			set_status_code(403);
-			return (false);
-		}
-	}
-	else if (_request._method == "DELETE" || _request._method == "POST")
-	{
-		/* checking that the path to the file for deletion is located within the root of this route / server class */
-		char resolvedPath[PATH_MAX];
-		char resolvedRoot[PATH_MAX];
-		if (!realpath(_request._fullPathURI.c_str(), resolvedPath) || !realpath(_request._root.c_str(), resolvedRoot))
-		{
-			set_status_code(403);
-			return (false);
-		}
-		std::string resolvedFile(resolvedPath);
-		std::string resolvedRootDir(resolvedRoot);
-		if (resolvedRootDir[resolvedRootDir.size() - 1] != '/')
-			resolvedRootDir += '/';
-		if (resolvedFile.find(resolvedRootDir) != 0)
-		{
-			set_status_code(403);
-			return (false);
-		}
-
-		/* checking if we can delete in this directory */
+		/* checking if we can write in this directory */
 		std::string dirPath;
 		{
 			char tmp[PATH_MAX];
@@ -156,9 +105,213 @@ bool Client::validate_methods()
 	return (true);
 }
 
+bool Client::is_method_allowed(const Route &route)
+{
+	for (size_t j = 0; j < route.get_methods().size(); ++j)
+	{
+		if (_request._method == route.get_methods()[j])
+			return (true);
+	}
+	set_status_code(405);
+	_response.set_allowed_methods(route.get_methods());
+	return (false);
+}
+
+bool Client::check_directory_rules(const Route &route)
+{
+	if (S_ISDIR(_request._stat.st_mode) && (_request._method == "GET" || _request._method == "POST"))
+	{
+		if ((!route.get_autoindex().empty() && _request._method == "GET") || _request._method == "POST")
+			_request._isDirectory = true;
+		else
+		{
+			set_status_code(403);
+			return (false);
+		}
+	}
+	return (true);
+}
+
+bool Client::check_subnet(const std::string &rule_target, const std::string &client_ip)
+{
+	size_t slash = rule_target.find('/');
+	if (slash != std::string::npos && rule_target.size() >= slash + 2)
+	{
+		std::string network = rule_target.substr(0, slash);
+		int prefix = std::strtol(rule_target.substr(slash + 1).c_str(), NULL, 10);
+		if (prefix < 0 || prefix > 32)
+		{
+			set_status_code(500);
+			set_create_response();
+			return false;
+		}
+
+		struct in_addr addr;
+		if (inet_pton(AF_INET, client_ip.c_str(), &addr) != 1)
+		{
+			set_status_code(500);
+			set_create_response();
+			return (false);
+		}
+		uint32_t client = ntohl(addr.s_addr);
+
+		if (inet_pton(AF_INET, network.c_str(), &addr) != 1)
+		{
+			set_status_code(500);
+			set_create_response();
+			return (false);
+		}
+		uint32_t net = ntohl(addr.s_addr);
+
+		uint32_t mask = 0;
+		if (prefix > 0 && prefix <= 32)
+		{
+			mask = 0xFFFFFFFF;
+			mask <<= (32 - prefix);
+		}
+
+		if ((client & mask) == (net & mask))
+			return (true);
+	}
+	return (false);
+}
+
+bool Client::bouncer_approval(const Route &route)
+{
+	/* get highest ranking bouncer to decide on allow/deny, return if there is no bouncer */
+	std::map<std::string, std::string> bouncer = route.get_bouncer();
+	if (bouncer.empty())
+		bouncer = _server->get_bouncer();
+	if (bouncer.empty())
+		return (true);
+
+	for (std::map<std::string, std::string>::const_iterator it = bouncer.begin(); it != bouncer.end(); ++it)
+	{
+		const std::string &rule_type = it->first;
+		const std::string &rule_target = it->second;
+
+		if (rule_type == "deny")
+		{
+			if (rule_target == "all" || rule_target == _client_ip || check_subnet(rule_target, _client_ip))
+				return false;
+		}
+		else if (rule_type == "allow")
+		{
+			if (rule_target == "none")
+				return false;
+			else if (rule_target == _client_ip)
+				return (true);
+			else if (check_subnet(rule_target, _client_ip))
+				return (true);
+		}
+	}
+	return (false);
+}
+
+bool Client::check_uri_exists()
+{
+	if (stat(_request._fullPathURI.c_str(), &_request._stat) != 0)
+	{
+		std::cout << "URI doesn't exist : " << _request._fullPathURI << std::endl;
+		set_status_code(404);
+		return (false);
+	}
+	return (true);
+}
+
+bool Client::route_matches(const std::string &uri, const std::string &route)
+{
+	if (uri.compare(0, route.size(), route) == 0)
+	{
+		if (uri.size() == route.size())
+			return (true);
+		else
+		{
+			if (uri[route.size()] == '/')
+				return (true);
+		}
+	}
+	return false;
+}
+
+int Client::find_best_route_index(std::vector<Route> &routes)
+{
+	int best_index = -1;
+	size_t best_len = 0;
+
+	for (size_t i = 0; i < routes.size(); ++i)
+	{
+		const std::string &route_path = routes[i].get_path();
+
+		if (route_matches(_request._uri, route_path))
+		{
+			if (route_path.size() >= best_len)
+			{
+				best_len = route_path.size();
+				best_index = static_cast<int>(i);
+			}
+		}
+	}
+
+	return (best_index);
+}
+
+bool Client::validate_permissions()
+{
+	std::vector<Route> routes = _server->get_routes();
+	int routeIndex = find_best_route_index(routes);
+	if (routeIndex < 0)
+	{
+		set_status_code(404);
+		return (false);
+	}
+
+	const Route &route = routes[routeIndex];
+	if (route.get_root().empty())
+		_request._root = _server->get_root();
+	else
+		_request._root = route.get_root();
+	_request._fullPathURI = _request._root + _request._uri.substr(route.get_path().size());
+	if (_request._method != "POST")
+	{
+		if (!check_uri_exists())
+		{
+			std::cout << "failed existing uri" << std::endl;
+			return (false);
+		}
+	}
+	if (!bouncer_approval(route))
+	{
+		std::cout << "failed transversal" << std::endl;
+		return (false);
+	}
+	if (!transversal_protection())
+	{
+		std::cout << "failed transversal" << std::endl;
+		return (false);
+	}
+	if (!check_directory_rules(route))
+	{
+		std::cout << "failed directory rules" << std::endl;
+		return (false);
+	}
+	if (!is_method_allowed(route))
+	{
+		std::cout << "failed allowed methods" << std::endl;
+		return (false);
+	}
+	if (!validate_methods())
+	{
+		std::cout << "failed method validation" << std::endl;
+		return (false);
+	}
+
+	return (true);
+}
+
 int Client::read_to_buffer()
 {
-	char buf[50];
+	char buf[1024];
 	ssize_t n = recv(_fd, buf, sizeof(buf), 0);
 
 	if (n > 0)
@@ -212,8 +365,15 @@ bool Client::chunked_body_finished() const
 
 bool Client::try_parse_body()
 {
-	std::cout << "try to parse body" << std::endl;
 	/* send to chunked version */
+	// add option for route max body size
+	if (_request._request_data.size() > get_server()->get_client_max_body_size())
+	{
+		_status_code = 413;
+		set_create_response();
+		return (1);
+	}
+
 	if (is_body_chunked())
 	{
 		std::cout << "body is chunked" << std::endl;
@@ -227,6 +387,12 @@ bool Client::try_parse_body()
 			}
 			else
 			{
+				if (_request.parse_body())
+				{
+					_status_code = 400;
+					set_create_response();
+					return (1);
+				}
 				std::cout << "\033[35m  Body parsed \033[0m" << std::endl;
 				set_process_request();
 				return (0);
@@ -262,10 +428,10 @@ bool Client::try_parse_body()
 
 bool Client::try_parse_header()
 {
-	/* Checking if we are still chekcking the header, if we're exceeding the size and if the end of header indicator has been found */
+	/* Checking if we're exceeding the size and if the end of header indicator has been found */
 	if (_request._request_data.size() > 16384)
 	{
-		_status_code = 413;
+		_status_code = 431;
 		set_create_response();
 		return (1);
 	}
@@ -285,13 +451,13 @@ bool Client::try_parse_header()
 	set_flags();
 	if (_request._request_data.size() > _request._content_length)
 		_flags._leftover_chunk = true;
-	if (static_cast<long long>(_request._content_length) > _server->get_client_max_body_size())
+	if (static_cast<unsigned long>(_request._content_length) > _server->get_client_max_body_size())
 	{
 		_status_code = 413;
 		set_create_response();
 		return (1);
 	}
-	if (_request.http_requirements_met() != 200)
+	if ((_status_code = _request.http_requirements_met()) != 200)
 	{
 		set_create_response();
 		std::cout << "failed requirements" << std::endl;
@@ -306,6 +472,7 @@ bool Client::try_parse_header()
 		return (1);
 	}
 	std::cout << "\033[35m  Header parsed \033[0m" << std::endl;
+
 	/* if validation works, check if we should read the body next or go to the processing step */
 	if (is_body_chunked())
 		set_read_body();

@@ -76,6 +76,7 @@ void Service::poll_service()
 
 			if (this->fds["poll_fds"][i].revents == 0)
 			{
+				// std::cout << "## i'm checking if we should close the client ##" << std::endl;
 				if (server_fd_if_new_client != -1 || (server_fd_if_new_client == -1 && clients[this->fds["poll_fds"][i].fd].leftover_chunk() == false))
 					continue;
 				else if (clients[this->fds["poll_fds"][i].fd].is_inactive() && this->fds["poll_fds"][i].revents & POLLIN)

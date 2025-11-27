@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>My Site</title>
+	<style>
+		:root {
+			--bg: #ffffff;
+			--accent: #2563eb;
+			--muted: #64748b;
+		}
+
+		html,
+		body {
+			height: 100%;
+			margin: 0;
+			font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+			color: #0f1724;
+			background: linear-gradient(180deg, #f8fafc, #ffffff);
+		}
+
+		.wrap {
+			min-height: 100%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 40px;
+		}
+
+		.card {
+			max-width: 960px;
+			width: 100%;
+			padding: 36px;
+			border-radius: 12px;
+			background: #fff;
+			box-shadow: 0 10px 30px rgba(2, 6, 23, 0.06);
+		}
+
+		h1 {
+			margin: 0;
+			font-size: 2.25rem;
+		}
+
+		p {
+			margin: 12px 0 0;
+			color: var(--muted);
+			line-height: 1.5;
+		}
+
+		nav {
+			margin-top: 18px;
+			display: flex;
+			gap: 12px;
+			flex-wrap: wrap;
+		}
+
+		a.btn {
+			text-decoration: none;
+			padding: 10px 14px;
+			border-radius: 8px;
+			font-weight: 600;
+			display: inline-block;
+		}
+
+		a.primary {
+			background: var(--accent);
+			color: white;
+		}
+
+		a.outline {
+			border: 1px solid rgba(15, 23, 36, 0.08);
+			color: var(--muted);
+		}
+
+		footer {
+			margin-top: 22px;
+			color: var(--muted);
+			font-size: 0.9rem;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="wrap">
+		<div class="card">
+			<h1>Welcome to this basic site</h1>
+			<p>Not much to see here, how did you even find this? Who told you about this place?</p>
+
+			<nav>
+				<a class="btn primary" href="/upload">Uploads</a>
+				<a class="btn outline" href="/about">About us</a>
+			</nav>
+
+			<footer>
+				© <span id="year"></span> A Site — <span>Built without care</span>
+			</footer>
+		</div>
+	</div>
+
+	<script>
+		document.getElementById('year').textContent = new Date().getFullYear();
+	</script>
+</body>
+
+</html>

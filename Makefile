@@ -16,10 +16,11 @@ SRCS =	srcs/main.cpp  \
 		srcs/Core/service.cpp \
 		srcs/Functions/method.cpp \
 		srcs/Functions/parserConfig.cpp \
-		srcs/Functions/requestUtils.cpp \
 		srcs/Functions/workCGI.cpp \
 		srcs/Models/client.cpp \
+		srcs/Models/multipart.cpp \
 		srcs/Models/request.cpp \
+		srcs/Models/requestUtils.cpp \
 		srcs/Models/response.cpp \
 		srcs/Models/route.cpp \
 		srcs/Models/server.cpp \

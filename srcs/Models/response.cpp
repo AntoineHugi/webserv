@@ -41,34 +41,56 @@ void Response::flush_response_data()
 	_bytes_sent = 0;
 }
 
+std::string Response::get_reason_phrase(int status_code)
+{
+	switch (status_code)
+	{
+	case 200:
+		return "OK";
+	case 201:
+		return "Created";
+	case 204:
+		return "No Content";
+	// case 301:
+	// 	return "Moved Permanently";
+	// case 302:
+	// 	return "Found";					// we don't use these currently
+	// case 304:
+	// 	return "Not Modified";
+	case 400:
+		return "Bad Request";
+	case 403:
+		return "Forbidden";
+	case 404:
+		return "Not Found";
+	case 405:
+		return "Method Not Allowed";
+	case 413:
+		return "Payload Too Large";
+	case 431:
+		return "Request Header Fields Too Large";
+	case 500:
+		return "Internal Server Error";
+	case 505:
+		return "HTTP Version Not Supported";
+	}
+	return "Internal Server Error";
+}
+
 std::string Response::format_response(int status_code, bool should_keep_alive, std::string version)
 {
 	std::string response;
 	std::string reason_phrase;
 	std::ostringstream ss;
 
+	// TODO: for every single key value pair, check if it already exists in the body
 	ss << status_code;
 	if (version.empty() || (version != "HTTP/1.1" && version != "HTTP/1.0"))
 		version = "HTTP/1.1";
-	// response += client._request._header_kv["Version"] + ss.str() + " ";
 	response += version + " " + ss.str() + " ";
 
 	reason_phrase = get_reason_phrase(status_code);
-	response += reason_phrase;
-	if (!_body.empty())
-	{
-		determine_content_type();
-		response += "Content-Type: ";
-		response += _content_type;
-		response += "\r\n";
-	}
-	if (status_code == 405)
-	{
-		response += "Allowed-Methods: ";
-		for (size_t i = 0; i < get_allowed_methods().size(); ++i)
-			response += get_allowed_methods()[i];
-		response += "\r\n";
-	}
+	response += reason_phrase + "\r\n";
 	response += "Server: webserv42\r\n";
 
 	std::time_t now = std::time(0);
@@ -79,55 +101,59 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	response += date_buf;
 	response += "\r\n";
 
-	//response += "Server: webserv42\r\n";
-
-	if (reason_phrase == "Internal Server Error\r\n")
+	if (reason_phrase == "Internal Server Error")
 	{
 		response += "Content-Length: 0\r\n";
 		response += "Connection: close\r\n";
+		response += "\r\n";
 		return response;
 	}
 
-	//response += "Content-Type: application/json\r\n"; // TODO: to be dynamic based on body
-
-	if (should_keep_alive)
-			response += "Connection: keep-alive\r\n";
-	else
-			response += "Connection: close\r\n";
-
-	ss.str("");
-	ss << _body.size();
-	response += "Content-Length: " + ss.str() + "\r\n";
-	response += "\r\n"; // close headers
-
-	// Append body if present
-	if (_body.size() != 0)
-		response += _body;
-	return response;
-}
-
-void Response::determine_content_type()
-{
-	size_t dot = _request->_uri.find_last_of('.');
-	if (dot == std::string::npos)
+	if (status_code == 405)
 	{
-		_content_type = "application/octet-stream";
-		return;
+		response += "Allowed-Methods: ";
+		for (size_t i = 0; i < get_allowed_methods().size(); ++i)
+			response += get_allowed_methods()[i];
+		response += "\r\n";
 	}
-	std::string ext = _request->_uri.substr(dot + 1);
-	for (size_t i = 0; i < ext.size(); i++)
-		ext[i] = std::tolower(ext[i]);
-	if (ext == "html" || ext == "htm") { _content_type = "text/html"; }
-	else if (ext == "txt") { _content_type = "text/plain"; }
-	else if (ext == "json") { _content_type = "application/json"; }
-	else if (ext == "png") { _content_type = "image/png"; }
-	else if (ext == "jpg" || ext == "jpeg") { _content_type = "image/jpeg"; }
-	else if (ext == "webp") { _content_type = "image/webp"; }
-	else if (ext == "gif") { _content_type = "image/gif"; }
-	else if (ext == "pdf") { _content_type = "application/pdf"; }
-	else if (ext == "css") { _content_type = "text/css"; }
-	else if (ext == "js") { _content_type = "application/javascript"; }
-	else if (ext == "py") { _content_type = "text/x-python"; }
-	else { _content_type = "application/octet-stream"; }
-	return;
+
+	if (!get_header().empty())
+	{
+		std::string header_text = get_header();
+		std::cout << "header_text: " << header_text << std::endl;
+		while(header_text.find("\n") != std::string::npos)
+		{
+			response += header_text.substr(0, header_text.find("\n"));
+			response += "\r\n";
+			header_text = header_text.substr(header_text.find("\n") + 1);
+		}
+		if (!header_text.empty())
+		{
+			response += header_text;
+			response += "\r\n";
+		}
+	}
+	if (response.find("Connection: ") == std::string::npos)
+	{
+		if (should_keep_alive)
+				response += "Connection: keep-alive\r\n";
+		else
+				response += "Connection: close\r\n";
+	}
+
+	if (!_body.empty())
+	{
+		if (response.find("Content-Type: ") == std::string::npos)
+			response += "Content-Type: " + _content_type + "\r\n";
+		ss.str("");
+		ss << _body.size();
+		if (response.find("Content-Length: ") == std::string::npos)
+			response += "Content-Length: " + ss.str() + "\r\n";
+		response += "\r\n";
+		response += _body;
+	}
+	else
+		response += "\r\n";
+
+	return response;
 }

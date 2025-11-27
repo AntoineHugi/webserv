@@ -4,8 +4,8 @@
 # include "../Models/request.hpp"
 # include "../Models/response.hpp"
 # include "../Models/server.hpp"
+// # include "../Models/route.hpp"
 # include "../Functions/method.hpp"
-# include "../Functions/requestUtils.hpp"
 
 # include <string>
 # include <vector>
@@ -58,14 +58,14 @@ class Client
 		int _status_code;
 		std::time_t _last_interaction;
 		Server* _server;
+		std::string _client_ip;
 
 	public:
 		Request _request;
 		Response _response;
-		// TODO: add timestamp for keep-alive timeout and hanging handling
 
 		Client();
-		Client(int fd, Server& server);
+		Client(int fd, Server& server, std::string client_ip);
 		Client(const Client& other);
 		Client& operator=(const Client& other);
 		~Client();
@@ -96,15 +96,6 @@ class Client
 		void set_handle_error() {_state = HANDLE_ERROR; };
 		void update_last_interaction() { _last_interaction = std::time(0);}
 
-
-		void set_flags();
-		void set_flags_error();
-		bool is_body_chunked() { return _flags._body_chunked; };
-		bool is_CGI_request() { return _flags._is_CGI; };
-		bool should_keep_alive() const { return _flags._should_keep_alive; };
-		bool leftover_chunk() const { return _flags._leftover_chunk; };
-		bool request_complete() const { return _state == PROCESSING_REQUEST; };
-
 		/* Read section */
 		int		handle_read();
 		int		read_to_buffer();
@@ -113,15 +104,31 @@ class Client
 		bool	chunked_body_finished() const;
 		bool	decode_chunked_body();
 		bool	validate_permissions();
+		int		find_best_route_index(std::vector<Route>& routes);
+		bool	route_matches(const std::string &uri, const std::string &route);
+		bool	check_uri_exists();
+		bool	bouncer_approval(const Route &route);
+		bool	check_subnet(const std::string& rule_target, const std::string& _client_ip);
+		bool	check_directory_rules(const Route &route);
+		bool	is_method_allowed(const Route &route);
 		bool	validate_methods();
+		bool	transversal_protection();
 
 		/* Processing section */
-		void	processRequest();
+		void	process_request();
 
 		/* Writing section */
-		int	handle_write();
+		int		handle_write();
 
-		void refresh_client();
+		/* Utils section */
+		void	set_flags();
+		void	set_flags_error();
+		void	refresh_client();
+		bool is_CGI_request() { return _flags._is_CGI; };
+		bool	is_body_chunked() { return _flags._body_chunked; };
+		bool	should_keep_alive() const { return _flags._should_keep_alive; };
+		bool	leftover_chunk() const { return _flags._leftover_chunk; };
+		bool	request_complete() const { return _state == PROCESSING_REQUEST; };
 };
 
 

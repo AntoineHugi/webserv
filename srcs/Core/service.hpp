@@ -4,6 +4,7 @@
 # include <string>
 # include <vector>
 # include <iostream>
+
 # include "../Models/server.hpp"
 # include "../Models/client.hpp"
 # include "../Models/CGIProcess.hpp"
@@ -17,7 +18,7 @@ class Service
 		std::map< std::string, std::vector<struct pollfd> > fds;
 		std::vector<Server> servers;
 		std::map<int, Client> clients;
-		std::map<int, CGIProcess> cgi_processes;
+		std::map<int, CGIProcess * > cgi_processes;
 		Service();
 		Service(const Service& other);
 		Service& operator=(const Service& other);

@@ -1,2 +1,8 @@
 - need to check for Host in the request format validation - mazbe?
 - changed server based on URI (find if the route exist in another server with same host)
+- send subject to chat gpt and ask what tests we should past
+- find eval sheet
+- form input (new page)
+- massive amoutn of request (& how to deal with it)
+- run tester from school
+- what to do if post has wrong headers, but is still sending the body? should we close 

@@ -5,6 +5,7 @@
 # include <vector>
 # include <map>
 # include <iostream>
+# include <fstream>
 # include <dirent.h>
 # include <unistd.h>
 # include <fcntl.h>
@@ -23,11 +24,13 @@ class Method
 		Method& operator=(const Method& other);
 		~Method();
 
-		static void	handleGet(Client& client);
-		static void	getFile(Client &client, std::string filepath);
-		static void	getDirectory(Client &client, DIR* directory);
-		static void	handlePost(Client& client);
-		static void	handleDelete(Client& client);
+		static void	handle_get(Client& client);
+		static void	get_file(Client &client, std::string filepath);
+		static void	determine_content_type(Client &client, std::string filepath);
+		static void	get_directory(Client &client, DIR* directory);
+		static void	handle_post(Client& client);
+		static int	saveUploadedFiles(std::vector<MultiPart>& parts, const std::string& upload_directory);
+		static void	handle_delete(Client& client);
 };
 
 #endif
