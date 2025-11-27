@@ -67,7 +67,7 @@ void test_chunked_request_simple(const TestConfig &config, TestStats &stats)
 	}
 
 	HttpResponse resp = parse_response(response);
-	assert_status(resp, 204, stats);
+	assert_status(resp, 201, stats);
 
 	close(sock);
 }

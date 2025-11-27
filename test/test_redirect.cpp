@@ -11,10 +11,10 @@ void test_redirection(const TestConfig &config, TestStats &stats)
 		return;
 	}
 
-	std::string response = send_request(sock, "GET", "/redirect_test");
+	std::string response = send_request(sock, "GET", "/old_upload");
 	HttpResponse resp = parse_response(response);
 
-	if (resp.status_code >= 300 && resp.status_code < 400 && resp.headers.count("Location"))
+	if (resp.status_code == 301 && resp.headers.count("Location"))
 	{
 		stats.add_pass();
 		print_pass("Redirection OK");

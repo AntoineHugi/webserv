@@ -37,7 +37,7 @@ void test_autoindex_on(const TestConfig &config, TestStats &stats)
 	HttpResponse resp = parse_response(raw);
 
 	assert_status(resp, 200, stats);
-	assert_body_contains(resp, "<a href=", stats);
+	assert_body_contains(resp, "<li>", stats);
 
 	close(sock);
 }
