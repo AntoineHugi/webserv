@@ -41,6 +41,8 @@ class Service
 		CGIProcess	find_cgi_for_this_client(int i);
 		void 	remove_fd(int fd);
 		void	setup_cgi_request(int i);
+		void	add_client_to_polls(std::map<int, Client> &clients, int fd, Server& server);
+		void	add_poll_to_vectors(int fd, int events, std::string additional_poll );
 
 };
 

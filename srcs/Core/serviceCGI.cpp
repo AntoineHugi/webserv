@@ -1,28 +1,26 @@
 #include "service.hpp"
 
 
-	// std::cout << "### current buffer: " << cgi.get_output_buffer() << std::endl;
+char** setup_env(std::map<int, Client> clients, int fd)
+{
+	std::vector<std::string> env_strings;
+	env_strings.push_back("REQUEST_METHOD=" + clients[fd]._request._method);
+	env_strings.push_back("CONTENT_LENGTH=" + clients[fd]._request._content_length);
+	env_strings.push_back("CONTENT_TYPE=" + clients[fd]._request._header_kv["Content-Type"]);
+	env_strings.push_back("QUERY_STRING=");
+	env_strings.push_back("SERVER_PROTOCOL=" + clients[fd]._request._version);
+	env_strings.push_back("GATEWAY_INTERFACE=CGI/1.1");
+	env_strings.push_back("SCRIPT_NAME=" + clients[fd]._request._fullPathURI);
+	env_strings.push_back("SERVER_PORT=" + (*clients[fd].get_server()).get_port());
 
-	// std::cout << "\n ==> fds['poll_fds'][i].fd: " << fds["poll_fds"][i].fd << std::endl;
-	// std::cout << "\n ==> cgi.get_pipe_to_cgi(): " << cgi.get_pipe_to_cgi() << std::endl;
-	// std::cout << "\n ==> cgi.get_pipe_from_cgi(): " << cgi.get_pipe_from_cgi() << std::endl;
+	char** envp = new char*[env_strings.size() + 1];
+	for (size_t i = 0; i < env_strings.size(); i++)
+			envp[i] = strdup(env_strings[i].c_str());
+	envp[env_strings.size()] = NULL;
+	return envp;
+}
 
-	// std::cout << "\n ==> revents value: " << fds["poll_fds"][i].revents << std::endl;
-  // std::cout << "\n ==> POLLIN flag: " << POLLIN << std::endl;
-  // std::cout << "\n ==> POLLOUT flag: " << POLLOUT << std::endl;
-  // std::cout << "\n ==> POLLHUP flag: " << POLLHUP << std::endl;
-  // std::cout << "\n ==> revents & POLLIN: " << (fds["poll_fds"][i].revents & POLLIN) << std::endl;
-  // std::cout << "\n ==> cgi.can_i_process_and_write(): " << cgi.can_i_process_and_write() << std::endl;
 
-  // // Check each condition separately
-  // bool fd_matches = (fds["poll_fds"][i].fd == cgi.get_pipe_from_cgi());
-  // bool has_pollin = (fds["poll_fds"][i].revents & POLLIN);
-  // bool can_process = cgi.can_i_process_and_write();
-
-  // std::cout << "\n ==> Condition breakdown:" << std::endl;
-  // std::cout << "     fd_matches: " << fd_matches << std::endl;
-  // std::cout << "     has_pollin: " << has_pollin << std::endl;
-  // std::cout << "     can_process: " << can_process << std::endl;
 
 void Service::cgi_handler(int i)
 {
@@ -39,7 +37,6 @@ void Service::cgi_handler(int i)
 	{
 		std::cout << "\n ==> handle writing to CGI" << std::endl;
 		std::string res = client._request._body.substr(cgi.get_bytes_written()).substr(0, 1024);
-		std::cout << "\n ==> this is what I write to CGI: " << res << std::endl;
 		ssize_t bytes_sent = write(cgi.get_pipe_to_cgi(), res.c_str(), res.size());
 		if (bytes_sent == -1)
 		{
@@ -182,14 +179,10 @@ void Service::setup_cgi_request(int i)
 			exit(1); // TODO: handle error
 		if(dup2(pipe_from_cgi[1], STDOUT_FILENO) == -1)
 			exit(1); // TODO: handle error
-		// dup2(pipe_from_cgi[1], STDERR_FILENO); // Use for testing
 		close(pipe_to_cgi[0]);
 		close(pipe_from_cgi[1]);
-
-		// std::cout << "## EXECVE about to star ... " << std::endl;
-		// std::cout << "## EXECVE about to start ... " << std::endl;
 		char *argv[] = {strdup(arg0.c_str()), strdup(exec_path.c_str()), NULL };
-		char *envp[] = {NULL};
+		char** envp = setup_env(this->clients, this->fds["poll_fds"][i].fd);
 		execve(argv[0], argv, envp);
 		exit(1); // TODO: handle error
 	}
@@ -206,21 +199,10 @@ void Service::setup_cgi_request(int i)
 		else
 		{
 			std::cout << "Adding writing pipe to CGI " << std::endl;
-			struct pollfd ptc;
-			ptc.fd = pipe_to_cgi[1];
-			ptc.events = POLLOUT;
-			ptc.revents = 0;
-			this->fds["cgi_fds"].push_back(ptc);
-			this->fds["poll_fds"].push_back(ptc);
+			add_poll_to_vectors(pipe_to_cgi[1], POLLOUT, "cgi_fds" );
 			this->cgi_processes.insert(std::pair<int, CGIProcess * >(pipe_to_cgi[1], cgi) );
 		}
-
-		struct pollfd pfc;
-		pfc.fd = pipe_from_cgi[0];
-		pfc.events = POLLIN;
-		pfc.revents = 0;
-		this->fds["cgi_fds"].push_back(pfc);
-		this->fds["poll_fds"].push_back(pfc);
+		add_poll_to_vectors(pipe_from_cgi[0], POLLIN, "cgi_fds" );
 		this->cgi_processes.insert(std::pair<int, CGIProcess * >(pipe_from_cgi[0], cgi) );
 
 		std::cout << "Parent - everything saved ... " << std::endl;
