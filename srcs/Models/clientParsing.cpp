@@ -230,6 +230,9 @@ void Client::overwrite_with_route(const Route &route)
 		_request._root = route.get_root();
 	else
 		_request._root = _server->get_root();
+
+	if (!route.get_cgi_path().empty())
+		_request._cgi_path = route.get_cgi_path();
 }
 
 bool Client::route_matches(const std::string &uri, const std::string &route)

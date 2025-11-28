@@ -35,6 +35,7 @@ class Request
 		bool _isCGI;
 		unsigned long	_client_max_body_size;
 		std::vector<std::string> _index;
+		std::string _cgi_path;
 
 		/* body attributes */
 		std::string _body;

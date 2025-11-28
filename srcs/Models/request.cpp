@@ -13,6 +13,9 @@ Request::Request() : _request_data(""),
 		     _isDirectory(false),
 		     _stat(),
 		     _isCGI(false),
+			 _client_max_body_size(0),
+			 _index(),
+			 _cgi_path(""),
 		     _body(""),
 		     _body_kv(),
 		     _multiparts(),
@@ -35,6 +38,9 @@ Request::Request(const Request &other)
 	_isDirectory = other._isDirectory;
 	_stat = other._stat;
 	_isCGI = other._isCGI;
+	_client_max_body_size = other._client_max_body_size;
+	_index = other._index;
+	_cgi_path = other._cgi_path;
 	_body = other._body;
 	_body_kv = other._body_kv;
 	_multiparts = other._multiparts;
@@ -58,6 +64,9 @@ Request &Request::operator=(const Request &other)
 		_isDirectory = other._isDirectory;
 		_stat = other._stat;
 		_isCGI = other._isCGI;
+		_client_max_body_size = other._client_max_body_size;
+		_index = other._index;
+		_cgi_path = other._cgi_path;
 		_body = other._body;
 		_body_kv = other._body_kv;
 		_multiparts = other._multiparts;

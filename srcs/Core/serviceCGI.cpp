@@ -150,7 +150,7 @@ void Service::setup_cgi_request(int i)
 	dir_path = dir_path.substr(0, dir_path.find_last_of("/"));
 	std::string exec_path = dir_path + clients[this->fds["poll_fds"][i].fd]._request._fullPathURI.substr(1);
 	std::cout << "This is the PATH: " << exec_path << std::endl;
-	std::string arg0 = "/usr/bin/python3";
+	std::string arg0 = clients[this->fds["poll_fds"][i].fd]._request._cgi_path;
 
 	if(pipe(pipe_to_cgi) || pipe(pipe_from_cgi))
 	{
