@@ -36,6 +36,7 @@ class Request
 		unsigned long	_client_max_body_size;
 		std::vector<std::string> _index;
 		std::string _cgi_path;
+		bool	_autoindex;
 
 		/* body attributes */
 		std::string _body;

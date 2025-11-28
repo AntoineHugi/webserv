@@ -161,9 +161,17 @@ void Method::handle_get(Client &client)
 				return;
 			}
 		}
-		/* if not, then serves the directory list */
-		DIR *dir = opendir(client._request._fullPathURI.c_str());
-		get_directory(client, dir);
+		/* if not, then serves the directory list if autoindex is on */
+		if (client._request._autoindex)
+		{
+			DIR *dir = opendir(client._request._fullPathURI.c_str());
+			get_directory(client, dir);
+		}
+		else
+		{
+			client.set_status_code(404);
+			return;
+		}
 	}
 	else
 		Method::get_file(client, client._request._fullPathURI);
@@ -261,7 +269,7 @@ void Method::handle_post(Client &client)
 	}
 	else
 	{
-		client.set_status_code(400);
+		client.set_status_code(200);
 		return;
 	}
 	return;

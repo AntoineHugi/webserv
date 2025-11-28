@@ -127,7 +127,7 @@ class Client
 		void	set_flags();
 		void	set_flags_error();
 		void	refresh_client();
-		bool is_CGI_request() { return _flags._is_CGI; };
+		bool	is_CGI_request() { return _flags._is_CGI; };
 		bool	is_body_chunked() { return _flags._body_chunked; };
 		bool	should_keep_alive() const { return _flags._should_keep_alive; };
 		bool	leftover_chunk() const { return _flags._leftover_chunk; };

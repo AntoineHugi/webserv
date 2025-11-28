@@ -3,10 +3,10 @@
 
 void Service::service_reading(std::vector<struct pollfd> &poll_fds, int i)
 {
-	std::cout << "\n###################################################" << std::endl;
+	/*std::cout << "\n###################################################" << std::endl;
 	std::cout << "################## READING #######################" << std::endl;
 	std::cout << "###################################################\n"
-			  << std::endl;
+			  << std::endl;*/
 
 	int read_status = clients[poll_fds[i].fd].handle_read();
 	if (read_status == 0)
@@ -46,7 +46,7 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 
 	std::cout << "sttus: " << clients[poll_fds[i].fd].get_status_code() << std::endl;
 
-	if (clients[poll_fds[i].fd].is_CGI_request() && clients[poll_fds[i].fd].get_status_code() < 300) // TODO: check status too otherwise infinite loop
+	if (clients[poll_fds[i].fd]._request._isCGI && clients[poll_fds[i].fd].get_status_code() < 300) // TODO: check status too otherwise infinite loop
 	{
 		std::cout << "will create CGI processes " << std::endl;
 		if (clients[poll_fds[i].fd].can_i_process_request())

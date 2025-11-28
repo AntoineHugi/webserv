@@ -233,6 +233,9 @@ void Client::overwrite_with_route(const Route &route)
 
 	if (!route.get_cgi_path().empty())
 		_request._cgi_path = route.get_cgi_path();
+
+	if (route.get_autoindex() == "on")
+		_request._autoindex = true;
 }
 
 bool Client::route_matches(const std::string &uri, const std::string &route)
@@ -395,7 +398,10 @@ bool Client::validate_permissions()
 		else
 			last = "";
 
+		if (_request._root[_request._root.size() - 1] == '/')
+			_request._root.erase(_request._root.size() - 1, _request._root.size());
 		_request._fullPathURI = _request._root + '/' + last;
+		_request._isCGI = true;
 	}
 	if (_request._method != "POST")
 	{
@@ -438,7 +444,7 @@ bool Client::validate_permissions()
 
 int Client::read_to_buffer()
 {
-	char buf[1024];
+	char buf[1048576];
 	ssize_t n = recv(_fd, buf, sizeof(buf), 0);
 
 	if (n > 0)
@@ -502,7 +508,7 @@ bool Client::try_parse_body()
 
 	if (is_body_chunked())
 	{
-		std::cout << "body is chunked" << std::endl;
+		//std::cout << "body is chunked" << std::endl;
 		if (chunked_body_finished())
 		{
 			if (!decode_chunked_body())
@@ -539,6 +545,8 @@ bool Client::try_parse_body()
 		set_create_response();
 		return (1);
 	}
+
+// add check that content_length = body size if not chunked
 
 	std::cout << "\033[35m  Body parsed \033[0m" << std::endl;
 	_request._request_data.erase(0, _request._content_length);

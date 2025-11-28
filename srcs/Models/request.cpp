@@ -16,6 +16,7 @@ Request::Request() : _request_data(""),
 			 _client_max_body_size(0),
 			 _index(),
 			 _cgi_path(""),
+			 _autoindex(false),
 		     _body(""),
 		     _body_kv(),
 		     _multiparts(),
@@ -41,6 +42,7 @@ Request::Request(const Request &other)
 	_client_max_body_size = other._client_max_body_size;
 	_index = other._index;
 	_cgi_path = other._cgi_path;
+	_autoindex = other._autoindex;
 	_body = other._body;
 	_body_kv = other._body_kv;
 	_multiparts = other._multiparts;
@@ -67,6 +69,7 @@ Request &Request::operator=(const Request &other)
 		_client_max_body_size = other._client_max_body_size;
 		_index = other._index;
 		_cgi_path = other._cgi_path;
+		_autoindex = other._autoindex;
 		_body = other._body;
 		_body_kv = other._body_kv;
 		_multiparts = other._multiparts;
@@ -155,7 +158,7 @@ int Request::parse_header()
 int Request::parse_body()
 {
 	std::cout << "\033[36mParsing body...\n\033[0m" << std::endl;
-	std::cout << "\033[36m    Body: " << _body << "\n\033[0m" << std::endl;
+//	std::cout << "\033[36m    Body: " << _body << "\n\033[0m" << std::endl;
 
 	std::string content_type = _header_kv["content-type"];
 	if (content_type == "application/x-www-form-urlencoded")
