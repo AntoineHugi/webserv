@@ -152,7 +152,10 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 		response += _body;
 	}
 	else
+	{
+		if (response.find("Content-Length: ") == std::string::npos)
+			response += "Content-Length: 0\r\n";
 		response += "\r\n";
-
+	}
 	return response;
 }
