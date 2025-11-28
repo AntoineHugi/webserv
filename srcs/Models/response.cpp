@@ -73,20 +73,117 @@ std::string Response::get_reason_phrase(int status_code)
 	return "Internal Server Error";
 }
 
+// Helper: Parse CGI headers into a map (lowercase keys for case-insensitive comparison)
+static std::map<std::string, std::string> parse_cgi_headers(const std::string& header_text)
+{
+	std::map<std::string, std::string> headers;
+	std::string remaining = header_text;
+
+	while (remaining.find("\n") != std::string::npos)
+	{
+		size_t pos = remaining.find("\n");
+		std::string line = remaining.substr(0, pos);
+		remaining = remaining.substr(pos + 1);
+
+		size_t colon = line.find(":");
+		if (colon != std::string::npos)
+		{
+			std::string name = line.substr(0, colon);
+			std::string value = line.substr(colon + 1);
+			size_t start = value.find_first_not_of(" \t\r");
+			if (start != std::string::npos)
+				value = value.substr(start);
+			size_t end = value.find_last_not_of(" \t\r");
+			if (end != std::string::npos)
+				value = value.substr(0, end + 1);
+			for (size_t i = 0; i < name.length(); i++)
+				name[i] = std::tolower(name[i]);
+			headers[name] = value;
+		}
+	}
+
+	if (!remaining.empty())
+	{
+		size_t colon = remaining.find(":");
+		if (colon != std::string::npos)
+		{
+			std::string name = remaining.substr(0, colon);
+			std::string value = remaining.substr(colon + 1);
+			size_t start = value.find_first_not_of(" \t\r");
+			if (start != std::string::npos)
+				value = value.substr(start);
+			size_t end = value.find_last_not_of(" \t\r");
+			if (end != std::string::npos)
+				value = value.substr(0, end + 1);
+			for (size_t i = 0; i < name.length(); i++)
+				name[i] = std::tolower(name[i]);
+			headers[name] = value;
+		}
+	}
+
+	return headers;
+}
+
+// Helper: Capitalize header name for output (e.g., "content-type" -> "Content-Type")
+static std::string capitalize_header(const std::string& name)
+{
+	std::string result = name;
+	bool capitalize_next = true;
+
+	for (size_t i = 0; i < result.length(); i++)
+	{
+		if (capitalize_next && result[i] >= 'a' && result[i] <= 'z')
+			result[i] = std::toupper(result[i]);
+		else if (!capitalize_next && result[i] >= 'A' && result[i] <= 'Z')
+			result[i] = std::tolower(result[i]);
+
+		capitalize_next = (result[i] == '-');
+	}
+
+	return result;
+}
+
 std::string Response::format_response(int status_code, bool should_keep_alive, std::string version)
 {
+
+	/*
+
+  | Header         | Priority      | Notes                            |
+  |----------------|---------------|----------------------------------|
+  | Status         | CGI wins      | Overrides server status code     |
+  | Server         | Server ALWAYS | Never from CGI                   |
+  | Date           | Server ALWAYS | Never from CGI                   |
+  | Connection     | Server ALWAYS | Server manages keep-alive        |
+  | Content-Type   | CGI wins      | Falls back to server default     |
+  | Content-Length | CGI wins      | Server calculates if missing     |
+  | Location       | CGI/Server    | From CGI if present, else server |
+  | Set-Cookie     | CGI wins      | Passed through                   |
+  | Custom headers | CGI wins      | Any X-* or application headers   |
+
+	*/
 	std::string response;
-	std::string reason_phrase;
 	std::ostringstream ss;
 
-	// TODO: for every single key value pair, check if it already exists in the body
-	ss << status_code;
+	std::map<std::string, std::string> cgi_headers;
+	int final_status = status_code;
+
+	if (!get_header().empty())
+	{
+		cgi_headers = parse_cgi_headers(get_header());
+		if (cgi_headers.find("status") != cgi_headers.end())
+		{
+			std::istringstream iss(cgi_headers["status"]);
+			iss >> final_status;
+			cgi_headers.erase("status");
+		}
+	}
+
 	if (version.empty() || (version != "HTTP/1.1" && version != "HTTP/1.0"))
 		version = "HTTP/1.1";
-	response += version + " " + ss.str() + " ";
 
-	reason_phrase = get_reason_phrase(status_code);
-	response += reason_phrase + "\r\n";
+	ss << final_status;
+	response += version + " " + ss.str() + " ";
+	response += get_reason_phrase(final_status) + "\r\n";
 	response += "Server: webserv42\r\n";
 
 	std::time_t now = std::time(0);
@@ -97,7 +194,7 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	response += date_buf;
 	response += "\r\n";
 
-	if (reason_phrase == "Internal Server Error")
+	if (final_status == 500)
 	{
 		response += "Content-Length: 0\r\n";
 		response += "Connection: close\r\n";
@@ -106,7 +203,15 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	}
 
 	if (status_code == 301 || status_code == 302)
-		response += "Location: " + get_location() + "\r\n";
+	{
+		if (cgi_headers.find("location") != cgi_headers.end())
+		{
+			response += "Location: " + cgi_headers["location"] + "\r\n";
+			cgi_headers.erase("location");
+		}
+		else
+			response += "Location: " + get_location() + "\r\n";
+	}
 
 	if (status_code == 405)
 	{
@@ -116,46 +221,39 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 		response += "\r\n";
 	}
 
-	if (!get_header().empty())
+	for (std::map<std::string, std::string>::iterator it = cgi_headers.begin();
+	     it != cgi_headers.end(); ++it)
 	{
-		std::string header_text = get_header();
-		std::cout << "header_text: " << header_text << std::endl;
-		while(header_text.find("\n") != std::string::npos)
-		{
-			response += header_text.substr(0, header_text.find("\n"));
-			response += "\r\n";
-			header_text = header_text.substr(header_text.find("\n") + 1);
-		}
-		if (!header_text.empty())
-		{
-			response += header_text;
-			response += "\r\n";
-		}
-	}
-	if (response.find("Connection: ") == std::string::npos)
-	{
-		if (should_keep_alive)
-				response += "Connection: keep-alive\r\n";
-		else
-				response += "Connection: close\r\n";
+		std::string header_name = it->first;
+		if (header_name == "server" ||
+		    header_name == "date" ||
+		    header_name == "connection")
+			continue;
+		response += capitalize_header(header_name) + ": " + it->second + "\r\n";
 	}
 
-	if (!_body.empty())
+	// Add required headers if CGI didn't provide them
+	if (cgi_headers.find("content-type") == cgi_headers.end() && !_body.empty())
+		response += "Content-Type: " + _content_type + "\r\n";
+
+	if (cgi_headers.find("content-length") == cgi_headers.end())
 	{
-		if (response.find("Content-Type: ") == std::string::npos)
-			response += "Content-Type: " + _content_type + "\r\n";
 		ss.str("");
 		ss << _body.size();
-		if (response.find("Content-Length: ") == std::string::npos)
-			response += "Content-Length: " + ss.str() + "\r\n";
-		response += "\r\n";
-		response += _body;
+		response += "Content-Length: " + ss.str() + "\r\n";
 	}
-	else
+
+	if (cgi_headers.find("connection") == cgi_headers.end())
 	{
-		if (response.find("Content-Length: ") == std::string::npos)
-			response += "Content-Length: 0\r\n";
-		response += "\r\n";
+		if (should_keep_alive)
+			response += "Connection: keep-alive\r\n";
+		else
+			response += "Connection: close\r\n";
 	}
+
+	response += "\r\n";
+	if (!_body.empty())
+		response += _body;
+
 	return response;
 }

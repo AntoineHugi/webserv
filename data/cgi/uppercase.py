@@ -11,16 +11,17 @@ def main():
     if input_data:
         # Convert to uppercase
         output = input_data.upper()
-        # print("Content-Type: text/plain")
-        # print("Content-Length: " + str(len(output)))
-        # print()
+        print("Content-Type: text/plain")
+        print("Status: 200")
+        print("Content-Length: " + str(len(output)))
+        print()
         print(output, end='')
     else:
         response = "ERROR: No input data"
-        # print("Status: 400 Bad Request")
-        # print("Content-Type: text/plain")
-        # print("Content-Length: " + str(len(response)))
-        # print()
+        print("Status: 400 Bad Request")
+        print("Content-Type: text/plain")
+        print("Content-Length: " + str(len(response)))
+        print()
         print(response, end='')
 
 if __name__ == "__main__":

@@ -499,11 +499,17 @@ bool Client::chunked_body_finished() const
 bool Client::try_parse_body()
 {
 	/* send to chunked version */
+	std::cout << "Body size: " << _request._request_data.size() << " bytes" << std::endl;
+	std::cout << "Header size: " << _request._header.size() << " bytes" << std::endl;
+	std::cout << "Max client body size: " << _request._client_max_body_size << " bytes" << std::endl;
 	if (_request._request_data.size() > _request._client_max_body_size)
 	{
-		_status_code = 413;
-		set_create_response();
-		return (1);
+		if (_request._request_data.size() - _request._header.size() - 2> _request._client_max_body_size)
+		{
+			_status_code = 413;
+			set_create_response();
+			return (1);
+		}
 	}
 
 	if (is_body_chunked())
@@ -563,7 +569,8 @@ bool Client::try_parse_body()
 bool Client::try_parse_header()
 {
 	/* Checking if we're exceeding the size and if the end of header indicator has been found */
-	if (_request._request_data.size() > 16384)
+	std::cout << "Header size: " << _request._request_data.size() << " bytes" << std::endl;
+	if (_request._request_data.size() > 1048576)
 	{
 		_status_code = 431;
 		set_create_response();

@@ -165,10 +165,15 @@ int Client::handle_write()
 	_response.set_response_data(response);
 	set_send_response();
 	std::cout << "==>>  Client will receive answer" << std::endl;
-	std::string res = _response.get_response_data(_response.get_bytes_sent()).substr(0, 1024);
-	std::cout << "Response to be sent:\n-----\n"
-		  << res << "-----\n\n"
-		  << std::endl;
+	std::string res = _response.get_response_data(_response.get_bytes_sent()).substr(0, 1048576);
+	if (_response.get_bytes_sent() == 0)
+	{
+		std::cout << "Response to be sent:\n-----\n"
+				<< res.substr(0,2048) << "-----\n\n"
+				<< std::endl;
+	}
+
+
 	ssize_t bytes_sent = send(_fd, res.c_str(), res.size(), 0);
 	if (bytes_sent == -1)
 	{
@@ -178,9 +183,8 @@ int Client::handle_write()
 		return (1);
 	}
 	_response.update_bytes_sent(bytes_sent);
-	std::cout << "bytes sent: " << bytes_sent << std::endl;
-	std::cout << "_response.get_bytes_sent(): " << _response.get_bytes_sent() << std::endl;
-	std::cout << "_response.get_response_data_full().size(): " << _response.get_response_data_full().size() << std::endl;
+	// std::cout << "bytes sent: " << bytes_sent << std::endl;
+	std::cout << "bytes_sent(): " << _response.get_bytes_sent() << " out of " << _response.get_response_data_full().size() << std::endl;
 	if (_response.get_bytes_sent() == (size_t)_response.get_response_data_full().size())
 	{
 		std::cout << "I'm changing status" << std::endl;
