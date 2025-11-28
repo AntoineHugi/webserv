@@ -161,7 +161,7 @@ int Client::handle_write()
 	if (_status_code >= 400)
 		set_flags_error();
 	_response.set_request(&_request);
-	std::string response = _response.format_response(get_status_code(), should_keep_alive(), _request._header_kv["version"]);
+	std::string response = _response.format_response(get_status_code(), should_keep_alive(), _request._version);
 	_response.set_response_data(response);
 	set_send_response();
 	std::cout << "==>>  Client will receive answer" << std::endl;

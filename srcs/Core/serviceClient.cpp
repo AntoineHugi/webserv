@@ -46,17 +46,36 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 
 	std::cout << "sttus: " << clients[poll_fds[i].fd].get_status_code() << std::endl;
 
-	if (clients[poll_fds[i].fd]._response.get_response_data_full().size() > 8192)
-		clients[poll_fds[i].fd].set_status_code(500);
-
-	if (clients[poll_fds[i].fd].get_status_code() >= 500)
+	if (clients[poll_fds[i].fd].is_CGI_request() && clients[poll_fds[i].fd].get_status_code() < 300) // TODO: check status too otherwise infinite loop
 	{
-		clients[poll_fds[i].fd].set_flags_error();
-		clients[poll_fds[i].fd]._request._body = "";
+		std::cout << "will create CGI processes " << std::endl;
+		if (clients[poll_fds[i].fd].can_i_process_request())
+		{
+			this->setup_cgi_request(i);
+			clients[poll_fds[i].fd].set_wait_cgi();
+		}
+		else if (clients[poll_fds[i].fd].am_i_waiting_cgi())
+		{
+			if ((*cgi_processes[cgi_fd_for_cgi(this->fds["poll_fds"][i].fd , this->fds["cgi_fds"])]).am_i_finish())
+				clients[poll_fds[i].fd].can_i_create_response();
+		}
+		return;
 	}
-	if (clients[poll_fds[i].fd].get_status_code() < 300)
-		clients[poll_fds[i].fd].process_request();
-	clients[poll_fds[i].fd].set_create_response();
+	else // TODO: review this structure becuase the errors should have already been avoided by now - reading errors should go directly to writing
+	{
+		if (clients[poll_fds[i].fd]._response.get_response_data_full().size() > 8192)
+			clients[poll_fds[i].fd].set_status_code(500);
+
+		if (clients[poll_fds[i].fd].get_status_code() >= 500)
+		{
+			clients[poll_fds[i].fd].set_flags_error();
+			clients[poll_fds[i].fd]._request._body = "";
+		}
+		if (clients[poll_fds[i].fd].get_status_code() < 300)
+			clients[poll_fds[i].fd].process_request();
+		clients[poll_fds[i].fd].set_create_response();
+	}
+
 }
 
 int Service::service_writing(std::vector<struct pollfd> &poll_fds, int i)

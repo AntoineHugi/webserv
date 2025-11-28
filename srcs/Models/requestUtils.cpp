@@ -48,12 +48,14 @@ std::vector<std::string> Request::tokenise_url_encoded(std::string &str)
 	std::istringstream iss(str);
 	std::string word;
 
+	std::cout << "Tokenizing....  " << std::endl;
+
 	while (iss >> word)
 	{
 		std::string current;
-
 		for (size_t i = 0; i < word.size(); ++i)
 		{
+			std::cout << "current: " << current << std::endl;
 			if (word[i] == '&' || word[i] == '=')
 			{
 				if (!current.empty())
@@ -75,6 +77,7 @@ std::vector<std::string> Request::tokenise_url_encoded(std::string &str)
 int Request::parse_url_encoded()
 {
 	std::vector<std::string> tokens = tokenise_url_encoded(_body);
+	std::cout << "after tokenizer, tokens.size(): " << tokens.size() << std::endl;
 	for (size_t i = 0; i < tokens.size(); ++i)
 	{
 		if (i >= tokens.size() || tokens[i] == "=" || tokens[i] == "&")

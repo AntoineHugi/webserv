@@ -4,6 +4,7 @@
 # include "../Models/request.hpp"
 # include "../Models/response.hpp"
 # include "../Models/server.hpp"
+// # include "../Models/route.hpp"
 # include "../Functions/method.hpp"
 
 # include <string>
@@ -25,6 +26,7 @@ class Client
 			READING_BODY,
 			PROCESSING_REQUEST,
 			CREATING_RESPONSE,
+			WAITING_CGI,
 			SENDING_RESPONSE,
 			KEEPALIVE_WAIT,
 			CLOSING,
@@ -36,6 +38,7 @@ class Client
 			bool _should_keep_alive;
 			bool _body_chunked;
 			bool _leftover_chunk;
+			bool _is_CGI;
 
 			flags():
 				_should_keep_alive(false),
@@ -75,6 +78,7 @@ class Client
 		bool can_i_read_body() const { return _state == READING_BODY; };
 		bool can_i_process_request() const { return _state == PROCESSING_REQUEST; };
 		bool can_i_create_response() const { return _state == CREATING_RESPONSE; };
+		bool am_i_waiting_cgi() const { return _state == WAITING_CGI; };
 		bool can_i_send_response() const { return _state == SENDING_RESPONSE; };
 		bool can_i_close_connection() const { return _state == CLOSING; };
 		bool is_error() const { return _state == HANDLE_ERROR; };
@@ -85,6 +89,7 @@ class Client
 		void set_read_body() { _state = READING_BODY; };
 		void set_process_request() { _state = PROCESSING_REQUEST; };
 		void set_create_response() { _state = CREATING_RESPONSE; };
+		void set_wait_cgi() { _state = WAITING_CGI; };
 		void set_send_response() { _state = SENDING_RESPONSE; };
 		void set_finish_request_alive() {_state = KEEPALIVE_WAIT; };
 		void set_finish_request_close() {_state = CLOSING; };
@@ -122,6 +127,7 @@ class Client
 		void	set_flags();
 		void	set_flags_error();
 		void	refresh_client();
+		bool is_CGI_request() { return _flags._is_CGI; };
 		bool	is_body_chunked() { return _flags._body_chunked; };
 		bool	should_keep_alive() const { return _flags._should_keep_alive; };
 		bool	leftover_chunk() const { return _flags._leftover_chunk; };

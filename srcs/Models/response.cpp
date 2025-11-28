@@ -79,6 +79,7 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	std::string reason_phrase;
 	std::ostringstream ss;
 
+	// TODO: for every single key value pair, check if it already exists in the body
 	ss << status_code;
 	if (version.empty() || (version != "HTTP/1.1" && version != "HTTP/1.0"))
 		version = "HTTP/1.1";
@@ -86,19 +87,8 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 
 	reason_phrase = get_reason_phrase(status_code);
 	response += reason_phrase + "\r\n";
-	if (!_body.empty())
-		response += "Content-Type: " + _content_type + "\r\n";
-	if (!get_location().empty())
-		response += "Location: " + get_location() + "\r\n";
-	if (status_code == 405)
-	{
-		response += "Allowed-Methods: ";
-		for (size_t i = 0; i < get_allowed_methods().size(); ++i)
-			response += get_allowed_methods()[i];
-		response += "\r\n";
-	}
-
 	response += "Server: webserv42\r\n";
+
 	std::time_t now = std::time(0);
 	std::tm *gmt_time = std::gmtime(&now);
 	char date_buf[100];
@@ -111,19 +101,61 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 	{
 		response += "Content-Length: 0\r\n";
 		response += "Connection: close\r\n";
+		response += "\r\n";
 		return response;
 	}
-	if (should_keep_alive)
-		response += "Connection: keep-alive\r\n";
-	else
-		response += "Connection: close\r\n";
 
-	ss.str("");
-	ss << _body.size();
-	response += "Content-Length: " + ss.str() + "\r\n";
-	response += "\r\n";
+	if (status_code == 301 || status_code == 302)
+		response += "Location: " + get_location() + "\r\n";
 
-	if (_body.size() != 0)
+	if (status_code == 405)
+	{
+		response += "Allowed-Methods: ";
+		for (size_t i = 0; i < get_allowed_methods().size(); ++i)
+			response += get_allowed_methods()[i];
+		response += "\r\n";
+	}
+
+	if (!get_header().empty())
+	{
+		std::string header_text = get_header();
+		std::cout << "header_text: " << header_text << std::endl;
+		while(header_text.find("\n") != std::string::npos)
+		{
+			response += header_text.substr(0, header_text.find("\n"));
+			response += "\r\n";
+			header_text = header_text.substr(header_text.find("\n") + 1);
+		}
+		if (!header_text.empty())
+		{
+			response += header_text;
+			response += "\r\n";
+		}
+	}
+	if (response.find("Connection: ") == std::string::npos)
+	{
+		if (should_keep_alive)
+				response += "Connection: keep-alive\r\n";
+		else
+				response += "Connection: close\r\n";
+	}
+
+	if (!_body.empty())
+	{
+		if (response.find("Content-Type: ") == std::string::npos)
+			response += "Content-Type: " + _content_type + "\r\n";
+		ss.str("");
+		ss << _body.size();
+		if (response.find("Content-Length: ") == std::string::npos)
+			response += "Content-Length: " + ss.str() + "\r\n";
+		response += "\r\n";
 		response += _body;
+	}
+	else
+	{
+		if (response.find("Content-Length: ") == std::string::npos)
+			response += "Content-Length: 0\r\n";
+		response += "\r\n";
+	}
 	return response;
 }
