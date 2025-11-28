@@ -3,15 +3,19 @@
 
 char** setup_env(std::map<int, Client> clients, int fd)
 {
+	std::ostringstream ss;
 	std::vector<std::string> env_strings;
+	ss << clients[fd]._request._content_length;
 	env_strings.push_back("REQUEST_METHOD=" + clients[fd]._request._method);
-	env_strings.push_back("CONTENT_LENGTH=" + clients[fd]._request._content_length);
+	env_strings.push_back("CONTENT_LENGTH=" + ss.str());
 	env_strings.push_back("CONTENT_TYPE=" + clients[fd]._request._header_kv["Content-Type"]);
 	env_strings.push_back("QUERY_STRING=");
 	env_strings.push_back("SERVER_PROTOCOL=" + clients[fd]._request._version);
 	env_strings.push_back("GATEWAY_INTERFACE=CGI/1.1");
 	env_strings.push_back("SCRIPT_NAME=" + clients[fd]._request._fullPathURI);
-	env_strings.push_back("SERVER_PORT=" + (*clients[fd].get_server()).get_port());
+	ss.clear();
+	ss << (*clients[fd].get_server()).get_port();
+	env_strings.push_back("SERVER_PORT=" + ss.str());
 
 	char** envp = new char*[env_strings.size() + 1];
 	for (size_t i = 0; i < env_strings.size(); i++)
