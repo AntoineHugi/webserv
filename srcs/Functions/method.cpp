@@ -68,53 +68,29 @@ void Method::determine_content_type(Client &client, std::string filepath)
 		for (size_t i = 0; i < ext.size(); i++)
 			ext[i] = std::tolower(ext[i]);
 		if (ext == "html" || ext == "htm")
-		{
 			content_type = "text/html";
-		}
 		else if (ext == "txt")
-		{
 			content_type = "text/plain";
-		}
 		else if (ext == "json")
-		{
 			content_type = "application/json";
-		}
 		else if (ext == "png")
-		{
 			content_type = "image/png";
-		}
 		else if (ext == "jpg" || ext == "jpeg")
-		{
 			content_type = "image/jpeg";
-		}
 		else if (ext == "webp")
-		{
 			content_type = "image/webp";
-		}
 		else if (ext == "gif")
-		{
 			content_type = "image/gif";
-		}
 		else if (ext == "pdf")
-		{
 			content_type = "application/pdf";
-		}
 		else if (ext == "csv")
-		{
 			content_type = "text/csv";
-		}
 		else if (ext == "js")
-		{
 			content_type = "application/javascript";
-		}
 		else if (ext == "py")
-		{
 			content_type = "text/x-python";
-		}
 		else
-		{
 			content_type = "application/octet-stream";
-		}
 	}
 	client._response.set_content_type(content_type);
 	return;
@@ -181,7 +157,7 @@ void Method::handle_get(Client &client)
 	return;
 }
 
-int Method::save_uploaded_files(Client& client, std::vector<MultiPart> &parts, const std::string &upload_directory)
+int Method::save_uploaded_files(Client &client, std::vector<MultiPart> &parts, const std::string &upload_directory)
 {
 	for (size_t i = 0; i < parts.size(); ++i)
 	{

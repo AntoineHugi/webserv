@@ -1,17 +1,11 @@
-- changed server based on URI (find if the route exist in another server with same host) (optional)
+- implement timeout for CGI potentially
 
-- massive amount of request (& how to deal with it) we are good.
+- add more tests
 
+- Check for parsing errors and segfaults
 
-- run tester from school - done
+- making sure to handle errors in dup2, write, etc.
 
+- review todos left in code
 
-- send subject to chat gpt and ask what tests we should past
-Missing tests : 
-	- CGI tests
-	- Static files (various mime types)
-	- CGI-specific edge cases (no content-length, chunked input, env vars, working directory)
-	
-	
-	
-
+- cleanup

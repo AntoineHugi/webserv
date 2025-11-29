@@ -37,7 +37,7 @@ void test_pipeline_chunked_get(const TestConfig& config, TestStats& stats) {
 	request += "0\r\n";
 	request += "\r\n";
 	// Second request immediately after
-	request += "GET /next HTTP/1.1\r\n";
+	request += "GET / HTTP/1.1\r\n";
 	request += "Host: localhost:8080\r\n";
 	request += "Connection: close\r\n";
 	request += "\r\n";

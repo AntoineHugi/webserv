@@ -49,16 +49,17 @@ void Service::poll_service()
 
 	while (g_shutdown == 0)
 	{
-		// Use timeout 0 if any client has leftover data to process
+		/* Use timeout 0 if any client has leftover data to process */
+		int POLL_TIMEOUT = CLIENT_TIMEOUT_MS;
 		for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it)
 		{
 			if (it->second.leftover_chunk())
 			{
-				CLIENT_TIMEOUT_MS = 0;
+				POLL_TIMEOUT = 0;
 				break;
 			}
 		}
-		int ret = poll(this->fds["poll_fds"].data(), this->fds["poll_fds"].size(), CLIENT_TIMEOUT_MS);
+		int ret = poll(this->fds["poll_fds"].data(), this->fds["poll_fds"].size(), POLL_TIMEOUT);
 		if (ret < 0)
 		{
 			if (errno == EINTR)
@@ -66,45 +67,47 @@ void Service::poll_service()
 			perror("poll failed");
 			break;
 		}
-
+		if (ret == 0)
+		{
+			for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end();)
+			{
+				if (it->second.is_inactive() && !it->second.leftover_chunk() && !it->second.am_i_waiting_cgi())
+				{
+					int fd = it->first;
+					++it;
+					handle_disconnection_by_fd(fd);
+				}
+				else
+					++it;
+			}
+		}
 		for (int i = this->fds["poll_fds"].size() - 1; i >= 0; i--)
 		{
 
 			int server_fd_if_new_client = server_fd_for_new_client(this->fds["poll_fds"][i].fd, this->fds["server_fds"]);
 			int cgi_fd_if_cgi = cgi_fd_for_cgi(this->fds["poll_fds"][i].fd, this->fds["cgi_fds"]);
 
-			if (this->fds["poll_fds"][i].revents == 0)
-			{
-				// std::cout << "## i'm checking if we should close the client ##" << std::endl;
-				if (server_fd_if_new_client != -1 || (server_fd_if_new_client == -1 && clients[this->fds["poll_fds"][i].fd].leftover_chunk() == false))
-					continue;
-				else if (clients[this->fds["poll_fds"][i].fd].is_inactive() && this->fds["poll_fds"][i].revents & POLLIN)
-					handle_disconnection(this->fds["poll_fds"], i);
-			}
-			// if (this->fds["poll_fds"][i].revents == 0)
-			// {
-			// 	if (server_fd_if_new_client != -1)
-			// 		continue;
-			// 	if (!clients[this->fds["poll_fds"][i].fd].leftover_chunk() && clients[this->fds["poll_fds"][i].fd].is_inactive())
-			// 		handle_disconnection(this->fds["poll_fds"], i);
-			// 	continue;
-			// }
 			if (server_fd_if_new_client != -1)
 			{
-				add_client_to_polls(this->clients, this->fds["poll_fds"][i].fd, this->servers[server_fd_if_new_client]);
-				// if (DEBUG)
-					std::cout << "\033[32m New client connected. Total clients: " << (this->fds["poll_fds"].size() - this->fds["server_fds"].size()) << "\033[0m" << std::endl;
+				if (this->fds["poll_fds"][i].revents != 0)
+				{
+					add_client_to_polls(this->clients, this->fds["poll_fds"][i].fd, this->servers[server_fd_if_new_client]);
+					if (DEBUG)
+						std::cout << "\033[32m New client connected. Total clients: " << (this->fds["poll_fds"].size() - this->fds["server_fds"].size()) << "\033[0m" << std::endl;
+				}
 			}
 			else if (cgi_fd_if_cgi != -1)
 				cgi_handler(i);
 			else
 			{
 				Client &client = clients[this->fds["poll_fds"][i].fd];
-				client.update_last_interaction();
 				if (client.leftover_chunk() == false && this->fds["poll_fds"][i].revents & (POLLERR | POLLHUP | POLLNVAL))
 				{
 					if (DEBUG)
+					{
+						std::cout << "POLL event : " << this->fds["poll_fds"][i].revents << std::endl;
 						std::cout << "this->fds['poll_fds'][i].revents : " << this->fds["poll_fds"][i].revents << std::endl;
+					}
 					handle_disconnection(this->fds["poll_fds"], i);
 					continue;
 				}

@@ -31,6 +31,7 @@ class Service
 
 		void	handle_connection(std::vector<struct pollfd> &poll_fds, const size_t& i);
 		void	handle_disconnection(std::vector<struct pollfd> &poll_fds, const size_t& i);
+		void	handle_disconnection_by_fd(int fd);
 		void	set_polls();
 		int		server_fd_for_new_client(int fd, std::vector<struct pollfd> &fds_vector);
 		int		cgi_fd_for_cgi(int fd, std::vector<struct pollfd> &fds_vector);

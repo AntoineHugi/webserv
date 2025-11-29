@@ -35,6 +35,5 @@ void Client::refresh_client()
 	_state = READING_HEADERS;
 	_flags._should_keep_alive = false;
 	_flags._body_chunked = false;
-	//_flags._leftover_chunk = false;
 	_status_code = 200;
 }

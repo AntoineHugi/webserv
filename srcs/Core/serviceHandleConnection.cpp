@@ -44,9 +44,21 @@ void Service::handle_disconnection(std::vector<struct pollfd> &poll_fds, const s
 	if (DEBUG)
 		std::cout << "[Handle Disconn] Handling disconnection for fd: " << fd << std::endl;
 
-	close(fd);							  // Close file descriptor
+	close(fd);			      // Close file descriptor
 	poll_fds.erase(poll_fds.begin() + i); // Remove from poll
-	clients.erase(fd);					  // Remove from map
+	clients.erase(fd);		      // Remove from map
 	if (DEBUG)
 		std::cout << "[Handle Disconn] Handling disconnection (error/hangup) for fd: " << fd << std::endl;
+}
+
+void Service::handle_disconnection_by_fd(int fd)
+{
+	for (size_t i = 0; i < fds["poll_fds"].size(); ++i)
+	{
+		if (fds["poll_fds"][i].fd == fd)
+		{
+			handle_disconnection(fds["poll_fds"], i);
+			return;
+		}
+	}
 }

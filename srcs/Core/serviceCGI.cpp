@@ -101,6 +101,7 @@ void Service::cgi_handler(int i)
 	}
 	CGIProcess &cgi = (*cgi_processes[cgi_fd_for_cgi(fds["poll_fds"][i].fd, fds["cgi_fds"])]);
 	Client &client = clients[cgi.get_client_fd()];
+	client.update_last_interaction();
 
 	// std::cout << "==> fds['poll_fds'][i].fd: " << fds["poll_fds"][i].fd << std::endl;
 	// std::cout << "==> cgi.get_pipe_to_cgi(): " << cgi.get_pipe_to_cgi() << std::endl;
@@ -110,7 +111,6 @@ void Service::cgi_handler(int i)
 	// std::cout << "==> fds['poll_fds'][i].revents & (POLLOUT | POLLHUP): " << (fds["poll_fds"][i].revents & (POLLOUT | POLLHUP)) << std::endl;
 	// std::cout << "==> fds['poll_fds'][i].revents & (POLLIN | POLLHUP): " << (fds["poll_fds"][i].revents & (POLLIN | POLLHUP)) << std::endl;
 	// std::cout << "==> fds['poll_fds'][i].revents : " << fds["poll_fds"][i].revents << std::endl;
-	// sleep(1);
 
 	if (fds["poll_fds"][i].fd == cgi.get_pipe_to_cgi() && (fds["poll_fds"][i].revents & (POLLOUT | POLLHUP)))
 	{
@@ -140,33 +140,24 @@ void Service::cgi_handler(int i)
 		}
 		else if (bytes_sent == 0)
 		{
-			// sleep(1);
 			if (DEBUG)
 				std::cout << "End of sending things to CGI : " << bytes_sent << std::endl;
 			remove_fd(cgi.get_pipe_to_cgi());
 			cgi.set_processing_and_writing();
 		}
 		else
-		{
-			// std::cout << "wrte to CGI : " << bytes_sent << std::endl;
-			// std::cout << "============>   Total bytes written: " << cgi.get_bytes_written() << " out of " << client._request._body.size() << std::endl;
 			cgi.update_bytes_written(bytes_sent);
-		}
 	}
 	else if (fds["poll_fds"][i].fd == cgi.get_pipe_from_cgi() && (fds["poll_fds"][i].revents & (POLLIN | POLLHUP)))
 	{
-		// std::cout << "\n ==> handle reading from CGI" << std::endl;
+		if (DEBUG)
+			std::cout << "\n ==> handle reading from CGI" << std::endl;
 
 		char buffer[BUFFER_SIZE];
 		ssize_t n = read(cgi.get_pipe_from_cgi(), buffer, sizeof(buffer));
 
-		// std::cout << "n is: " << n << std::endl;
 		if (n > 0)
-		{
-			// std::cout << "this is what we read: " << buffer << std::endl;
 			cgi.append_to_output(buffer, n);
-			// std::cout << "====>   Total buffer read: " << cgi.get_output_buffer().size() << " out of " << client._request._body.size() << std::endl;
-		}
 		else if (n == 0) // EOF
 		{
 			int status;
@@ -179,7 +170,7 @@ void Service::cgi_handler(int i)
 
 				if (exit_code == 0)
 				{
-					// Success - set response
+					
 					std::string output = cgi.get_output_buffer();
 					if (DEBUG)
 					{
@@ -211,13 +202,11 @@ void Service::cgi_handler(int i)
 					client.set_status_code(500);
 				}
 			}
-			// client._response.set_body(cgi.get_output_buffer());
-			// std::cout << "client response saved: " << client._response.get_response_data(0) << std::endl;
 			remove_fd(cgi.get_pipe_from_cgi());
 			delete &cgi;
 			client.set_create_response();
 		}
-		else // n < 0 - Error
+		else 
 		{
 			if (errno != EAGAIN && errno != EWOULDBLOCK)
 			{
