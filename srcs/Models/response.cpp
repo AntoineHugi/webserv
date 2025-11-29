@@ -1,18 +1,23 @@
 #include "response.hpp"
 
 Response::Response() : _header(""),
-					   _content_length(0),
-					   _bytes_sent(0),
-					   _response_data(""),
-					   _body(""),
-					   _allowedMethods() {}
+		       _content_length(0),
+		       _bytes_sent(0),
+		       _response_data(""),
+		       _body(""),
+		       _allowedMethods(),
+		       _content_type(""),
+		       _location("") {}
 
 Response::Response(const Response &other) : _header(other._header),
-											_content_length(other._content_length),
-											_bytes_sent(other._bytes_sent),
-											_response_data(other._response_data),
-											_body(other._body),
-											_allowedMethods(other._allowedMethods) {}
+					    _content_length(other._content_length),
+					    _bytes_sent(other._bytes_sent),
+					    _response_data(other._response_data),
+					    _body(other._body),
+					    _allowedMethods(other._allowedMethods),
+					    _content_type(other._content_type) ,
+					    _location(other._location) 
+					    {}
 
 Response &Response::operator=(const Response &other)
 {
@@ -24,6 +29,8 @@ Response &Response::operator=(const Response &other)
 		_response_data = other._response_data;
 		_body = other._body;
 		_allowedMethods = other._allowedMethods;
+		_content_type = other._content_type;
+		_location = other._location;
 	}
 	return (*this);
 }
@@ -32,11 +39,14 @@ Response::~Response() {}
 
 void Response::flush_response_data()
 {
-	_response_data.clear();
 	_header.clear();
-	_body.clear();
 	_content_length = 0;
 	_bytes_sent = 0;
+	_response_data.clear();
+	_body.clear();
+	_allowedMethods.clear();
+	_content_type.clear();
+	_location.clear();
 }
 
 std::string Response::get_reason_phrase(int status_code)
@@ -74,7 +84,7 @@ std::string Response::get_reason_phrase(int status_code)
 }
 
 // Helper: Parse CGI headers into a map (lowercase keys for case-insensitive comparison)
-static std::map<std::string, std::string> parse_cgi_headers(const std::string& header_text)
+std::map<std::string, std::string> Response::parse_cgi_headers(const std::string &header_text)
 {
 	std::map<std::string, std::string> headers;
 	std::string remaining = header_text;
@@ -125,7 +135,7 @@ static std::map<std::string, std::string> parse_cgi_headers(const std::string& h
 }
 
 // Helper: Capitalize header name for output (e.g., "content-type" -> "Content-Type")
-static std::string capitalize_header(const std::string& name)
+std::string Response::capitalize_header(const std::string &name)
 {
 	std::string result = name;
 	bool capitalize_next = true;
@@ -143,10 +153,10 @@ static std::string capitalize_header(const std::string& name)
 	return result;
 }
 
-std::string Response::format_response(int status_code, bool should_keep_alive, std::string version)
+void Response::format_response(int status_code, bool should_keep_alive, std::string version)
 {
 
-	/*
+/*
 
   | Header         | Priority      | Notes                            |
   |----------------|---------------|----------------------------------|
@@ -160,8 +170,8 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
   | Set-Cookie     | CGI wins      | Passed through                   |
   | Custom headers | CGI wins      | Any X-* or application headers   |
 
-	*/
-	std::string response;
+*/
+
 	std::ostringstream ss;
 
 	std::map<std::string, std::string> cgi_headers;
@@ -182,78 +192,77 @@ std::string Response::format_response(int status_code, bool should_keep_alive, s
 		version = "HTTP/1.1";
 
 	ss << final_status;
-	response += version + " " + ss.str() + " ";
-	response += get_reason_phrase(final_status) + "\r\n";
-	response += "Server: webserv42\r\n";
+	_response_data += version + " " + ss.str() + " ";
+	_response_data += get_reason_phrase(final_status) + "\r\n";
+	_response_data += "Server: webserv42\r\n";
 
 	std::time_t now = std::time(0);
 	std::tm *gmt_time = std::gmtime(&now);
 	char date_buf[100];
 	strftime(date_buf, sizeof(date_buf), "%a, %d %b %Y %H:%M:%S GMT", gmt_time);
-	response += "Date: ";
-	response += date_buf;
-	response += "\r\n";
+	_response_data += "Date: ";
+	_response_data += date_buf;
+	_response_data += "\r\n";
 
 	if (final_status == 500)
 	{
-		response += "Content-Length: 0\r\n";
-		response += "Connection: close\r\n";
-		response += "\r\n";
-		return response;
+		_response_data += "Content-Length: 0\r\n";
+		_response_data += "Connection: close\r\n";
+		_response_data += "\r\n";
+		std::cout << "status code sent : " << final_status << std::endl;
+		return;
 	}
 
 	if (status_code == 301 || status_code == 302)
 	{
 		if (cgi_headers.find("location") != cgi_headers.end())
 		{
-			response += "Location: " + cgi_headers["location"] + "\r\n";
+			_response_data += "Location: " + cgi_headers["location"] + "\r\n";
 			cgi_headers.erase("location");
 		}
 		else
-			response += "Location: " + get_location() + "\r\n";
+			_response_data += "Location: " + get_location() + "\r\n";
 	}
 
 	if (status_code == 405)
 	{
-		response += "Allowed-Methods: ";
+		_response_data += "Allowed-Methods: ";
 		for (size_t i = 0; i < get_allowed_methods().size(); ++i)
-			response += get_allowed_methods()[i];
-		response += "\r\n";
+			_response_data += get_allowed_methods()[i];
+		_response_data += "\r\n";
 	}
 
 	for (std::map<std::string, std::string>::iterator it = cgi_headers.begin();
 	     it != cgi_headers.end(); ++it)
 	{
 		std::string header_name = it->first;
-		if (header_name == "server" ||
-		    header_name == "date" ||
-		    header_name == "connection")
+		if (header_name == "server" || header_name == "date" || header_name == "connection")
 			continue;
-		response += capitalize_header(header_name) + ": " + it->second + "\r\n";
+		_response_data += capitalize_header(header_name) + ": " + it->second + "\r\n";
 	}
 
 	// Add required headers if CGI didn't provide them
 	if (cgi_headers.find("content-type") == cgi_headers.end() && !_body.empty())
-		response += "Content-Type: " + _content_type + "\r\n";
+		_response_data += "Content-Type: " + _content_type + "\r\n";
 
 	if (cgi_headers.find("content-length") == cgi_headers.end())
 	{
 		ss.str("");
 		ss << _body.size();
-		response += "Content-Length: " + ss.str() + "\r\n";
+		_response_data += "Content-Length: " + ss.str() + "\r\n";
 	}
 
 	if (cgi_headers.find("connection") == cgi_headers.end())
 	{
 		if (should_keep_alive)
-			response += "Connection: keep-alive\r\n";
+			_response_data += "Connection: keep-alive\r\n";
 		else
-			response += "Connection: close\r\n";
+			_response_data += "Connection: close\r\n";
 	}
 
-	response += "\r\n";
+	_response_data += "\r\n";
 	if (!_body.empty())
-		response += _body;
-
-	return response;
+		_response_data += _body;
+	std::cout << "status code sent : " << final_status << std::endl;
+	return;
 }

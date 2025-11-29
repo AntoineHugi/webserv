@@ -116,7 +116,8 @@ void Service::cgi_handler(int i)
 	{
 		// std::cout << "\n ==> handle writing to CGI" << std::endl;
 		// std::cout << "\n ==> content length = " << client._request._body.size() << std::endl;
-		std::string res = client._request._body.substr(cgi.get_bytes_written()).substr(0, BUFFER_SIZE);
+		//std::string res = client._request._body.substr(cgi.get_bytes_written()).substr(0, BUFFER_SIZE);
+		std::string res = client._request._body.substr(cgi.get_bytes_written(), BUFFER_SIZE);
 		//	std::cout << "res : " << res << std::endl;
 
 		ssize_t bytes_sent = write(cgi.get_pipe_to_cgi(), res.c_str(), res.size());

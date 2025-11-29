@@ -1,8 +1,8 @@
 #include "route.hpp"
 
 Route::Route() : _path(""), _root(""), _autoindex(""),
-				 _cgi_path(""), _client_max_body_size(0), _methods(), 
-				 _index(), _bouncer(), _cgi(false), 
+				 _cgi_path(""), _client_max_body_size(0), _methods(),
+				 _index(), _bouncer(), _cgi(false),
 				 _redirect() {}
 
 Route::Route(const Route &other)
@@ -99,4 +99,4 @@ void Route::set_methods(const std::vector<std::string> &methods)
 void Route::set_index(std::vector<std::string> index) { _index = index; }
 void Route::add_bouncer(std::string &key, std::string &value) { _bouncer.insert(std::make_pair(key, value)); }
 void Route::set_cgi(bool cgi) { _cgi = cgi; }
-void Route::set_redirect(int key, std::string& value) { _redirect.insert(std::make_pair(key, value)); }
+void Route::set_redirect(int key, std::string &value) { _redirect.insert(std::make_pair(key, value)); }

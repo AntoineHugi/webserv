@@ -115,10 +115,8 @@ void Server::set_server(){
 		perror("Socket option failed");
 		return; // TODO: throw correct error
 	}
-	int flags = fcntl(get_sock(), F_GETFL); // Get current flags
-	check = fcntl(get_sock(), F_SETFL, flags | O_NONBLOCK); // Set non-blocking flag
-	// Interesting for CGI
-	// fcntl(fd, F_SETFD, FD_CLOEXEC); // Set close-on-exec flag
+	int flags = fcntl(get_sock(), F_GETFL);
+	check = fcntl(get_sock(), F_SETFL, flags | O_NONBLOCK);
 	if (check < 0) {
 		perror("Socket flags failed");
 		return; // TODO: throw correct error
@@ -126,9 +124,9 @@ void Server::set_server(){
 
 	struct sockaddr_in server_addr;
 	memset(&server_addr, 0, sizeof(server_addr));
-	server_addr.sin_family = AF_INET; // IPv4
-	server_addr.sin_addr.s_addr = INADDR_ANY; // Any interface
-	server_addr.sin_port = htons(get_port()); // Port 8080
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_addr.s_addr = INADDR_ANY;
+	server_addr.sin_port = htons(get_port());
 	check = bind(get_sock(), (struct sockaddr *)&server_addr, sizeof(server_addr));
 	if (check < 0) {
 		perror("Bind failed");

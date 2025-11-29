@@ -3,7 +3,7 @@
 - massive amount of request (& how to deal with it) we are good.
 
 
-- run tester from school
+- run tester from school - done
 
 
 - send subject to chat gpt and ask what tests we should past

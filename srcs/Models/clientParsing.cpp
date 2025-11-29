@@ -570,8 +570,6 @@ bool Client::try_parse_body()
 		return (1);
 	}
 
-	// add check that content_length = body size if not chunked
-
 	if (DEBUG)
 		std::cout << "\033[35m  Body parsed \033[0m" << std::endl;
 	_request._request_data.erase(0, _request._content_length);

@@ -4,12 +4,14 @@ int Request::http_requirements_met()
 {
 	if (_method.empty() || _uri.empty() || _version.empty() || _host.empty())
 	{
-		std::cout << "something is empty, _method = " << _method << "; _uri = " << _uri << ";_version = " << _version << ";_host = " << _host << std::endl;
+		if (DEBUG)
+			std::cout << "something is empty, _method = " << _method << "; _uri = " << _uri << ";_version = " << _version << ";_host = " << _host << std::endl;
 		return 400;
 	}
 	if (_version != "HTTP/1.1" && _version != "HTTP/1.0")
 	{
-		std::cout << "version is " << _version << std::endl;
+		if (DEBUG)
+			std::cout << "version is " << _version << std::endl;
 		return 505;
 	}
 	return 200;
@@ -29,6 +31,7 @@ void Request::flush_request_data()
 	_method.clear();
 	_uri.clear();
 	_version.clear();
+	_host.clear();
 	_header_kv.clear();
 	_content_length = 0;
 	_fullPathURI.clear();
@@ -36,11 +39,16 @@ void Request::flush_request_data()
 	_isDirectory = false;
 	memset(&_stat, 0, sizeof(_stat));
 	_isCGI = false;
+	_client_max_body_size = 0;
+	_index.clear();
+	_cgi_path.clear();
+	_autoindex = false;
 	_body.clear();
 	_body_kv.clear();
 	_multiparts.clear();
 	_body_data.clear();
 }
+
 
 std::vector<std::string> Request::tokenise_url_encoded(std::string &str)
 {

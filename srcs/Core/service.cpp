@@ -92,7 +92,7 @@ void Service::poll_service()
 			if (server_fd_if_new_client != -1)
 			{
 				add_client_to_polls(this->clients, this->fds["poll_fds"][i].fd, this->servers[server_fd_if_new_client]);
-				if (DEBUG)
+				// if (DEBUG)
 					std::cout << "\033[32m New client connected. Total clients: " << (this->fds["poll_fds"].size() - this->fds["server_fds"].size()) << "\033[0m" << std::endl;
 			}
 			else if (cgi_fd_if_cgi != -1)
@@ -103,7 +103,8 @@ void Service::poll_service()
 				client.update_last_interaction();
 				if (client.leftover_chunk() == false && this->fds["poll_fds"][i].revents & (POLLERR | POLLHUP | POLLNVAL))
 				{
-					std::cout << "this->fds['poll_fds'][i].revents : " << this->fds["poll_fds"][i].revents << std::endl;
+					if (DEBUG)
+						std::cout << "this->fds['poll_fds'][i].revents : " << this->fds["poll_fds"][i].revents << std::endl;
 					handle_disconnection(this->fds["poll_fds"], i);
 					continue;
 				}

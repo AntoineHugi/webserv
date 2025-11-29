@@ -67,7 +67,6 @@ int Client::handle_read()
 
 	if (!leftover_chunk())
 	{
-		// std::cout << "request data was empty" << std::endl;
 		int read_result = read_to_buffer();
 		if (read_result == -1)
 		{
@@ -161,10 +160,11 @@ int Client::handle_write()
 	}
 	if (_status_code >= 400)
 		set_flags_error();
-	_response.set_request(&_request);
-	std::string response = _response.format_response(get_status_code(), should_keep_alive(), _request._version);
-	_response.set_response_data(response);
-	set_send_response();
+	if (can_i_create_response())
+	{
+		_response.format_response(get_status_code(), should_keep_alive(), _request._version);
+		set_send_response();
+	}
 	if (DEBUG)
 		std::cout << "==>>  Client will receive answer" << std::endl;
 	std::string res = _response.get_response_data(_response.get_bytes_sent()).substr(0, BUFFER_SIZE);
@@ -188,7 +188,6 @@ int Client::handle_write()
 		return (1);
 	}
 	_response.update_bytes_sent(bytes_sent);
-	// std::cout << "bytes sent: " << bytes_sent << std::endl;
 	if (DEBUG)
 		std::cout << "bytes_sent(): " << _response.get_bytes_sent() << " out of " << _response.get_response_data_full().size() << std::endl;
 	if (_response.get_bytes_sent() == (size_t)_response.get_response_data_full().size())

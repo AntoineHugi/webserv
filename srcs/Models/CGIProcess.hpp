@@ -21,11 +21,11 @@ class CGIProcess
 
 		int _client_fd;
 		pid_t _pid;
-		int _pipe_to_cgi;    // Write end (stdin for child)
-		int _pipe_from_cgi;  // Read end (stdout from child)
+		int _pipe_to_cgi;
+		int _pipe_from_cgi;
 		std::string _output_buffer;
 		int _bytes_written;
-		time_t _start_time;  // For timeout
+		time_t _start_time;
 
 	public:
 		CGIProcess();
@@ -43,15 +43,14 @@ class CGIProcess
 		bool am_i_finish() const { return _state == FINISH; };
 
 		void update_bytes_written(int res) { _bytes_written += res; };
-		void append_to_output(const std::string& buf, int n) { _output_buffer = _output_buffer.append(buf, 0, n); };
+		void append_to_output(const std::string& buf, int n) { _output_buffer.append(buf, 0, n); };
 
 		int get_client_fd() const { return _client_fd; };
 		pid_t get_pid() const { return _pid; };
 		int get_pipe_to_cgi() const { return _pipe_to_cgi; };
 		int get_pipe_from_cgi() const { return _pipe_from_cgi; };
 		int get_bytes_written() const { return _bytes_written; };
-		std::string get_output_buffer() const { return _output_buffer; };
-
+		std::string& get_output_buffer() { return _output_buffer; };
 };
 
 #endif
