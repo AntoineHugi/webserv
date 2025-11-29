@@ -48,14 +48,11 @@ std::vector<std::string> Request::tokenise_url_encoded(std::string &str)
 	std::istringstream iss(str);
 	std::string word;
 
-	// std::cout << "Tokenizing....  " << std::endl;
-
 	while (iss >> word)
 	{
 		std::string current;
 		for (size_t i = 0; i < word.size(); ++i)
 		{
-			// std::cout << "current: " << current << std::endl;
 			if (word[i] == '&' || word[i] == '=')
 			{
 				if (!current.empty())
@@ -77,7 +74,6 @@ std::vector<std::string> Request::tokenise_url_encoded(std::string &str)
 int Request::parse_url_encoded()
 {
 	std::vector<std::string> tokens = tokenise_url_encoded(_body);
-	std::cout << "after tokenizer, tokens.size(): " << tokens.size() << std::endl;
 	for (size_t i = 0; i < tokens.size(); ++i)
 	{
 		if (i >= tokens.size() || tokens[i] == "=" || tokens[i] == "&")
@@ -163,7 +159,8 @@ std::vector<MultiPart> Request::generate_multipart(const std::string &boundary)
 					namePos += 6;
 					size_t endPos = line.find("\"", namePos);
 					part.set_name(line.substr(namePos, endPos - namePos));
-					std::cout << "part name = " << part.get_name() << std::endl;
+					if (DEBUG)
+						std::cout << "part name = " << part.get_name() << std::endl;
 				}
 
 				size_t filePos = line.find("filename=\"");
@@ -172,7 +169,8 @@ std::vector<MultiPart> Request::generate_multipart(const std::string &boundary)
 					filePos += 10;
 					size_t endPos = line.find("\"", filePos);
 					part.set_file_name(line.substr(filePos, endPos - filePos));
-					std::cout << "file name = " << part.get_file_name() << std::endl;
+					if (DEBUG)
+						std::cout << "file name = " << part.get_file_name() << std::endl;
 				}
 			}
 			else if (line.find("Content-Type:") == 0)
@@ -182,7 +180,8 @@ std::vector<MultiPart> Request::generate_multipart(const std::string &boundary)
 				while (!type.empty() && type[0] == ' ')
 					type.erase(0, 1);
 				part.set_MIME_type(type);
-				std::cout << "file type = " << part.get_MIME_type() << std::endl;
+				if (DEBUG)
+					std::cout << "file type = " << part.get_MIME_type() << std::endl;
 			}
 		}
 		part.set_file_data(rawContent);

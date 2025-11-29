@@ -13,10 +13,10 @@ Request::Request() : _request_data(""),
 		     _isDirectory(false),
 		     _stat(),
 		     _isCGI(false),
-			 _client_max_body_size(0),
-			 _index(),
-			 _cgi_path(""),
-			 _autoindex(false),
+		     _client_max_body_size(0),
+		     _index(),
+		     _cgi_path(""),
+		     _autoindex(false),
 		     _body(""),
 		     _body_kv(),
 		     _multiparts(),
@@ -82,7 +82,8 @@ Request::~Request() {}
 
 int Request::parse_header()
 {
-	std::cout << "\033[34mParsing header...\n\033[0m" << std::endl;
+	if (DEBUG)
+		std::cout << "\033[34mParsing header...\n\033[0m" << std::endl;
 	while (!_header.empty() && (_header[0] == '\r' || _header[0] == '\n'))
 		_header.erase(0, 1);
 	std::string line;
@@ -120,7 +121,8 @@ int Request::parse_header()
 				_header_kv[key] = value;
 			else
 			{
-				std::cout << "duplicate keys in header" << std::endl;
+				if (DEBUG)
+					std::cout << "duplicate keys in header" << std::endl;
 				return (1);
 			}
 		}
@@ -134,7 +136,8 @@ int Request::parse_header()
 		long val = std::strtol(_header_kv["content-length"].c_str(), &endptr, 10);
 		if (*endptr != '\0' && *endptr != '\r')
 		{
-			std::cout << "Bad formatting: content-length" << std::endl;
+			if (DEBUG)
+				std::cout << "Bad formatting: content-length" << std::endl;
 			return (1);
 		}
 		_content_length = val;
@@ -142,23 +145,26 @@ int Request::parse_header()
 
 	/* printing header */
 	std::map<std::string, std::string>::iterator it;
-	std::cout << "'method: '" << _method << "'" << std::endl;
-	std::cout << "'uri: '" << _uri << "'" << std::endl;
-	std::cout << "'version : '" << _version << "'" << std::endl;
-	// std::cout << "'host : '" << _host << "'" << std::endl;
-	for (it = _header_kv.begin(); it != _header_kv.end(); ++it)
+	if (DEBUG)
 	{
-		std::cout << "'" << it->first << "' : '" << it->second << "'" << std::endl;
-	}
+		std::cout << "'method: '" << _method << "'" << std::endl;
+		std::cout << "'uri: '" << _uri << "'" << std::endl;
+		std::cout << "'version : '" << _version << "'" << std::endl;
+		std::cout << "'host : '" << _host << "'" << std::endl;
 
-	std::cout << "\033[34mHeader parsed sucessfully! \n\033[0m" << std::endl;
+		for (it = _header_kv.begin(); it != _header_kv.end(); ++it)
+		{
+			std::cout << "'" << it->first << "' : '" << it->second << "'" << std::endl;
+		}
+		std::cout << "\033[34mHeader parsed sucessfully! \n\033[0m" << std::endl;
+	}
 	return (0);
 }
 
 int Request::parse_body()
 {
-	std::cout << "\033[36mParsing body...\n\033[0m" << std::endl;
-//	std::cout << "\033[36m    Body: " << _body << "\n\033[0m" << std::endl;
+	if (DEBUG)
+		std::cout << "\033[36mParsing body...\n\033[0m" << std::endl;
 
 	std::string content_type = _header_kv["content-type"];
 	if (content_type == "application/x-www-form-urlencoded")

@@ -77,7 +77,7 @@ void test_simple_post(const TestConfig &config, TestStats &stats)
 		all_responses += buffer;
 	}
 
-	bool post_ok = all_responses.find("HTTP/1.1 200") != std::string::npos;
+	bool post_ok = all_responses.find("HTTP/1.1 201") != std::string::npos;
 	bool get_ok = all_responses.find(file_content) != std::string::npos;
 
 	if (post_ok && get_ok)
@@ -176,7 +176,7 @@ void test_post_delete(const TestConfig &config, TestStats &stats)
 		all_responses += buffer;
 	}
 
-	bool post_ok = all_responses.find("HTTP/1.1 200") != std::string::npos;
+	bool post_ok = all_responses.find("HTTP/1.1 201") != std::string::npos;
 	bool get_ok = all_responses.find(file_content) != std::string::npos;
 	bool delete_ok = all_responses.find("HTTP/1.1 204") != std::string::npos;
 

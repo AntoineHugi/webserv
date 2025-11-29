@@ -12,14 +12,14 @@ Client::Client() : _state(READING_HEADERS),
 		   _response() {}
 
 Client::Client(int fd, Server &server, std::string client_ip) : _state(READING_HEADERS),
-							_flags(),
-							_fd(fd),
-							_status_code(200),
-							_last_interaction(std::time(0)),
-							_server(&server),
-							_client_ip(client_ip),
-							_request(),
-							_response() {}
+								_flags(),
+								_fd(fd),
+								_status_code(200),
+								_last_interaction(std::time(0)),
+								_server(&server),
+								_client_ip(client_ip),
+								_request(),
+								_response() {}
 
 Client::Client(const Client &other) : _state(other._state),
 				      _flags(other._flags),
@@ -143,7 +143,8 @@ void Client::process_request()
 		Method::handle_delete(*this);
 		break;
 	default:
-		std::cout << "Error processing request, method is = " << _request._method << std::endl;
+		if (DEBUG)
+			std::cout << "Error processing request, method is = " << _request._method << std::endl;
 		set_status_code(500);
 		return;
 	}
@@ -164,149 +165,48 @@ int Client::handle_write()
 	std::string response = _response.format_response(get_status_code(), should_keep_alive(), _request._version);
 	_response.set_response_data(response);
 	set_send_response();
-	std::cout << "==>>  Client will receive answer" << std::endl;
-	std::string res = _response.get_response_data(_response.get_bytes_sent()).substr(0, 1048576);
+	if (DEBUG)
+		std::cout << "==>>  Client will receive answer" << std::endl;
+	std::string res = _response.get_response_data(_response.get_bytes_sent()).substr(0, BUFFER_SIZE);
 	if (_response.get_bytes_sent() == 0)
 	{
-		std::cout << "Response to be sent:\n-----\n"
-				<< res.substr(0,2048) << "-----\n\n"
-				<< std::endl;
+		if (DEBUG)
+		{
+			std::cout << "Response to be sent:\n-----\n"
+				  << res.substr(0, 2048) << "-----\n\n"
+				  << std::endl;
+		}
 	}
-
 
 	ssize_t bytes_sent = send(_fd, res.c_str(), res.size(), 0);
 	if (bytes_sent == -1)
 	{
 		_status_code = 500;
 		set_flags_error();
-		std::cout << "Error sending response" << std::endl;
+		if (DEBUG)
+			std::cout << "Error sending response" << std::endl;
 		return (1);
 	}
 	_response.update_bytes_sent(bytes_sent);
 	// std::cout << "bytes sent: " << bytes_sent << std::endl;
-	std::cout << "bytes_sent(): " << _response.get_bytes_sent() << " out of " << _response.get_response_data_full().size() << std::endl;
+	if (DEBUG)
+		std::cout << "bytes_sent(): " << _response.get_bytes_sent() << " out of " << _response.get_response_data_full().size() << std::endl;
 	if (_response.get_bytes_sent() == (size_t)_response.get_response_data_full().size())
 	{
-		std::cout << "I'm changing status" << std::endl;
+		if (DEBUG)
+			std::cout << "I'm changing status" << std::endl;
 		if (_flags._should_keep_alive)
 		{
-			std::cout << "I'm staying alive" << std::endl;
+			if (DEBUG)
+				std::cout << "I'm staying alive" << std::endl;
 			set_finish_request_alive();
 		}
 		else
 		{
-			std::cout << "I'm closing" << std::endl;
+			if (DEBUG)
+				std::cout << "I'm closing" << std::endl;
 			set_finish_request_close();
 		}
 	}
 	return (0);
 }
-
-/*
-
-	## HTTP Response Structure
-
-	### Format
-	```
-	<VERSION> <STATUS_CODE> <REASON_PHRASE>\r\n
-	<Header-Name>: <Header-Value>\r\n
-	<Header-Name>: <Header-Value>\r\n
-	...
-	\r\n
-	<BODY>
-
-
-	## Response Status Line (Mandatory)
-	```
-	VERSION STATUS_CODE REASON_PHRASE\r\n
-	```
-
-	**VERSION:** Same as request (`HTTP/1.1`)
-
-	**STATUS_CODE:** 3-digit number indicating result
-
-	**REASON_PHRASE:** Human-readable description (optional but conventional)
-
-	---
-
-	## Response Headers (What You Should Include)
-
-	### Mandatory/Highly Recommended Headers
-
-	**Content-Length** (If you know body size)
-	```
-	Content-Length: 1234
-	```
-	Tells client exactly how many bytes to expect.
-
-	**Content-Type** (Describes body format)
-	```
-	Content-Type: text/html; charset=utf-8
-	Content-Type: application/json
-	Content-Type: image/png
-	```
-
-	**Connection** (Control keep-alive)
-	```
-	Connection: close        # Close after sending response
-	Connection: keep-alive   # Keep connection open
-	```
-
-	**Date** (Current server time - recommended)
-	```
-	Date: Wed, 21 Oct 2024 07:28:00 GMT
-	```
-
-	**Server** (Your server identification - optional)
-	```
-	Server: webserv/1.0
-	```
-
-	### Optional But Useful Headers
-
-	**Location** (For redirects)
-	```
-	HTTP/1.1 301 Moved Permanently
-	Location: https://newsite.com/page
-	```
-
-	**Set-Cookie** (Send cookie to client)
-	```
-	Set-Cookie: session_id=abc123; Path=/; HttpOnly
-	```
-
-	**Cache-Control** (Control caching)
-	```
-	Cache-Control: no-cache
-	Cache-Control: max-age=3600
-	```
-
-	**Content-Encoding** (If you compress body)
-	```
-	Content-Encoding: gzip
-
-	Response Body
-	Body Depends on Status Code and Content-Type
-	200 OK with HTML:
-	httpHTTP/1.1 200 OK
-	Content-Type: text/html
-	Content-Length: 50
-
-	<html><body><h1>Hello</h1></body></html>
-	200 OK with JSON:
-	httpHTTP/1.1 200 OK
-	Content-Type: application/json
-	Content-Length: 25
-
-	{"status":"success"}
-	404 Not Found:
-	httpHTTP/1.1 404 Not Found
-	Content-Type: text/html
-	Content-Length: 45
-
-	<html><body><h1>404 Not Found</h1></body></html>
-	204 No Content (No body!):
-	httpHTTP/1.1 204 No Content
-	Content-Length: 0
-
-*/

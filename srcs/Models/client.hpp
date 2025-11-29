@@ -4,7 +4,6 @@
 # include "../Models/request.hpp"
 # include "../Models/response.hpp"
 # include "../Models/server.hpp"
-// # include "../Models/route.hpp"
 # include "../Functions/method.hpp"
 
 # include <string>
@@ -82,7 +81,7 @@ class Client
 		bool can_i_send_response() const { return _state == SENDING_RESPONSE; };
 		bool can_i_close_connection() const { return _state == CLOSING; };
 		bool is_error() const { return _state == HANDLE_ERROR; };
-		bool is_inactive() const { return std::time(0) - _last_interaction > 60; }
+		bool is_inactive() const { return std::time(0) - _last_interaction > CLIENT_TIMEOUT_MS/1000; }
 
 		void set_status_code(int code) { _status_code = code; };
 		void set_read_header() { _state = READING_HEADERS; };

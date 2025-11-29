@@ -11,8 +11,11 @@
 #include <cstdlib>
 #include <sys/stat.h>
 #include <algorithm>
-
 #include "multipart.hpp"
+
+static bool DEBUG = false;
+static const size_t BUFFER_SIZE = 1048576;
+static int CLIENT_TIMEOUT_MS = 60000;
 
 class Request
 {

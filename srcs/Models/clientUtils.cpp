@@ -7,13 +7,13 @@ void Client::set_flags_error()
 
 void Client::set_flags()
 {
-	if (_request._version == "HTTP/1.1") // HTTP/1.1 has keep-alive by default
+	if (_request._version == "HTTP/1.1")
 	{
 		_flags._should_keep_alive = true;
 		if (_request._header_kv["connection"] == "close")
 			_flags._should_keep_alive = false;
 	}
-	else if (_request._version == "HTTP/1.0") // HTTP/1.0 requires explicit keep-alive
+	else if (_request._version == "HTTP/1.0")
 	{
 		_flags._should_keep_alive = false;
 		if (_request._header_kv["connection"] == "keep-alive")
@@ -25,15 +25,16 @@ void Client::set_flags()
 	else
 		_flags._body_chunked = false;
 
-	if (_request._uri.find(".py") != std::string::npos) // TODO: check that this is by the end of the URI not in the middle
-		_flags._is_CGI = true;
-	else
-		_flags._is_CGI = false;
+	// if (_request._uri.find(".py") != std::string::npos) // TODO: check that this is by the end of the URI not in the middle
+	// 	_flags._is_CGI = true;
+	// else
+	// 	_flags._is_CGI = false;
 }
 
 void Client::refresh_client()
 {
-	std::cout << ">>>   CLIENT REFRESH <<<" << std::endl;
+	if (DEBUG)
+		std::cout << ">>>   CLIENT REFRESH <<<" << std::endl;
 	_request.flush_request_data();
 	_response.flush_response_data();
 	_state = READING_HEADERS;

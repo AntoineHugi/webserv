@@ -19,7 +19,8 @@ void Method::get_directory(Client &client, DIR *directory)
 {
 	if (!directory)
 	{
-		std::cout << "Error opening requested directory" << std::endl;
+		if (DEBUG)
+			std::cout << "Error opening requested directory" << std::endl;
 		client.set_status_code(500);
 		return;
 	}
@@ -124,7 +125,8 @@ void Method::get_file(Client &client, std::string filepath)
 	int fd = open(filepath.c_str(), O_RDONLY);
 	if (fd == -1)
 	{
-		std::cout << "Error opening requested file" << std::endl;
+		if (DEBUG)
+			std::cout << "Error opening requested file" << std::endl;
 		client.set_status_code(500);
 		return;
 	}
@@ -135,7 +137,8 @@ void Method::get_file(Client &client, std::string filepath)
 		body.append(buffer, bytes);
 	if (bytes == -1)
 	{
-		std::cout << "Error reading request target" << std::endl;
+		if (DEBUG)
+			std::cout << "Error reading request target" << std::endl;
 		client.set_status_code(500);
 		close(fd);
 		return;
@@ -188,13 +191,15 @@ int Method::save_uploaded_files(Client& client, std::vector<MultiPart> &parts, c
 		std::ofstream out(path.c_str(), std::ios::binary);
 		if (!out.is_open())
 		{
-			std::cout << "Failed to open file for writing: " << path << std::endl;
+			if (DEBUG)
+				std::cout << "Failed to open file for writing: " << path << std::endl;
 			return (1);
 		}
 		const std::vector<char> &data = parts[i].get_file_data();
 		out.write(data.data(), data.size());
 		out.close();
-		std::cout << "Saved file: " << path << " to disc." << std::endl;
+		if (DEBUG)
+			std::cout << "Saved file: " << path << " to disc." << std::endl;
 		client._response.set_location(path);
 	}
 	return (0);
@@ -223,8 +228,11 @@ int Method::input_data(Client &client)
 		return (1);
 	}
 	std::string path = client._request._root + client._request._fullPathURI.substr(pos);
-	std::cout << "initially: " << client._request._fullPathURI << std::endl;
-	std::cout << "path to write input: " << path << std::endl;
+	if (DEBUG)
+	{
+		std::cout << "initially: " << client._request._fullPathURI << std::endl;
+		std::cout << "path to write input: " << path << std::endl;
+	}
 
 	std::ofstream out(path.c_str(), std::ios::app);
 	if (!out.is_open())
@@ -244,7 +252,8 @@ int Method::input_data(Client &client)
 
 void Method::handle_post(Client &client)
 {
-	std::cout << "content-type: " << client._request._header_kv["content-type"] << std::endl;
+	if (DEBUG)
+		std::cout << "content-type: " << client._request._header_kv["content-type"] << std::endl;
 	if (client._request._header_kv["content-type"] == "application/x-www-form-urlencoded")
 	{
 		if (input_data(client))

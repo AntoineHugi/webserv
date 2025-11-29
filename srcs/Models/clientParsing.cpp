@@ -115,7 +115,8 @@ bool Client::transversal_protection()
 	char resolved_root[PATH_MAX];
 	if (!realpath(_request._root.c_str(), resolved_root))
 	{
-		std::cout << "failed root : " << resolved_root << std::endl;
+		if (DEBUG)
+			std::cout << "failed root : " << resolved_root << std::endl;
 		return (false);
 	}
 	std::string real_root = resolved_root;
@@ -128,7 +129,8 @@ bool Client::transversal_protection()
 		char resolved_file[PATH_MAX];
 		if (!realpath(_request._fullPathURI.c_str(), resolved_file))
 		{
-			std::cout << "failed file path : " << resolved_file << std::endl;
+			if (DEBUG)
+				std::cout << "failed file path : " << resolved_file << std::endl;
 			return (false);
 		}
 		std::string real_file(resolved_file);
@@ -136,7 +138,8 @@ bool Client::transversal_protection()
 			real_file += '/';
 		if (real_file.find(real_root) != 0)
 		{
-			std::cout << "didn't find root " << real_root << " | the file is " << real_file << std::endl;
+			if (DEBUG)
+				std::cout << "didn't find root " << real_root << " | the file is " << real_file << std::endl;
 			return (false);
 		}
 	}
@@ -156,7 +159,8 @@ bool Client::transversal_protection()
 		char resolved_parent[PATH_MAX];
 		if (!realpath(parent.c_str(), resolved_parent))
 		{
-			std::cout << "failed file path : " << resolved_parent << std::endl;
+			if (DEBUG)
+				std::cout << "failed file path : " << resolved_parent << std::endl;
 			return (false);
 		}
 		std::string real_parent = resolved_parent;
@@ -164,7 +168,8 @@ bool Client::transversal_protection()
 			real_parent += '/';
 		if (real_parent.find(real_root) != 0)
 		{
-			std::cout << "didn't find root: " << real_root << " | in parent: " << real_parent << std::endl;
+			if (DEBUG)
+				std::cout << "didn't find root: " << real_root << " | in parent: " << real_parent << std::endl;
 			return false;
 		}
 	}
@@ -207,7 +212,8 @@ bool Client::check_uri_exists()
 {
 	if (stat(_request._fullPathURI.c_str(), &_request._stat) != 0)
 	{
-		std::cout << "URI doesn't exist : " << _request._fullPathURI << std::endl;
+		if (DEBUG)
+			std::cout << "URI doesn't exist : " << _request._fullPathURI << std::endl;
 		set_status_code(404);
 		return (false);
 	}
@@ -296,7 +302,6 @@ std::vector<std::string> Client::fetch_extensions(const std::string &cgi_path)
 					current = ".";
 				}
 			}
-			/* this case is invalid inside a parenthesis */
 			else if (c == '$')
 				return std::vector<std::string>();
 			else
@@ -407,35 +412,41 @@ bool Client::validate_permissions()
 	{
 		if (!check_uri_exists())
 		{
-			std::cout << "failed existing uri" << std::endl;
+			if (DEBUG)
+				std::cout << "failed existing uri" << std::endl;
 			return (false);
 		}
 	}
 	if (!bouncer_approval(route))
 	{
-		std::cout << "failed bouncer" << std::endl;
+		if (DEBUG)
+			std::cout << "failed bouncer" << std::endl;
 		set_status_code(403);
 		return (false);
 	}
 	if (!transversal_protection())
 	{
-		std::cout << "failed transversal" << std::endl;
+		if (DEBUG)
+			std::cout << "failed transversal" << std::endl;
 		set_status_code(403);
 		return (false);
 	}
 	if (!check_directory_rules(route))
 	{
-		std::cout << "failed directory rules" << std::endl;
+		if (DEBUG)
+			std::cout << "failed directory rules" << std::endl;
 		return (false);
 	}
 	if (!is_method_allowed(route))
 	{
-		std::cout << "failed allowed methods" << std::endl;
+		if (DEBUG)
+			std::cout << "failed allowed methods" << std::endl;
 		return (false);
 	}
 	if (!validate_methods())
 	{
-		std::cout << "failed method validation" << std::endl;
+		if (DEBUG)
+			std::cout << "failed method validation" << std::endl;
 		return (false);
 	}
 
@@ -444,7 +455,7 @@ bool Client::validate_permissions()
 
 int Client::read_to_buffer()
 {
-	char buf[1048576];
+	char buf[BUFFER_SIZE];
 	ssize_t n = recv(_fd, buf, sizeof(buf), 0);
 
 	if (n > 0)
@@ -499,22 +510,16 @@ bool Client::chunked_body_finished() const
 bool Client::try_parse_body()
 {
 	/* send to chunked version */
-	std::cout << "Body size: " << _request._request_data.size() << " bytes" << std::endl;
-	std::cout << "Header size: " << _request._header.size() << " bytes" << std::endl;
-	std::cout << "Max client body size: " << _request._client_max_body_size << " bytes" << std::endl;
-	if (_request._request_data.size() > _request._client_max_body_size)
+	if (DEBUG)
 	{
-		if (_request._request_data.size() - _request._header.size() - 2> _request._client_max_body_size)
-		{
-			_status_code = 413;
-			set_create_response();
-			return (1);
-		}
+		std::cout << "Body size: " << _request._request_data.size() << " bytes" << std::endl;
+		std::cout << "Header size: " << _request._header.size() << " bytes" << std::endl;
+		std::cout << "Max client body size: " << _request._client_max_body_size << " bytes" << std::endl;
 	}
 
 	if (is_body_chunked())
 	{
-		//std::cout << "body is chunked" << std::endl;
+		// std::cout << "body is chunked" << std::endl;
 		if (chunked_body_finished())
 		{
 			if (!decode_chunked_body())
@@ -525,13 +530,20 @@ bool Client::try_parse_body()
 			}
 			else
 			{
+				if (_request._body.size() > _request._client_max_body_size)
+				{
+					_status_code = 413;
+					set_create_response();
+					return (1);
+				}
 				if (_request.parse_body())
 				{
 					_status_code = 400;
 					set_create_response();
 					return (1);
 				}
-				std::cout << "\033[35m  Body parsed \033[0m" << std::endl;
+				if (DEBUG)
+					std::cout << "\033[35m  Body parsed \033[0m" << std::endl;
 				set_process_request();
 				return (0);
 			}
@@ -545,6 +557,12 @@ bool Client::try_parse_body()
 
 	/* once we have everything, dump it into request._body */
 	_request._body = _request._request_data.substr(0, _request._content_length);
+	if (_request._body.size() > _request._client_max_body_size)
+	{
+		_status_code = 413;
+		set_create_response();
+		return (1);
+	}
 	if (_request.parse_body())
 	{
 		_status_code = 400;
@@ -552,9 +570,10 @@ bool Client::try_parse_body()
 		return (1);
 	}
 
-// add check that content_length = body size if not chunked
+	// add check that content_length = body size if not chunked
 
-	std::cout << "\033[35m  Body parsed \033[0m" << std::endl;
+	if (DEBUG)
+		std::cout << "\033[35m  Body parsed \033[0m" << std::endl;
 	_request._request_data.erase(0, _request._content_length);
 	set_process_request();
 
@@ -569,13 +588,8 @@ bool Client::try_parse_body()
 bool Client::try_parse_header()
 {
 	/* Checking if we're exceeding the size and if the end of header indicator has been found */
-	std::cout << "Header size: " << _request._request_data.size() << " bytes" << std::endl;
-	if (_request._request_data.size() > 1048576)
-	{
-		_status_code = 431;
-		set_create_response();
-		return (1);
-	}
+	// std::cout << "Header size: " << _request._request_data.size() << " bytes" << std::endl;
+
 	size_t pos = _request._request_data.find("\r\n\r\n");
 	if (pos == std::string::npos)
 		return (0);
@@ -589,6 +603,12 @@ bool Client::try_parse_header()
 		return (1);
 	}
 	_request._request_data.erase(0, pos + 4);
+	if (_request._header.size() > 32768)
+	{
+		_status_code = 431;
+		set_create_response();
+		return (1);
+	}
 	set_flags();
 	if (_request._request_data.size() > _request._content_length)
 		_flags._leftover_chunk = true;
@@ -601,7 +621,8 @@ bool Client::try_parse_header()
 	if ((_status_code = _request.http_requirements_met()) != 200)
 	{
 		set_create_response();
-		std::cout << "failed requirements" << std::endl;
+		if (DEBUG)
+			std::cout << "failed requirements" << std::endl;
 		return (1);
 	}
 	if (!validate_permissions())
@@ -609,10 +630,12 @@ bool Client::try_parse_header()
 		set_create_response();
 		if (_request._content_length > 0)
 			_request._request_data.erase(0, std::min(_request._content_length, _request._request_data.size()));
-		std::cout << "failed permissions" << std::endl;
+		if (DEBUG)
+			std::cout << "failed permissions" << std::endl;
 		return (1);
 	}
-	std::cout << "\033[35m  Header parsed \033[0m" << std::endl;
+	if (DEBUG)
+		std::cout << "\033[35m  Header parsed \033[0m" << std::endl;
 
 	/* if validation works, check if we should read the body next or go to the processing step */
 	if (is_body_chunked())
