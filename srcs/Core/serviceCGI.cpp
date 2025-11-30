@@ -5,19 +5,19 @@ char **setup_env(std::map<int, Client> clients, int fd)
 {
 	std::ostringstream ss;
 	std::vector<std::string> env_strings;
-	ss << clients[fd]._request._body.size();
+	ss << clients[fd]._request.get_body().size();
 	env_strings.push_back("CONTENT_LENGTH=" + ss.str());
 	env_strings.push_back("CONTENT_TYPE=" + clients[fd]._request._header_kv["content-type"]);
 	env_strings.push_back("QUERY_STRING=");
-	env_strings.push_back("REQUEST_METHOD=" + clients[fd]._request._method);
+	env_strings.push_back("REQUEST_METHOD=" + clients[fd]._request.get_method());
 	env_strings.push_back("GATEWAY_INTERFACE=CGI/1.1");
 	env_strings.push_back("SERVER_PROTOCOL=" + clients[fd]._request.get_version());
 	ss.str("");
 	ss << (*clients[fd].get_server()).get_port();
 	env_strings.push_back("SERVER_PORT=" + ss.str());
-	env_strings.push_back("SCRIPT_NAME=" + clients[fd]._request._uri);
-	env_strings.push_back("REQUEST_URI=" + clients[fd]._request._uri);
-	env_strings.push_back("PATH_INFO=" + clients[fd]._request._uri);
+	env_strings.push_back("SCRIPT_NAME=" + clients[fd]._request.get_uri());
+	env_strings.push_back("REQUEST_URI=" + clients[fd]._request.get_uri());
+	env_strings.push_back("PATH_INFO=" + clients[fd]._request.get_uri());
 
 	// Add all HTTP headers as HTTP_* environment variables
 	for (std::map<std::string, std::string>::const_iterator it = clients[fd]._request._header_kv.begin();
@@ -88,7 +88,7 @@ void Service::cgi_handler(int i)
 	if (fds["poll_fds"][i].fd == cgi.get_pipe_to_cgi() && (fds["poll_fds"][i].revents & (POLLOUT | POLLHUP)))
 	{
 		print_header("CGI REQUEST - Writing to CGI");
-		std::string res = client._request._body.substr(cgi.get_bytes_written(), BUFFER_SIZE);
+		std::string res = client._request.get_body().substr(cgi.get_bytes_written(), BUFFER_SIZE);
 		ssize_t bytes_sent = write(cgi.get_pipe_to_cgi(), res.c_str(), res.size());
 		if (bytes_sent == -1)
 		{
@@ -201,9 +201,9 @@ void Service::setup_cgi_request(int i)
 	path_buf[count] = '\0';
 	std::string dir_path = std::string(path_buf);
 	dir_path = dir_path.substr(0, dir_path.find_last_of("/"));
-	std::string exec_path = dir_path + clients[this->fds["poll_fds"][i].fd]._request._fullPathURI.substr(1);
-	std::string arg0 = clients[this->fds["poll_fds"][i].fd]._request._cgi_path;
-	print_cyan("This is the file being executed: " + clients[this->fds["poll_fds"][i].fd]._request._fullPathURI.substr(1), DEBUG);
+	std::string exec_path = dir_path + clients[this->fds["poll_fds"][i].fd]._request.get_fullPathURI().substr(1);
+	std::string arg0 = clients[this->fds["poll_fds"][i].fd]._request.get_cgi_path();
+	print_cyan("This is the file being executed: " + clients[this->fds["poll_fds"][i].fd]._request.get_fullPathURI().substr(1), DEBUG);
 	print_cyan("This is the executor: " + arg0, DEBUG);
 
 	if (pipe(pipe_to_cgi) || pipe(pipe_from_cgi))
@@ -259,7 +259,7 @@ void Service::setup_cgi_request(int i)
 		fcntl(pipe_from_cgi[0], F_SETFL, fcntl(pipe_from_cgi[0], F_GETFL, 0) | O_NONBLOCK);
 		print_cyan("\n ==> pipe_to_cgi[1] " + convert_to_string(pipe_to_cgi[1]) , DEBUG);
 		print_cyan("==> pipe_from_cgi[0] \n" + convert_to_string(pipe_from_cgi[0]) , DEBUG);
-		if (clients[this->fds["poll_fds"][i].fd]._request._body.empty())
+		if (clients[this->fds["poll_fds"][i].fd]._request.get_body().empty())
 			close(pipe_to_cgi[1]);
 		else
 		{
@@ -270,7 +270,7 @@ void Service::setup_cgi_request(int i)
 		add_poll_to_vectors(pipe_from_cgi[0], POLLIN, "cgi_fds");
 		this->cgi_processes.insert(std::pair<int, CGIProcess *>(pipe_from_cgi[0], cgi));
 		print_blue("Parent - everything saved ... " , DEBUG);
-		if (clients[this->fds["poll_fds"][i].fd]._request._body.empty())
+		if (clients[this->fds["poll_fds"][i].fd]._request.get_body().empty())
 			(*this->cgi_processes[pipe_from_cgi[0]]).set_processing_and_writing();
 	}
 	return;

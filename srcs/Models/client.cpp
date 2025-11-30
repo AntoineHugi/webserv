@@ -133,7 +133,7 @@ void Client::process_request()
 	int field = -1;
 	for (int i = 0; i < 3; i++)
 	{
-		if (_request._method == methods[i])
+		if (_request.get_method() == methods[i])
 			field = i;
 	}
 	switch (field)
@@ -149,7 +149,7 @@ void Client::process_request()
 		break;
 	default:
 		if (DEBUG)
-			std::cout << "Error processing request, method is = " << _request._method << std::endl;
+			std::cout << "Error processing request, method is = " << _request.get_method() << std::endl;
 		set_status_code(500);
 		return;
 	}

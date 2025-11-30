@@ -9,3 +9,33 @@
 - review todos left in code
 
 - cleanup
+
+
+Old TODOs (Done):
+- DEBUG flag and proper logging
+- Dynamically change the sizes of Buffers (read/write, normal_request/CGI) and Timeouts (clients/CGI)
+
+Next TODOs:
+-- Add Timeout for CGI processes
+-- Test malformed requests and edge cases
+
+-- Error handling (parsing errors (config + request), function errors (dup2, write, read, etc.)):
+@ void Server::set_server()
+ - check all possible errors on the sockets
+
+@ void Service::poll_service()
+--> manage this mistake
+		if (ret < 0)
+		{
+			if (errno == EINTR)
+				continue; // Interrupted, retry
+			perror("poll failed");
+			break;
+		}
+
+
+Production Ready:
+-- Pass School test
+-- Clean TODOs and useless comments from the code
+-- Double check memory, Fds and segfaults
+-- Stress test with our own tests

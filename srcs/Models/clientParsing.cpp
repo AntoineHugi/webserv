@@ -3,27 +3,27 @@
 
 bool Client::validate_methods()
 {
-	if (_request._method == "GET")
+	if (_request.get_method() == "GET")
 	{
 		/* checking if we can read/execute this file/directory */
-		if (_request._isCGI && access(_request._fullPathURI.c_str(), X_OK) != 0)
+		if (_request._is_cgi() && access(_request.get_fullPathURI().c_str(), X_OK) != 0)
 		{
 			set_status_code(403);
 			return (false);
 		}
-		else if (!_request._isCGI && access(_request._fullPathURI.c_str(), R_OK) != 0)
+		else if (!_request._is_cgi() && access(_request.get_fullPathURI().c_str(), R_OK) != 0)
 		{
 			set_status_code(403);
 			return (false);
 		}
 	}
-	else if (_request._method == "POST" || _request._method == "DELETE")
+	else if (_request.get_method() == "POST" || _request.get_method() == "DELETE")
 	{
 		/* checking if we can write in this directory */
 		std::string dirPath;
 		{
 			char tmp[PATH_MAX];
-			strncpy(tmp, _request._fullPathURI.c_str(), PATH_MAX);
+			strncpy(tmp, _request.get_fullPathURI().c_str(), PATH_MAX);
 			tmp[PATH_MAX - 1] = '\0';
 
 			char *d = dirname(tmp);
@@ -42,7 +42,7 @@ bool Client::is_method_allowed(const Route &route)
 {
 	for (size_t j = 0; j < route.get_methods().size(); ++j)
 	{
-		if (_request._method == route.get_methods()[j])
+		if (_request.get_method() == route.get_methods()[j])
 			return (true);
 	}
 	set_status_code(405);
@@ -52,10 +52,10 @@ bool Client::is_method_allowed(const Route &route)
 
 bool Client::check_directory_rules(const Route &route)
 {
-	if (S_ISDIR(_request._stat.st_mode) && (_request._method == "GET" || _request._method == "POST"))
+	if (S_ISDIR(_request._stat.st_mode) && (_request.get_method() == "GET" || _request.get_method() == "POST"))
 	{
-		if ((!route.get_autoindex().empty() && _request._method == "GET") || _request._method == "POST")
-			_request._isDirectory = true;
+		if ((!route.get_autoindex().empty() && _request.get_method() == "GET") || _request.get_method() == "POST")
+			_request.set_is_directory(true);
 		else
 		{
 			set_status_code(403);
@@ -113,7 +113,7 @@ bool Client::transversal_protection()
 {
 	/* checking that the absolute path to the root exists */
 	char resolved_root[PATH_MAX];
-	if (!realpath(_request._root.c_str(), resolved_root))
+	if (!realpath(_request.get_root().c_str(), resolved_root))
 	{
 		if (DEBUG)
 			std::cout << "failed root : " << resolved_root << std::endl;
@@ -124,10 +124,10 @@ bool Client::transversal_protection()
 		real_root += '/';
 
 	/* checking that the path to the file is located within the root */
-	if (_request._method == "GET" || _request._method == "DELETE")
+	if (_request.get_method() == "GET" || _request.get_method() == "DELETE")
 	{
 		char resolved_file[PATH_MAX];
-		if (!realpath(_request._fullPathURI.c_str(), resolved_file))
+		if (!realpath(_request.get_fullPathURI().c_str(), resolved_file))
 		{
 			if (DEBUG)
 				std::cout << "failed file path : " << resolved_file << std::endl;
@@ -144,9 +144,9 @@ bool Client::transversal_protection()
 		}
 	}
 	/* checking that the path to the file parent directory is located within the root */
-	else if (_request._method == "POST")
+	else if (_request.get_method() == "POST")
 	{
-		std::string parent = _request._fullPathURI;
+		std::string parent = _request.get_fullPathURI();
 		size_t lastSlash = parent.find_last_of('/');
 		std::string lastComponent = (lastSlash == std::string::npos) ? parent : parent.substr(lastSlash + 1);
 		if (lastComponent.find('.') != std::string::npos)
@@ -210,10 +210,10 @@ bool Client::bouncer_approval(const Route &route)
 
 bool Client::check_uri_exists()
 {
-	if (stat(_request._fullPathURI.c_str(), &_request._stat) != 0)
+	if (stat(_request.get_fullPathURI().c_str(), &_request._stat) != 0)
 	{
 		if (DEBUG)
-			std::cout << "URI doesn't exist : " << _request._fullPathURI << std::endl;
+			std::cout << "URI doesn't exist : " << _request.get_fullPathURI() << std::endl;
 		set_status_code(404);
 		return (false);
 	}
@@ -223,9 +223,9 @@ bool Client::check_uri_exists()
 void Client::overwrite_with_route(const Route &route)
 {
 	if (route.get_client_max_body_size() > 0)
-		_request._client_max_body_size = route.get_client_max_body_size();
+		_request.set_client_max_body_size(route.get_client_max_body_size());
 	else
-		_request._client_max_body_size = get_server()->get_client_max_body_size();
+		_request.set_client_max_body_size(get_server()->get_client_max_body_size());
 
 	if (!route.get_index().empty())
 		_request._index = route.get_index();
@@ -233,15 +233,15 @@ void Client::overwrite_with_route(const Route &route)
 		_request._index = _server->get_index();
 
 	if (!route.get_root().empty())
-		_request._root = route.get_root();
+		_request.set_root(route.get_root());
 	else
-		_request._root = _server->get_root();
+		_request.set_root(_server->get_root());
 
 	if (!route.get_cgi_path().empty())
-		_request._cgi_path = route.get_cgi_path();
+		_request.set_cgi_path(route.get_cgi_path());
 
 	if (route.get_autoindex() == "on")
-		_request._autoindex = true;
+		_request.set_is_autoindex(true);
 }
 
 bool Client::route_matches(const std::string &uri, const std::string &route)
@@ -352,12 +352,12 @@ int Client::find_best_route_index(std::vector<Route> &routes)
 		const std::string &route_path = routes[i].get_path();
 		if (routes[i].get_cgi())
 		{
-			if (cgi_matches(_request._uri, route_path))
+			if (cgi_matches(_request.get_uri(), route_path))
 				return (static_cast<int>(i));
 		}
 		else
 		{
-			if (route_matches(_request._uri, route_path))
+			if (route_matches(_request.get_uri(), route_path))
 			{
 				if (route_path.size() >= best_len)
 				{
@@ -390,25 +390,25 @@ bool Client::validate_permissions()
 	}
 
 	if (!route.get_cgi())
-		_request._fullPathURI = _request._root + _request._uri.substr(route.get_path().size());
+		_request.set_fullPathURI(_request.get_root() + _request.get_uri().substr(route.get_path().size()));
 	else
 	{
-		size_t pos = _request._uri.find_last_of('/');
+		size_t pos = _request.get_uri().find_last_of('/');
 		std::string last;
 
 		if (pos == std::string::npos)
-			last = _request._uri;
-		else if (pos + 1 < _request._uri.size())
-			last = _request._uri.substr(pos + 1);
+			last = _request.get_uri();
+		else if (pos + 1 < _request.get_uri().size())
+			last = _request.get_uri().substr(pos + 1);
 		else
 			last = "";
 
-		if (_request._root[_request._root.size() - 1] == '/')
-			_request._root.erase(_request._root.size() - 1, _request._root.size());
-		_request._fullPathURI = _request._root + '/' + last;
-		_request._isCGI = true;
+		if (_request.get_root()[_request.get_root().size() - 1] == '/')
+			_request.set_root(_request.get_root().substr(0, _request.get_root().size() - 1));
+		_request.set_fullPathURI(_request.get_root() + '/' + last);
+		_request.set_is_cgi(true);
 	}
-	if (_request._method != "POST")
+	if (_request.get_method() != "POST")
 	{
 		if (!check_uri_exists())
 		{
@@ -460,7 +460,7 @@ int Client::read_to_buffer()
 
 	if (n > 0)
 	{
-		_request._request_data.append(buf, n);
+		_request.set_request_data(_request.get_request_data().append(buf, n));
 		return 1;
 	}
 	else if (n == 0)
@@ -471,9 +471,9 @@ int Client::read_to_buffer()
 
 bool Client::decode_chunked_body()
 {
-	std::string &raw = _request._request_data;
+	std::string raw = _request.get_request_data();
 	size_t pos = 0;
-	_request._body.clear();
+	_request.set_body("");
 
 	while (true)
 	{
@@ -491,18 +491,18 @@ bool Client::decode_chunked_body()
 		if (raw.size() < pos + chunk_size + 2)
 			return (false);
 
-		_request._body.append(raw, pos, chunk_size);
+		_request.set_body(_request.get_body().append(raw, pos, chunk_size));
 		pos += chunk_size + 2;
 	}
-	_request._request_data.erase(0, pos);
-	if (!_request._request_data.empty())
+	_request.set_request_data(_request.get_request_data().erase(0, pos));
+	if (!_request.get_request_data().empty())
 		_flags._leftover_chunk = true;
 	return (true);
 }
 
 bool Client::chunked_body_finished() const
 {
-	if (_request._request_data.find("0\r\n\r\n") != std::string::npos)
+	if (_request.get_request_data().find("0\r\n\r\n") != std::string::npos)
 		return true;
 	return false;
 }
@@ -512,9 +512,9 @@ bool Client::try_parse_body()
 	/* send to chunked version */
 	if (DEBUG)
 	{
-		std::cout << "Body size: " << _request._request_data.size() << " bytes" << std::endl;
-		std::cout << "Header size: " << _request._header.size() << " bytes" << std::endl;
-		std::cout << "Max client body size: " << _request._client_max_body_size << " bytes" << std::endl;
+		std::cout << "Body size: " << _request.get_request_data().size() << " bytes" << std::endl;
+		std::cout << "Header size: " << _request.get_header().size() << " bytes" << std::endl;
+		std::cout << "Max client body size: " << _request.get_client_max_body_size() << " bytes" << std::endl;
 	}
 
 	if (is_body_chunked())
@@ -530,7 +530,7 @@ bool Client::try_parse_body()
 			}
 			else
 			{
-				if (_request._body.size() > _request._client_max_body_size)
+				if (_request.get_body().size() > _request.get_client_max_body_size())
 				{
 					_status_code = 413;
 					set_create_response();
@@ -551,12 +551,12 @@ bool Client::try_parse_body()
 	}
 
 	/* if we didn't get the get the whole data yet, skip for another turn of reading */
-	if (_request._request_data.size() < _request._content_length)
+	if (_request.get_request_data().size() < _request.get_content_length())
 		return (0);
 
 	/* once we have everything, dump it into request._body */
-	_request._body = _request._request_data.substr(0, _request._content_length);
-	if (_request._body.size() > _request._client_max_body_size)
+	_request.set_body(_request.get_request_data().substr(0, _request.get_content_length()));
+	if (_request.get_body().size() > _request.get_client_max_body_size())
 	{
 		_status_code = 413;
 		set_create_response();
@@ -570,11 +570,11 @@ bool Client::try_parse_body()
 	}
 
 	print_blue("----- Body parsed and validated! -----\n", DEBUG);
-	_request._request_data.erase(0, _request._content_length);
+	_request.set_request_data(_request.get_request_data().erase(0, _request.get_content_length()));
 	set_process_request();
 
 	/* checking if there is anything left, potentially a new request */
-	if (_request._request_data.size() > 0)
+	if (_request.get_request_data().size() > 0)
 		_flags._leftover_chunk = true;
 	else
 		_flags._leftover_chunk = false;
@@ -586,29 +586,29 @@ bool Client::try_parse_header()
 	/* Checking if we're exceeding the size and if the end of header indicator has been found */
 	// std::cout << "Header size: " << _request._request_data.size() << " bytes" << std::endl;
 
-	size_t pos = _request._request_data.find("\r\n\r\n");
+	size_t pos = _request.get_request_data().find("\r\n\r\n");
 	if (pos == std::string::npos)
 		return (0);
 
 	/* if found, parse the header and make some validation, jumping to the response if the parsing/validation fails */
-	_request._header = _request._request_data.substr(0, pos + 4);
+	_request.set_header(_request.get_request_data().substr(0, pos + 4));
 	if (_request.parse_header() != 0)
 	{
 		_status_code = 400;
 		set_create_response();
 		return (1);
 	}
-	_request._request_data.erase(0, pos + 4);
-	if (_request._header.size() > 32768)
+	_request.set_request_data(_request.get_request_data().erase(0, pos + 4));
+	if (_request.get_header().size() > 32768)
 	{
 		_status_code = 431;
 		set_create_response();
 		return (1);
 	}
 	set_flags();
-	if (_request._request_data.size() > _request._content_length)
+	if (_request.get_request_data().size() > _request.get_content_length())
 		_flags._leftover_chunk = true;
-	if (static_cast<unsigned long>(_request._content_length) > _server->get_client_max_body_size())
+	if (static_cast<unsigned long>(_request.get_content_length()) > _server->get_client_max_body_size())
 	{
 		_status_code = 413;
 		set_create_response();
@@ -623,8 +623,8 @@ bool Client::try_parse_header()
 	if (!validate_permissions())
 	{
 		set_create_response();
-		if (_request._content_length > 0)
-			_request._request_data.erase(0, std::min(_request._content_length, _request._request_data.size()));
+		if (_request.get_content_length() > 0)
+			_request.set_request_data(_request.get_request_data().erase(0, std::min(_request.get_content_length(), _request.get_request_data().size())));
 		print_red("Error: failed permissions", DEBUG);
 		return (1);
 	}
@@ -632,7 +632,7 @@ bool Client::try_parse_header()
 
 	if (is_body_chunked())
 		set_read_body();
-	else if (_request.http_can_have_body() && _request._content_length != 0)
+	else if (_request.http_can_have_body() && _request.get_content_length() != 0)
 		set_read_body();
 	else
 		set_process_request();

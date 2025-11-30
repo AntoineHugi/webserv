@@ -10,12 +10,11 @@ void Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 		poll_fds[i].events = POLLIN;
 		if (client.leftover_chunk() == true)
 		{
-			if (DEBUG)
-				std::cout << "there is data left: " << client._request._request_data << std::endl;
-			save_buffer = client._request._request_data;
+			print_yellow("There is leftover chunked data to process" + client._request.get_request_data(), DEBUG);
+			save_buffer = client._request.get_request_data();
 		}
 		client.refresh_client();
-		client._request._request_data = save_buffer;
+		client._request.set_request_data(save_buffer);
 		if (DEBUG)
 			std::cout << "[Handle Conn] Connection kept alive for fd: " << poll_fds[i].fd << std::endl;
 	}

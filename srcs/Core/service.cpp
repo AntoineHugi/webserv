@@ -50,16 +50,18 @@ void Service::poll_service()
 	while (g_shutdown == 0)
 	{
 		/* Use timeout 0 if any client has leftover data to process */
-		int POLL_TIMEOUT = CLIENT_TIMEOUT_MS;
+		// int POLL_TIMEOUT = CLIENT_TIMEOUT_MS;
 		for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it)
 		{
 			if (it->second.leftover_chunk())
 			{
-				POLL_TIMEOUT = 0;
+				// POLL_TIMEOUT = 0;
 				break;
 			}
 		}
-		int ret = poll(this->fds["poll_fds"].data(), this->fds["poll_fds"].size(), POLL_TIMEOUT);
+		// Set up poll fds
+
+		int ret = poll(this->fds["poll_fds"].data(), this->fds["poll_fds"].size(), 0);
 		if (ret < 0)
 		{
 			if (errno == EINTR)
@@ -81,6 +83,8 @@ void Service::poll_service()
 					++it;
 			}
 		}
+
+		// Loop for event handling
 		for (int i = this->fds["poll_fds"].size() - 1; i >= 0; i--)
 		{
 
@@ -92,10 +96,7 @@ void Service::poll_service()
 				if (this->fds["poll_fds"][i].revents != 0)
 				{
 					add_client_to_polls(this->clients, this->fds["poll_fds"][i].fd, this->servers[server_fd_if_new_client]);
-					std::ostringstream ss;
-					ss << (this->fds["poll_fds"].size() - this->fds["server_fds"].size());
-					std::string msg = "New client connected. Total clients: " + ss.str();
-					print_cyan(msg, true);
+					print_cyan("New client connected. Total clients: " + convert_to_string(this->fds["poll_fds"].size() - this->fds["server_fds"].size()), true);
 				}
 			}
 			else if (cgi_fd_if_cgi != -1)
@@ -105,11 +106,8 @@ void Service::poll_service()
 				Client &client = clients[this->fds["poll_fds"][i].fd];
 				if (client.leftover_chunk() == false && this->fds["poll_fds"][i].revents & (POLLERR | POLLHUP | POLLNVAL))
 				{
-					if (DEBUG)
-					{
-						std::cout << "POLL event : " << this->fds["poll_fds"][i].revents << std::endl;
-						std::cout << "this->fds['poll_fds'][i].revents : " << this->fds["poll_fds"][i].revents << std::endl;
-					}
+					print_yellow("Client disconnected or error occurred on fd: " + convert_to_string(this->fds["poll_fds"][i].fd), true);
+					print_yellow("POLL event : " + convert_to_string(this->fds["poll_fds"][i].revents), true);
 					handle_disconnection(this->fds["poll_fds"], i);
 					continue;
 				}

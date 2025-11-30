@@ -33,7 +33,7 @@ void Method::get_directory(Client &client, DIR *directory)
 	std::string html;
 	html += "<!DOCTYPE html>\n";
 	html += "<html><head><title>Index of ";
-	html += client._request._uri;
+	html += client._request.get_uri();
 	html += "</title></head><body>\n";
 	html += "<ul>\n";
 
@@ -133,13 +133,13 @@ void Method::get_file(Client &client, std::string filepath)
 
 void Method::handle_get(Client &client)
 {
-	if (client._request._isDirectory)
+	if (client._request._is_directory())
 	{
 		/* looks if there is an index file */
 		const std::vector<std::string> &indices = client._request._index;
 		for (size_t i = 0; i < indices.size(); i++)
 		{
-			std::string attempt = client._request._fullPathURI + "/" + indices[i];
+			std::string attempt = client._request.get_fullPathURI() + "/" + indices[i];
 			if (access(attempt.c_str(), R_OK) == 0)
 			{
 				get_file(client, attempt);
@@ -147,9 +147,9 @@ void Method::handle_get(Client &client)
 			}
 		}
 		/* if not, then serves the directory list if autoindex is on */
-		if (client._request._autoindex)
+		if (client._request._is_autoindex())
 		{
-			DIR *dir = opendir(client._request._fullPathURI.c_str());
+			DIR *dir = opendir(client._request.get_fullPathURI().c_str());
 			get_directory(client, dir);
 		}
 		else
@@ -159,7 +159,7 @@ void Method::handle_get(Client &client)
 		}
 	}
 	else
-		Method::get_file(client, client._request._fullPathURI);
+		Method::get_file(client, client._request.get_fullPathURI());
 	return;
 }
 
@@ -203,16 +203,16 @@ std::string Method::double_quote_handling(const std::string &input)
 
 int Method::input_data(Client &client)
 {
-	size_t pos = client._request._fullPathURI.find_last_of('/');
+	size_t pos = client._request.get_fullPathURI().find_last_of('/');
 	if (pos == std::string::npos)
 	{
 		client.set_status_code(400);
 		return (1);
 	}
-	std::string path = client._request._root + client._request._fullPathURI.substr(pos);
+	std::string path = client._request.get_root() + client._request.get_fullPathURI().substr(pos);
 	if (DEBUG)
 	{
-		std::cout << "initially: " << client._request._fullPathURI << std::endl;
+		std::cout << "initially: " << client._request.get_fullPathURI() << std::endl;
 		std::cout << "path to write input: " << path << std::endl;
 	}
 
@@ -245,7 +245,7 @@ void Method::handle_post(Client &client)
 	}
 	else if (client._request._header_kv["content-type"].find("multipart/form-data") != std::string::npos)
 	{
-		if (save_uploaded_files(client, client._request._multiparts, client._request._fullPathURI) == 1)
+		if (save_uploaded_files(client, client._request._multiparts, client._request.get_fullPathURI()) == 1)
 		{
 			client.set_status_code(500);
 			return;
@@ -270,7 +270,7 @@ void Method::handle_delete(Client &client)
 {
 	if (S_ISREG(client._request._stat.st_mode))
 	{
-		if (std::remove(client._request._fullPathURI.c_str()) != 0)
+		if (std::remove(client._request.get_fullPathURI().c_str()) != 0)
 			client.set_status_code(500);
 		else
 			client.set_status_code(204);

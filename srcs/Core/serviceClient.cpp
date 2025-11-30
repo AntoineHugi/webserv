@@ -26,7 +26,7 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 	Client &client = clients[poll_fds[i].fd];
 
 	client.update_last_interaction();
-	if (client._request._isCGI && client.get_status_code() < 300) // TODO: check status too otherwise infinite loop
+	if (client._request._is_cgi() && client.get_status_code() < 300)
 	{
 		print_white(">>> This client will create CGI processes and wait", DEBUG);
 		if (client.can_i_process_request())
@@ -57,19 +57,17 @@ int Service::service_writing(std::vector<struct pollfd> &poll_fds, int i)
 	client.update_last_interaction();
 	if (client.handle_write())
 	{
-		std::cout << "\n >> returning from inside writing - handle connection should happen outside << " << std::endl;
+		print_yellow("\n >> returning from inside writing - handle connection should happen outside << ", true);
 		handle_connection(poll_fds, i);
 		poll_fds[i].events = POLLIN;
 		return (1);
 	}
 	else
 	{
-		if (DEBUG)
-			std::cout << "Service ========>>  Client send response: " << client.can_i_send_response() << std::endl;
+		print_cyan("Service ========>>  Client send response: " + convert_to_string(client.can_i_send_response()), DEBUG);
 		if (!client.can_i_send_response())
 		{
-			if (DEBUG)
-				std::cout << "[Writing] Finishing request, preparing client for next or closing" << std::endl;
+			print_blue("[Writing] Finishing request, preparing client for next or closing", DEBUG);
 			poll_fds[i].events = POLLIN;
 			if (!client.can_i_close_connection())
 				client.set_read_header();

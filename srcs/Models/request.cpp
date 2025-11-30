@@ -3,23 +3,23 @@
 
 Request::Request() :
 _version(""),
-	_request_data(""),
-	_header(""),
-	_method(""),
-	_uri(""),
-	_host(""),
+_uri(""),
+_method(""),
+_host(""),
+_header(""),
+_content_length(0),
+_root(""),
+_fullPathURI(""),
+_request_data(""),
+_isDirectory(false),
+_isCGI(false),
+_autoindex(false),
+_cgi_path(""),
+_client_max_body_size(0),
+_body(""),
 	_header_kv(),
-	_content_length(0),
-	_fullPathURI(""),
-	_root(""),
-	_isDirectory(false),
 	_stat(),
-	_isCGI(false),
-	_client_max_body_size(0),
 	_index(),
-	_cgi_path(""),
-	_autoindex(false),
-	_body(""),
 	_body_kv(),
 	_multiparts(),
 	_body_data()
@@ -27,23 +27,23 @@ _version(""),
 
 Request::Request(const Request &other) :
 _version(other._version),
-	_request_data(other._request_data),
-	_header(other._header),
-	_method(other._method),
-	_uri(other._uri),
-	_host(other._host),
+_uri(other._uri),
+_method(other._method),
+_host(other._host),
+_header(other._header),
+_content_length(other._content_length),
+_root(other._root),
+_fullPathURI(other._fullPathURI),
+_request_data(other._request_data),
+_isDirectory(other._isDirectory),
+_isCGI(other._isCGI),
+_autoindex(other._autoindex),
+_cgi_path(other._cgi_path),
+_client_max_body_size(other._client_max_body_size),
+_body(other._body),
 	_header_kv(other._header_kv),
-	_content_length(other._content_length),
-	_fullPathURI(other._fullPathURI),
-	_root(other._root),
-	_isDirectory(other._isDirectory),
 	_stat(other._stat),
-	_isCGI(other._isCGI),
-	_client_max_body_size(other._client_max_body_size),
 	_index(other._index),
-	_cgi_path(other._cgi_path),
-	_autoindex(other._autoindex),
-	_body(other._body),
 	_body_kv(other._body_kv),
 	_multiparts(other._multiparts),
 	_body_data(other._body_data)
@@ -54,23 +54,23 @@ Request &Request::operator=(const Request &other)
 	if (this != &other)
 	{
 		_version = other._version;
-		_request_data = other._request_data;
-		_header = other._header;
-		_method = other._method;
 		_uri = other._uri;
+		_method = other._method;
 		_host = other._host;
-		_header_kv = other._header_kv;
+		_header = other._header;
 		_content_length = other._content_length;
-		_fullPathURI = other._fullPathURI;
 		_root = other._root;
+		_fullPathURI = other._fullPathURI;
+		_request_data = other._request_data;
 		_isDirectory = other._isDirectory;
-		_stat = other._stat;
 		_isCGI = other._isCGI;
-		_client_max_body_size = other._client_max_body_size;
-		_index = other._index;
-		_cgi_path = other._cgi_path;
 		_autoindex = other._autoindex;
+		_cgi_path = other._cgi_path;
+		_client_max_body_size = other._client_max_body_size;
 		_body = other._body;
+		_header_kv = other._header_kv;
+		_stat = other._stat;
+		_index = other._index;
 		_body_kv = other._body_kv;
 		_multiparts = other._multiparts;
 		_body_data = other._body_data;
