@@ -1,14 +1,8 @@
 #include "service.hpp"
 
-
 void Service::service_reading(std::vector<struct pollfd> &poll_fds, int i)
 {
-	if (DEBUG)
-	{
-		std::cout << "\n###################################################" << std::endl;
-		std::cout << "################## READING #######################" << std::endl;
-		std::cout << "###################################################\n" << std::endl;
-	}
+	print_header("READING");
 	Client &client = clients[poll_fds[i].fd];
 
 	client.update_last_interaction();
@@ -28,20 +22,13 @@ void Service::service_reading(std::vector<struct pollfd> &poll_fds, int i)
 
 void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 {
-	if (DEBUG)
-	{
-		std::cout << "\n###################################################" << std::endl;
-		std::cout << "################## PROCESSING #######################" << std::endl;
-		std::cout << "###################################################\n" << std::endl;
-	}
-
+	print_header("PROCESSING");
 	Client &client = clients[poll_fds[i].fd];
 
 	client.update_last_interaction();
 	if (client._request._isCGI && client.get_status_code() < 300) // TODO: check status too otherwise infinite loop
 	{
-		if (DEBUG)
-			std::cout << "will create CGI processes " << std::endl;
+		print_white(">>> This client will create CGI processes and wait", DEBUG);
 		if (client.can_i_process_request())
 		{
 			this->setup_cgi_request(i);
@@ -64,13 +51,7 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 
 int Service::service_writing(std::vector<struct pollfd> &poll_fds, int i)
 {
-	if (DEBUG)
-	{
-		std::cout << "\n###################################################" << std::endl;
-		std::cout << "################## WRITING #######################" << std::endl;
-		std::cout << "###################################################\n"<< std::endl;
-	}
-
+	print_header("WRITING");
 	Client &client = clients[poll_fds[i].fd];
 
 	client.update_last_interaction();

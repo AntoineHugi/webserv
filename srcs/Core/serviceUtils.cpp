@@ -2,14 +2,8 @@
 
 void Service::add_client_to_polls(std::map<int, Client> &clients, int fd, Server &server)
 {
-	if (DEBUG)
-	{
-		std::cout << "\n###################################################" << std::endl;
-		std::cout << "################## ADDING CLIENT ##################" << std::endl;
-		std::cout << "###################################################\n"
-			  << std::endl;
-		std::cout << "\033[32m New connection! \033[0m" << std::endl;
-	}
+	print_header("ADDING CGI");
+	print_green("New connection!", DEBUG);
 
 	struct sockaddr_in client_addr;
 	socklen_t client_len = sizeof(client_addr);
@@ -31,8 +25,7 @@ void Service::add_client_to_polls(std::map<int, Client> &clients, int fd, Server
 		char ip_str[INET_ADDRSTRLEN];
 		inet_ntop(AF_INET, &(client_addr.sin_addr), ip_str, INET_ADDRSTRLEN);
 		std::string client_ip(ip_str);
-		if (DEBUG)
-			std::cout << "Client connected from IP: " << client_ip << std::endl;
+		print_cyan("Client connected from IP: " + client_ip , DEBUG);
 		this->add_poll_to_vectors(client_fd, POLLIN | POLLOUT, "");
 		clients.insert(std::pair<int, Client>(client_fd, Client(client_fd, server, client_ip)));
 	}
@@ -84,8 +77,7 @@ int find_fd_index_in_vector(int fd, std::vector<struct pollfd> &fds_vector)
 void Service::remove_fd(int fd)
 {
 	close(fd);
-	if (DEBUG)
-		std::cout << "removing fds" << std::endl;
+	print_yellow(" // Removing fds //", DEBUG);
 	int index = find_fd_index_in_vector(fd, this->fds["poll_fds"]);
 	if (index != -1)
 		this->fds["poll_fds"].erase(this->fds["poll_fds"].begin() + index);

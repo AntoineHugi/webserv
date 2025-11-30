@@ -17,6 +17,10 @@
 # include <stdio.h>
 # include <errno.h>
 
+extern bool DEBUG;
+extern const size_t BUFFER_SIZE;
+extern int CLIENT_TIMEOUT_MS;
+
 class Client
 {
 	private:

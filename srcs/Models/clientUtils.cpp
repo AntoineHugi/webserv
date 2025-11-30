@@ -7,13 +7,13 @@ void Client::set_flags_error()
 
 void Client::set_flags()
 {
-	if (_request._version == "HTTP/1.1")
+	if (_request.get_version() == "HTTP/1.1")
 	{
 		_flags._should_keep_alive = true;
 		if (_request._header_kv["connection"] == "close")
 			_flags._should_keep_alive = false;
 	}
-	else if (_request._version == "HTTP/1.0")
+	else if (_request.get_version() == "HTTP/1.0")
 	{
 		_flags._should_keep_alive = false;
 		if (_request._header_kv["connection"] == "keep-alive")

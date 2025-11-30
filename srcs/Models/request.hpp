@@ -13,21 +13,22 @@
 #include <algorithm>
 #include "multipart.hpp"
 
-static bool DEBUG = false;
-static const size_t BUFFER_SIZE = 1048576;
-static int CLIENT_TIMEOUT_MS = 60000;
+extern bool DEBUG;
+extern const size_t BUFFER_SIZE;
+extern int CLIENT_TIMEOUT_MS;
 
 class Request
 {
 	private:
-		// size_t _reading_lenght;
+		std::string _version;
+
+	// size_t _reading_lenght;
 	public:
 		/* header attributes */
 		std::string _request_data;
 		std::string _header;
 		std::string _method;
 		std::string _uri;
-		std::string _version;
 		std::string _host;
 		std::map<std::string, std::string> _header_kv;
 		size_t _content_length;
@@ -51,6 +52,15 @@ class Request
 		Request(const Request &other);
 		Request &operator=(const Request &other);
 		~Request();
+
+		// Getters
+		std::string	get_version() const { return _version; };
+		size_t		get_content_length() const { return _content_length; };
+
+		// Setters
+		void	set_version(const std::string &version) { _version = version; };
+		void	set_content_length(size_t length) { _content_length = length; };
+
 
 		void	flush_request_data();
 

@@ -4,11 +4,14 @@
 # include <string>
 # include <vector>
 # include <iostream>
+# include "debugPrinting.hpp"
+extern bool DEBUG;
+extern const size_t BUFFER_SIZE;
+extern int CLIENT_TIMEOUT_MS;
 
 # include "../Models/server.hpp"
 # include "../Models/client.hpp"
 # include "../Models/CGIProcess.hpp"
-# include "../Functions/workCGI.hpp"
 
 class Service
 {

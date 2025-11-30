@@ -1,5 +1,9 @@
 #include "./Functions/parserConfig.hpp"
-#include "./Core/service.hpp"
+#include "./Core/debugPrinting.hpp"
+
+bool DEBUG = true;
+const size_t BUFFER_SIZE = 1048576;
+int CLIENT_TIMEOUT_MS = 60000;
 
 int	main(int argc, char **argv)
 {
@@ -13,7 +17,7 @@ int	main(int argc, char **argv)
 		Service	service;
 		if (!Parser::open_config_file(argv[1], service))
 		{
-			std::cout << "config parsing failed" << std::endl;
+			print_red("Error: Failed to open config file", DEBUG);
 			return (1);
 		}
 		else
@@ -21,7 +25,10 @@ int	main(int argc, char **argv)
 			while(i < service.servers.size())
 			{
 				service.servers[i].set_server();
-				std::cout << "Server: " << i << " starting... "<< std::endl;
+				std::ostringstream ss;
+				ss << service.servers[i].get_port();
+				std::string msg = "Server " + service.servers[i].get_name() + " configured on " + service.servers[i].get_host() + ":" + ss.str() + " starting ...";
+				print_green(msg, DEBUG);
 				i++;
 			}
 		}
@@ -31,6 +38,8 @@ int	main(int argc, char **argv)
 		std::cout << "please run the executable and 1 valid .conf file" << std::endl;
 	return (0);
 }
+
+
 
 // TODO: Implement proper logging flag, so we see debug info only when needed
 // TODO: Implement signal handling for graceful shutdown

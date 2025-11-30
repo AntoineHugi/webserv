@@ -12,6 +12,9 @@
 # include <stdlib.h>
 
 # include "../Models/client.hpp"
+extern bool DEBUG;
+extern const size_t BUFFER_SIZE;
+extern int CLIENT_TIMEOUT_MS;
 
 class Method
 {

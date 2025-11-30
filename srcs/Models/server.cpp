@@ -1,32 +1,29 @@
 #include "server.hpp"
 
 Server::Server():
-	_name(""), 
-	_port(-1), 
-	_host(""), 
-	_root(""), 
-	_index(), 
+	_name(""),
+	_port(-1),
+	_host(""),
+	_root(""),
+	_index(),
 	_error_page(),
 	_bouncer(),
-	_client_max_body_size(0), 
+	_client_max_body_size(0),
 	_sock(-1),
 	_routes()
-	{}
+{}
 
-Server::~Server() {}
-
-Server::Server(const Server& other)
-{
-	_name = other._name;
-	_port = other._port;
-	_host = other._host;
-	_root = other._root;
-	_index = other._index;
-	_error_page = other._error_page;
-	_bouncer = other._bouncer;
-	_client_max_body_size = other._client_max_body_size;
-	_routes = other._routes;
-}
+Server::Server(const Server& other) :
+	_name(other._name),
+	_port(other._port),
+	_host(other._host),
+	_root(other._root),
+	_index(other._index),
+	_error_page(other._error_page),
+	_bouncer(other._bouncer),
+	_client_max_body_size(other._client_max_body_size),
+	_routes(other._routes)
+{}
 
 Server& Server::operator=(const Server& other)
 {
@@ -45,19 +42,14 @@ Server& Server::operator=(const Server& other)
 	return (*this);
 }
 
-std::string	Server::get_name() { return (_name); }
-int	Server::get_port() { return (_port); }
-int	Server::get_sock() { return (_sock); }
-std::string	Server::get_host() { return (_host); }
-std::string	Server::get_root() { return (_root); }
-std::vector <std::string>	Server::get_index() { return (_index); }
-std::map <int, std::string>	Server::get_error_page() { return (_error_page); }
-std::map <std::string, std::string>	Server::get_bouncer() { return (_bouncer); }
-unsigned long	Server::get_client_max_body_size() { return (_client_max_body_size); }
-std::vector <Route>	Server::get_routes() { return (_routes); }
+Server::~Server() {}
+
+/*####################################################################################################*/
+/*####################################################################################################*/
+/*####################################################################################################*/
+/*####################################################################################################*/
 
 
-void	Server::set_name(const std::string& name) { _name = name; }
 void	Server::set_port(const std::string& port)
 {
 	for (size_t i = 0; i < port.size(); i++)
@@ -67,13 +59,7 @@ void	Server::set_port(const std::string& port)
 	}
 	_port = atoi(port.c_str());
 }
-void	Server::set_sock(int sock) { _sock = sock; }
-void	Server::set_host(const std::string& host) { _host = host; }
-void	Server::set_root(const std::string& root) { _root = root; }
-void	Server::set_index(const std::vector <std::string>& index) { _index = index; }
-void	Server::add_error_page(int key, std::string& value) { _error_page.insert(std::make_pair(key, value)); }
-void	Server::add_bouncer(std::string& key, std::string& value) { _bouncer.insert(std::make_pair(key, value)); }
-void	Server::set_client_max_body_size(const std::string& max) 
+void	Server::set_client_max_body_size(const std::string& max)
 {
 	if (max.empty())
 		throw (std::runtime_error("Invalid max client body size - empty string"));
@@ -98,7 +84,6 @@ void	Server::set_client_max_body_size(const std::string& max)
 	}
 	this->_client_max_body_size = value;
 }
-void	Server::add_route(Route route) { _routes.push_back(route); }
 
 void Server::set_server(){
 
@@ -107,7 +92,7 @@ void Server::set_server(){
 		perror("Socket creation failed");
 		return; // TODO: throw correct error
 	}
-	std::cout << "socket: " << get_sock() << std::endl;
+	print_cyan("socket: " + convert_to_string(get_sock()), true);
 
 	int optval = 1;
 	int check = setsockopt(get_sock(), SOL_SOCKET , SO_REUSEADDR , &optval, sizeof(optval));
@@ -137,6 +122,5 @@ void Server::set_server(){
 		perror("Listen failed");
 		return; // TODO: throw correct error
 	}
-	std::cout << "Server listening on port " << get_port() << std::endl;
+	print_cyan("Server listening on port: " + convert_to_string(get_port()), true);
 }
-

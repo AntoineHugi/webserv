@@ -13,11 +13,11 @@ SRCDIR := srcs
 # 	)
 
 SRCS =	srcs/main.cpp  \
+		srcs/Core/debugPrinting.cpp \
 		srcs/Core/service.cpp \
 		srcs/Functions/method.cpp \
 		srcs/Functions/parserConfigLocation.cpp \
 		srcs/Functions/parserConfigServer.cpp \
-		srcs/Functions/workCGI.cpp \
 		srcs/Models/client.cpp \
 		srcs/Models/multipart.cpp \
 		srcs/Models/request.cpp \

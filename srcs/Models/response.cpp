@@ -1,23 +1,26 @@
 #include "response.hpp"
 
-Response::Response() : _header(""),
-		       _content_length(0),
-		       _bytes_sent(0),
-		       _response_data(""),
-		       _body(""),
-		       _allowedMethods(),
-		       _content_type(""),
-		       _location("") {}
+Response::Response() :
+	_header(""),
+	_content_length(0),
+	_bytes_sent(0),
+	_response_data(""),
+	_body(""),
+	_allowedMethods(),
+	_content_type(""),
+	_location("")
+{}
 
-Response::Response(const Response &other) : _header(other._header),
-					    _content_length(other._content_length),
-					    _bytes_sent(other._bytes_sent),
-					    _response_data(other._response_data),
-					    _body(other._body),
-					    _allowedMethods(other._allowedMethods),
-					    _content_type(other._content_type) ,
-					    _location(other._location) 
-					    {}
+Response::Response(const Response &other) :
+	_header(other._header),
+	_content_length(other._content_length),
+	_bytes_sent(other._bytes_sent),
+	_response_data(other._response_data),
+	_body(other._body),
+	_allowedMethods(other._allowedMethods),
+	_content_type(other._content_type) ,
+	_location(other._location)
+{}
 
 Response &Response::operator=(const Response &other)
 {
@@ -36,6 +39,11 @@ Response &Response::operator=(const Response &other)
 }
 
 Response::~Response() {}
+
+/*####################################################################################################*/
+/*####################################################################################################*/
+/*####################################################################################################*/
+/*####################################################################################################*/
 
 void Response::flush_response_data()
 {

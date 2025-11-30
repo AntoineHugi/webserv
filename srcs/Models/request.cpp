@@ -1,63 +1,63 @@
 #include "request.hpp"
+# include "../Core/debugPrinting.hpp"
 
-Request::Request() : _request_data(""),
-		     _header(""),
-		     _method(""),
-		     _uri(""),
-		     _version(""),
-		     _host(""),
-		     _header_kv(),
-		     _content_length(0),
-		     _fullPathURI(""),
-		     _root(""),
-		     _isDirectory(false),
-		     _stat(),
-		     _isCGI(false),
-		     _client_max_body_size(0),
-		     _index(),
-		     _cgi_path(""),
-		     _autoindex(false),
-		     _body(""),
-		     _body_kv(),
-		     _multiparts(),
-		     _body_data()
-{
-}
+Request::Request() :
+_version(""),
+	_request_data(""),
+	_header(""),
+	_method(""),
+	_uri(""),
+	_host(""),
+	_header_kv(),
+	_content_length(0),
+	_fullPathURI(""),
+	_root(""),
+	_isDirectory(false),
+	_stat(),
+	_isCGI(false),
+	_client_max_body_size(0),
+	_index(),
+	_cgi_path(""),
+	_autoindex(false),
+	_body(""),
+	_body_kv(),
+	_multiparts(),
+	_body_data()
+{}
 
-Request::Request(const Request &other)
-{
-	_request_data = other._request_data;
-	_header = other._header;
-	_method = other._method;
-	_uri = other._uri;
-	_version = other._version;
-	_host = other._host;
-	_header_kv = other._header_kv;
-	_content_length = other._content_length;
-	_fullPathURI = other._fullPathURI;
-	_root = other._root;
-	_isDirectory = other._isDirectory;
-	_stat = other._stat;
-	_isCGI = other._isCGI;
-	_client_max_body_size = other._client_max_body_size;
-	_index = other._index;
-	_cgi_path = other._cgi_path;
-	_autoindex = other._autoindex;
-	_body = other._body;
-	_body_kv = other._body_kv;
-	_multiparts = other._multiparts;
-	_body_data = other._body_data;
-}
+Request::Request(const Request &other) :
+_version(other._version),
+	_request_data(other._request_data),
+	_header(other._header),
+	_method(other._method),
+	_uri(other._uri),
+	_host(other._host),
+	_header_kv(other._header_kv),
+	_content_length(other._content_length),
+	_fullPathURI(other._fullPathURI),
+	_root(other._root),
+	_isDirectory(other._isDirectory),
+	_stat(other._stat),
+	_isCGI(other._isCGI),
+	_client_max_body_size(other._client_max_body_size),
+	_index(other._index),
+	_cgi_path(other._cgi_path),
+	_autoindex(other._autoindex),
+	_body(other._body),
+	_body_kv(other._body_kv),
+	_multiparts(other._multiparts),
+	_body_data(other._body_data)
+{}
 
 Request &Request::operator=(const Request &other)
 {
 	if (this != &other)
 	{
+		_version = other._version;
 		_request_data = other._request_data;
 		_header = other._header;
 		_method = other._method;
 		_uri = other._uri;
-		_version = other._version;
 		_host = other._host;
 		_header_kv = other._header_kv;
 		_content_length = other._content_length;
@@ -80,10 +80,15 @@ Request &Request::operator=(const Request &other)
 
 Request::~Request() {}
 
+/*####################################################################################################*/
+/*####################################################################################################*/
+/*####################################################################################################*/
+/*####################################################################################################*/
+
+
 int Request::parse_header()
 {
-	if (DEBUG)
-		std::cout << "\033[34mParsing header...\n\033[0m" << std::endl;
+	print_blue("----- Parsing header... -----", DEBUG);
 	while (!_header.empty() && (_header[0] == '\r' || _header[0] == '\n'))
 		_header.erase(0, 1);
 	std::string line;
@@ -121,8 +126,7 @@ int Request::parse_header()
 				_header_kv[key] = value;
 			else
 			{
-				if (DEBUG)
-					std::cout << "duplicate keys in header" << std::endl;
+				print_red("Error: duplicate keys in header", DEBUG);
 				return (1);
 			}
 		}
@@ -136,36 +140,26 @@ int Request::parse_header()
 		long val = std::strtol(_header_kv["content-length"].c_str(), &endptr, 10);
 		if (*endptr != '\0' && *endptr != '\r')
 		{
-			if (DEBUG)
-				std::cout << "Bad formatting: content-length" << std::endl;
+			print_red("Error: Bad formatting: content-length", DEBUG);
 			return (1);
 		}
 		_content_length = val;
 	}
 
-	/* printing header */
+	print_cyan("> 'method: '" + _method + "'", DEBUG);
+	print_cyan("> 'uri: '" + _uri + "'", DEBUG);
+	print_cyan("> 'version: '" + _version + "'", DEBUG);
+	print_cyan("> 'host: '" + _host + "'", DEBUG);
 	std::map<std::string, std::string>::iterator it;
-	if (DEBUG)
-	{
-		std::cout << "'method: '" << _method << "'" << std::endl;
-		std::cout << "'uri: '" << _uri << "'" << std::endl;
-		std::cout << "'version : '" << _version << "'" << std::endl;
-		std::cout << "'host : '" << _host << "'" << std::endl;
-
-		for (it = _header_kv.begin(); it != _header_kv.end(); ++it)
-		{
-			std::cout << "'" << it->first << "' : '" << it->second << "'" << std::endl;
-		}
-		std::cout << "\033[34mHeader parsed sucessfully! \n\033[0m" << std::endl;
-	}
+	for (it = _header_kv.begin(); it != _header_kv.end(); ++it)
+		print_cyan("> '" + it->first + "': '" + it->second + "'", true);
+	print_blue("----- Header parsed sucessfully! -----\n", DEBUG);
 	return (0);
 }
 
 int Request::parse_body()
 {
-	if (DEBUG)
-		std::cout << "\033[36mParsing body...\n\033[0m" << std::endl;
-
+	print_blue("----- Parsing body... -----", DEBUG);
 	std::string content_type = _header_kv["content-type"];
 	if (content_type == "application/x-www-form-urlencoded")
 		return (parse_url_encoded());

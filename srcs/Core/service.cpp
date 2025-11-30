@@ -92,8 +92,10 @@ void Service::poll_service()
 				if (this->fds["poll_fds"][i].revents != 0)
 				{
 					add_client_to_polls(this->clients, this->fds["poll_fds"][i].fd, this->servers[server_fd_if_new_client]);
-					if (DEBUG)
-						std::cout << "\033[32m New client connected. Total clients: " << (this->fds["poll_fds"].size() - this->fds["server_fds"].size()) << "\033[0m" << std::endl;
+					std::ostringstream ss;
+					ss << (this->fds["poll_fds"].size() - this->fds["server_fds"].size());
+					std::string msg = "New client connected. Total clients: " + ss.str();
+					print_cyan(msg, true);
 				}
 			}
 			else if (cgi_fd_if_cgi != -1)

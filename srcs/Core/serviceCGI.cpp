@@ -11,7 +11,7 @@ char **setup_env(std::map<int, Client> clients, int fd)
 	env_strings.push_back("QUERY_STRING=");
 	env_strings.push_back("REQUEST_METHOD=" + clients[fd]._request._method);
 	env_strings.push_back("GATEWAY_INTERFACE=CGI/1.1");
-	env_strings.push_back("SERVER_PROTOCOL=" + clients[fd]._request._version);
+	env_strings.push_back("SERVER_PROTOCOL=" + clients[fd]._request.get_version());
 	ss.str("");
 	ss << (*clients[fd].get_server()).get_port();
 	env_strings.push_back("SERVER_PORT=" + ss.str());
@@ -47,58 +47,31 @@ char **setup_env(std::map<int, Client> clients, int fd)
 		env_strings.push_back(env_name + "=" + header_value);
 	}
 
-	// if (clients[fd]._request._fullPathURI == "./YoupiBanane/youpi.bla" && clients[fd]._request._method == "POST")
-	// {
-	// 	std::cout << "=== SPECIAL CASE! Setting up CGI ENV for test script ===" << std::endl;
-	// 	// env_strings.push_back("SCRIPT_NAME=" + clients[fd]._request._uri);
-	// 	// env_strings.push_back("HTTP_ACCEPT=");
-	// 	// env_strings.push_back("HTTP_ACCEPT_LANGUAGE=");
-	// 	// env_strings.push_back("HTTP_COOKIE=");
-	// 	// env_strings.push_back("HTTP_REFERER=");
-	// 	// env_strings.push_back("HTTP_USER_AGENT=Go-http-client/1.1");
-	// 	env_strings.push_back("PATH_INFO=/directory/youpi.bla");
-	// 	// env_strings.push_back("PATH_TRANSLATED=/");
-	// 	// env_strings.push_back("REDIRECT_STATUS=200");
-	// 	// env_strings.push_back("REMOTE_ADDR=");
-	// 	env_strings.push_back("SERVER_NAME=127.0.0.1");
-	// 	env_strings.push_back("SERVER_SOFTWARE=webserv/1.0");
-	// 	env_strings.push_back("REQUEST_URI=/directory/youpi.bla");
-	// 	env_strings.push_back("SCRIPT_NAME=/directory/youpi.bla");
-	// }
-	// else
-	// {
-	// 	env_strings.push_back("CONTENT_LENGTH=" + ss.str());
-	// 	env_strings.push_back("CONTENT_TYPE=" + clients[fd]._request._header_kv["Content-Type"]);
-	// 	env_strings.push_back("QUERY_STRING=");
-	// 	env_strings.push_back("SCRIPT_NAME=" + clients[fd]._request._fullPathURI);
-	// 	env_strings.push_back("PATH_INFO=" + exec_path);
-	// }
-
 	char **envp = new char *[env_strings.size() + 1];
+	print_cyan("/n === CGI Environment Variables set up ===", DEBUG);
+
 	for (size_t i = 0; i < env_strings.size(); i++)
+	{
 		envp[i] = strdup(env_strings[i].c_str());
+		print_cyan(envp[i], DEBUG);
+	}
+	print_cyan(" =================================", DEBUG);
+
 	envp[env_strings.size()] = NULL;
 
-	if (DEBUG)
-	{
-		std::cout << "=== CGI Environment Variables ===" << std::endl;
-		for (size_t i = 0; i < env_strings.size(); i++)
-			std::cout << envp[i] << std::endl;
-		std::cout << "=================================" << std::endl;
-	}
+	// if (DEBUG)
+	// {
+	// 	std::cout << "\n\033[34m=== CGI Environment Variables ===" << std::endl;
+	// 	for (size_t i = 0; i < env_strings.size(); i++)
+	// 		std::cout << envp[i] << std::endl;
+	// 	std::cout << "=================================\033[0m" << std::endl;
+	// }
 
 	return envp;
 }
 
 void Service::cgi_handler(int i)
 {
-	if (DEBUG)
-	{
-		std::cout << "\n###################################################" << std::endl;
-		std::cout << "################## CGI REQUEST #######################" << std::endl;
-		std::cout << "###################################################\n"
-			  << std::endl;
-	}
 	CGIProcess &cgi = (*cgi_processes[cgi_fd_for_cgi(fds["poll_fds"][i].fd, fds["cgi_fds"])]);
 	Client &client = clients[cgi.get_client_fd()];
 	client.update_last_interaction();
@@ -114,22 +87,18 @@ void Service::cgi_handler(int i)
 
 	if (fds["poll_fds"][i].fd == cgi.get_pipe_to_cgi() && (fds["poll_fds"][i].revents & (POLLOUT | POLLHUP)))
 	{
-		// std::cout << "\n ==> handle writing to CGI" << std::endl;
-		// std::cout << "\n ==> content length = " << client._request._body.size() << std::endl;
-		//std::string res = client._request._body.substr(cgi.get_bytes_written()).substr(0, BUFFER_SIZE);
+		print_header("CGI REQUEST - Writing to CGI");
 		std::string res = client._request._body.substr(cgi.get_bytes_written(), BUFFER_SIZE);
-		//	std::cout << "res : " << res << std::endl;
-
 		ssize_t bytes_sent = write(cgi.get_pipe_to_cgi(), res.c_str(), res.size());
-		// std::cout << "\n ==> bytes_sent = " << bytes_sent << std::endl;
 		if (bytes_sent == -1)
 		{
-			std::cout << "Error sending data to CGI" << std::endl;
-			std::cout << "errno : " << strerror(errno) << std::endl;
+			print_red("Error: Failed to send data to CGI", true);
+			print_red("errno : " + convert_to_string(errno), true);
 			int status;
 			waitpid(cgi.get_pid(), &status, 0);
 			int exit_code = WEXITSTATUS(status);
-			std::cout << "CGI exit code: " << exit_code << std::endl;
+			print_red("CGI exited with code: " + convert_to_string(exit_code), true);
+
 			client.set_status_code(500);
 			client.set_flags_error();
 			client.set_create_response();
@@ -140,24 +109,26 @@ void Service::cgi_handler(int i)
 		}
 		else if (bytes_sent == 0)
 		{
-			if (DEBUG)
-				std::cout << "End of sending things to CGI : " << bytes_sent << std::endl;
+			print_blue("End of sending things to CGI : " + convert_to_string(bytes_sent) , DEBUG);
 			remove_fd(cgi.get_pipe_to_cgi());
 			cgi.set_processing_and_writing();
 		}
 		else
+		{
+			print_cyan("Writing to CGI sucessful : " + convert_to_string(bytes_sent) , DEBUG);
 			cgi.update_bytes_written(bytes_sent);
+		}
 	}
 	else if (fds["poll_fds"][i].fd == cgi.get_pipe_from_cgi() && (fds["poll_fds"][i].revents & (POLLIN | POLLHUP)))
 	{
-		if (DEBUG)
-			std::cout << "\n ==> handle reading from CGI" << std::endl;
-
+		print_header("CGI REQUEST - Reading from CGI");
 		char buffer[BUFFER_SIZE];
 		ssize_t n = read(cgi.get_pipe_from_cgi(), buffer, sizeof(buffer));
-
 		if (n > 0)
+		{
+			print_cyan("Reading from CGI sucessful : " + convert_to_string(n) , DEBUG);
 			cgi.append_to_output(buffer, n);
+		}
 		else if (n == 0) // EOF
 		{
 			int status;
@@ -165,30 +136,20 @@ void Service::cgi_handler(int i)
 			if (result > 0 && WIFEXITED(status))
 			{
 				int exit_code = WEXITSTATUS(status);
-				if (DEBUG)
-					std::cout << "CGI exit code: " << exit_code << std::endl;
-
+				print_blue("CGI exit code: " + convert_to_string(exit_code) , DEBUG);
 				if (exit_code == 0)
 				{
-					
 					std::string output = cgi.get_output_buffer();
-					if (DEBUG)
-					{
-						std::cout << "CGI Buffer init: " << output.substr(0, 2048) << std::endl;
-						std::cout << "CGI output (" << output.size() << " bytes): " << std::endl;
-					}
+					print_cyan("CGI Buffer init: " + output.substr(0, 1024) , DEBUG);
+					print_cyan("CGI output (" + convert_to_string(output.size()) + " bytes)" , DEBUG);
 
-					// Try to find blank line separator (CGI uses \r\n\r\n or \n\n)
 					size_t blank_line = output.find("\r\n\r\n");
 					size_t header_end_offset = 4; // Length of \r\n\r\n
-
 					if (blank_line == std::string::npos)
 					{
-						// Fallback to \n\n for scripts that don't use \r\n
 						blank_line = output.find("\n\n");
 						header_end_offset = 2; // Length of \n\n
 					}
-
 					if (blank_line != std::string::npos)
 					{
 						client._response.set_header(output.substr(0, blank_line));
@@ -198,6 +159,7 @@ void Service::cgi_handler(int i)
 				}
 				else
 				{
+					print_red("CGI failed", true);
 					std::cerr << "CGI failed with exit code " << exit_code << std::endl;
 					client.set_status_code(500);
 				}
@@ -206,7 +168,7 @@ void Service::cgi_handler(int i)
 			delete &cgi;
 			client.set_create_response();
 		}
-		else 
+		else
 		{
 			if (errno != EAGAIN && errno != EWOULDBLOCK)
 			{
@@ -225,19 +187,9 @@ void Service::cgi_handler(int i)
 
 void Service::setup_cgi_request(int i)
 {
-	if (DEBUG)
-	{
-		std::cout << "\n###################################################" << std::endl;
-		std::cout << "################## ADDING CGI #######################" << std::endl;
-		std::cout << "###################################################\n"
-			  << std::endl;
-	}
-
+	print_header("ADDING CGI");
 	int pipe_to_cgi[2];
 	int pipe_from_cgi[2];
-
-	if (DEBUG)
-		std::cout << "==> we will run the srcipt here: " << clients[this->fds["poll_fds"][i].fd]._request._fullPathURI.substr(1) << std::endl;
 
 	char path_buf[PATH_MAX];
 	ssize_t count = readlink("/proc/self/exe", path_buf, PATH_MAX);
@@ -250,11 +202,9 @@ void Service::setup_cgi_request(int i)
 	std::string dir_path = std::string(path_buf);
 	dir_path = dir_path.substr(0, dir_path.find_last_of("/"));
 	std::string exec_path = dir_path + clients[this->fds["poll_fds"][i].fd]._request._fullPathURI.substr(1);
-	if (DEBUG)
-		std::cout << "This is the PATH: " << exec_path << std::endl;
 	std::string arg0 = clients[this->fds["poll_fds"][i].fd]._request._cgi_path;
-	if (DEBUG)
-		std::cout << "This is the executor: " << arg0 << std::endl;
+	print_cyan("This is the file being executed: " + clients[this->fds["poll_fds"][i].fd]._request._fullPathURI.substr(1), DEBUG);
+	print_cyan("This is the executor: " + arg0, DEBUG);
 
 	if (pipe(pipe_to_cgi) || pipe(pipe_from_cgi))
 	{
@@ -302,31 +252,24 @@ void Service::setup_cgi_request(int i)
 	else
 	{
 		CGIProcess *cgi = new CGIProcess(this->fds["poll_fds"][i].fd, pid, pipe_to_cgi[1], pipe_from_cgi[0]);
-		if (DEBUG)
-			std::cout << "Parent starting ... " << std::endl;
+		print_blue("\nParent starting ... " , DEBUG);
 		close(pipe_to_cgi[0]);
 		close(pipe_from_cgi[1]);
 		fcntl(pipe_to_cgi[1], F_SETFL, fcntl(pipe_to_cgi[1], F_GETFL, 0) | O_NONBLOCK);
 		fcntl(pipe_from_cgi[0], F_SETFL, fcntl(pipe_from_cgi[0], F_GETFL, 0) | O_NONBLOCK);
-		if (DEBUG)
-		{
-			std::cout << "\n ==> pipe_to_cgi[1] " << pipe_to_cgi[1] << std::endl;
-			std::cout << "\n ==> pipe_from_cgi[0] " << pipe_from_cgi[0] << std::endl;
-		}
+		print_cyan("\n ==> pipe_to_cgi[1] " + convert_to_string(pipe_to_cgi[1]) , DEBUG);
+		print_cyan("==> pipe_from_cgi[0] \n" + convert_to_string(pipe_from_cgi[0]) , DEBUG);
 		if (clients[this->fds["poll_fds"][i].fd]._request._body.empty())
 			close(pipe_to_cgi[1]);
 		else
 		{
-			if (DEBUG)
-				std::cout << "Adding writing pipe to CGI " << std::endl;
+			print_blue("Parent - adding writing pipe to CGI " , DEBUG);
 			add_poll_to_vectors(pipe_to_cgi[1], POLLOUT, "cgi_fds");
 			this->cgi_processes.insert(std::pair<int, CGIProcess *>(pipe_to_cgi[1], cgi));
 		}
 		add_poll_to_vectors(pipe_from_cgi[0], POLLIN, "cgi_fds");
 		this->cgi_processes.insert(std::pair<int, CGIProcess *>(pipe_from_cgi[0], cgi));
-
-		if (DEBUG)
-			std::cout << "Parent - everything saved ... " << std::endl;
+		print_blue("Parent - everything saved ... " , DEBUG);
 		if (clients[this->fds["poll_fds"][i].fd]._request._body.empty())
 			(*this->cgi_processes[pipe_from_cgi[0]]).set_processing_and_writing();
 	}

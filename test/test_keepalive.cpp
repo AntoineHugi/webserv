@@ -152,7 +152,7 @@ void test_idle_timeout(const TestConfig &config, TestStats &stats)
 	sleep(15);
 
 	char buf;
-	char test_byte = 'X';
+	// char test_byte = 'X';
 	ssize_t received = recv(sock, &buf, 1, 0);
 	if (received == 0)
 	{

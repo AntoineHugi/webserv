@@ -542,8 +542,7 @@ bool Client::try_parse_body()
 					set_create_response();
 					return (1);
 				}
-				if (DEBUG)
-					std::cout << "\033[35m  Body parsed \033[0m" << std::endl;
+				print_yellow("----- Chunked body fully parsed -----\n", DEBUG);
 				set_process_request();
 				return (0);
 			}
@@ -570,8 +569,7 @@ bool Client::try_parse_body()
 		return (1);
 	}
 
-	if (DEBUG)
-		std::cout << "\033[35m  Body parsed \033[0m" << std::endl;
+	print_blue("----- Body parsed and validated! -----\n", DEBUG);
 	_request._request_data.erase(0, _request._content_length);
 	set_process_request();
 
@@ -619,8 +617,7 @@ bool Client::try_parse_header()
 	if ((_status_code = _request.http_requirements_met()) != 200)
 	{
 		set_create_response();
-		if (DEBUG)
-			std::cout << "failed requirements" << std::endl;
+		print_red("Error: failed requirements", DEBUG);
 		return (1);
 	}
 	if (!validate_permissions())
@@ -628,14 +625,11 @@ bool Client::try_parse_header()
 		set_create_response();
 		if (_request._content_length > 0)
 			_request._request_data.erase(0, std::min(_request._content_length, _request._request_data.size()));
-		if (DEBUG)
-			std::cout << "failed permissions" << std::endl;
+		print_red("Error: failed permissions", DEBUG);
 		return (1);
 	}
-	if (DEBUG)
-		std::cout << "\033[35m  Header parsed \033[0m" << std::endl;
+	print_blue("----- Header parsed and validated! -----\n", DEBUG);
 
-	/* if validation works, check if we should read the body next or go to the processing step */
 	if (is_body_chunked())
 		set_read_body();
 	else if (_request.http_can_have_body() && _request._content_length != 0)

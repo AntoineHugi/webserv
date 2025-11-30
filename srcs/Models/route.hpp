@@ -12,45 +12,48 @@
 
 class Route
 {
-private:
-	std::string _path;
-	std::string _root;
-	std::string _autoindex;
-	std::string _cgi_path;
-	unsigned long _client_max_body_size;
-	std::vector<std::string> _methods;
-	std::vector<std::string> _index;
-	std::map<std::string, std::string> _bouncer;
-	bool _cgi;
-	std::map <int, std::string> _redirect;
+	private:
+		std::string _path;
+		std::string _root;
+		std::string _autoindex;
+		std::string _cgi_path;
+		unsigned long _client_max_body_size;
+		std::vector<std::string> _methods;
+		std::vector<std::string> _index;
+		std::map<std::string, std::string> _bouncer;
+		bool _cgi;
+		std::map <int, std::string> _redirect;
 
-public:
-	Route();
-	Route(const Route &other);
-	Route &operator=(const Route &other);
-	~Route();
+	public:
+		Route();
+		Route(const Route &other);
+		Route &operator=(const Route &other);
+		~Route();
 
-	std::string get_path() const;
-	std::string get_root() const;
-	std::string get_autoindex() const;
-	std::string get_cgi_path() const;
-	unsigned long get_client_max_body_size() const;
-	std::vector<std::string> get_methods() const;
-	std::vector<std::string> get_index() const;
-	std::map<std::string, std::string> get_bouncer() const;
-	bool get_cgi() const;
-	std::map <int, std::string> get_redirect() const;
+		std::string get_path() const { return (_path); }
+		std::string get_root() const { return (_root); }
+		std::string get_autoindex() const { return (_autoindex); }
+		std::string get_cgi_path() const { return (_cgi_path); }
+		unsigned long get_client_max_body_size() const { return (_client_max_body_size); }
+		std::vector<std::string> get_methods() const { return (_methods); }
+		std::vector<std::string> get_index() const { return (_index); }
+		std::map<std::string, std::string> get_bouncer() const { return (_bouncer); }
+		bool get_cgi() const { return (_cgi); }
+		std::map<int, std::string> get_redirect() const { return (_redirect); }
 
-	void set_path(const std::string &path);
-	void set_root(const std::string &root);
-	void set_autoindex(const std::string &autoindex);
-	void set_cgi_path(const std::string &cgi_path);
-	void set_client_max_body_size(const std::string &max);
-	void set_methods(const std::vector<std::string> &methods);
-	void add_bouncer(std::string &key, std::string &value);
-	void set_index(std::vector<std::string> index);
-	void set_cgi(bool cgi);
-	void set_redirect(int key, std::string& value);
+		void set_path(const std::string &path) { _path = path; }
+		void set_root(const std::string &root) { _root = root; }
+		void set_cgi_path(const std::string &cgi_path) { _cgi_path = cgi_path; }
+		void add_bouncer(std::string &key, std::string &value) { _bouncer.insert(std::make_pair(key, value)); }
+		void set_index(std::vector<std::string> index) { _index = index; }
+		void set_cgi(bool cgi) { _cgi = cgi; }
+		void set_redirect(int key, std::string &value) { _redirect.insert(std::make_pair(key, value)); }
+
+		// Functions in cpp file
+		void set_autoindex(const std::string &autoindex);
+		void set_client_max_body_size(const std::string &max);
+		void set_methods(const std::vector<std::string> &methods);
+
 };
 
 #endif
