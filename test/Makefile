@@ -18,7 +18,8 @@ CATEGORY_SRCS := test_basic.cpp \
 		test_post_delete.cpp \
 		test_redirect.cpp \
 		test_cgi.cpp \
-		test_cgi_env.cpp
+		test_cgi_env.cpp \
+		test_42_evaluation.cpp
 MAIN_SRC := test_suite.cpp
 
 SRCS := $(FRAMEWORK_SRCS) $(CATEGORY_SRCS) $(MAIN_SRC)
@@ -89,6 +90,10 @@ test-cgi-env: $(TARGET)
 	@echo "$(BLUE)Running CGI environment variable tests only...$(NC)"
 	@./$(TARGET) --only cgi-env
 
+test-42-eval: $(TARGET)
+	@echo "$(BLUE)Running 42 evaluation tests only...$(NC)"
+	@./$(TARGET) --only 42-eval
+
 test-verbose: $(TARGET)
 	@echo "$(BLUE)Running all tests (verbose)...$(NC)"
 	@./$(TARGET) --verbose
@@ -118,6 +123,7 @@ help:
 	@echo "  $(GREEN)test-pipeline$(NC)    Run only pipeline tests"
 	@echo "  $(GREEN)test-cgi$(NC)         Run only CGI tests"
 	@echo "  $(GREEN)test-cgi-env$(NC)     Run only CGI environment variable tests"
+	@echo "  $(GREEN)test-42-eval$(NC)     Run only 42 evaluation tests"
 	@echo "  $(GREEN)test-verbose$(NC)     Run all tests with verbose output"
 	@echo "  $(GREEN)test-full$(NC)        Auto-start server and run tests"
 	@echo "  $(GREEN)clean$(NC)            Remove object files"
@@ -128,4 +134,4 @@ help:
 	@echo "  ./$(TARGET) --help       Show all command-line options"
 	@echo "  ./$(TARGET) --list       List all test categories"
 
-.PHONY: all clean fclean re test test-basic test-keepalive test-chunked test-pipeline test-cgi test-cgi-env test-verbose test-full help
+.PHONY: all clean fclean re test test-basic test-keepalive test-chunked test-pipeline test-cgi test-cgi-env test-42-eval test-verbose test-full help

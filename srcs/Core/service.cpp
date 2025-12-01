@@ -113,7 +113,7 @@ void Service::poll_service()
 				}
 				if ((this->fds["poll_fds"][i].revents & POLLIN || client.leftover_chunk()) && (client.can_i_read_header() == true || client.can_i_read_body() == true))
 					service_reading(this->fds["poll_fds"], i);
-				if (i < (int)this->fds["poll_fds"].size() && (this->fds["poll_fds"][i].revents & POLLOUT) && client.can_i_process_request() == true)
+				if (i < (int)this->fds["poll_fds"].size() && (this->fds["poll_fds"][i].revents & POLLOUT) && (client.can_i_process_request() == true || client.can_i_parse_body() == true))
 					service_processing(this->fds["poll_fds"], i);
 				if (i < (int)this->fds["poll_fds"].size() && (this->fds["poll_fds"][i].revents & POLLOUT) && (client.can_i_create_response() == true || client.can_i_send_response() == true))
 					service_writing(this->fds["poll_fds"], i);

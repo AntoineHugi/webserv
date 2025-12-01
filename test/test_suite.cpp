@@ -15,6 +15,7 @@ void run_post_delete(const TestConfig &config, TestStats &stats);
 void run_cgi_tests(const TestConfig &config, TestStats &stats);
 void run_cgi_env_tests(const TestConfig &config, TestStats &stats);
 void run_redirect_test(const TestConfig &config, TestStats &stats);
+void run_42_evaluation_tests(const TestConfig &config, TestStats &stats);
 
 // ============================================================================
 // CONFIGURATION & COMMAND LINE PARSING
@@ -44,6 +45,7 @@ void print_usage(const char *program_name)
 	std::cout << "  cgi                  CGI script execution\n";
 	std::cout << "  cgi-env              CGI environment variables\n";
 	std::cout << "  redirect             redirection\n";
+	std::cout << "  42-eval              42 Evaluation scale tests\n";
 	std::cout << "  all                  All categories (default)\n\n";
 	std::cout << "Examples:\n";
 	std::cout << "  " << program_name << "                    # Run all tests\n";
@@ -72,6 +74,7 @@ TestConfig parse_args(int argc, char **argv)
 	config.enabled_categories["cgi"] = true;
 	config.enabled_categories["cgi-env"] = true;
 	config.enabled_categories["redirect"] = true;
+	config.enabled_categories["42-eval"] = true;
 
 	for (int i = 1; i < argc; i++)
 	{
@@ -96,6 +99,7 @@ TestConfig parse_args(int argc, char **argv)
 			std::cout << "  - cgi\n";
 			std::cout << "  - cgi-env\n";
 			std::cout << "  - redirect\n";
+			std::cout << "  - 42-eval\n";
 			exit(0);
 		}
 		else if (arg == "--host" && i + 1 < argc)
@@ -128,6 +132,7 @@ TestConfig parse_args(int argc, char **argv)
 			config.enabled_categories["cgi"] = false;
 			config.enabled_categories["cgi-env"] = false;
 			config.enabled_categories["redirect"] = false;
+			config.enabled_categories["42-eval"] = false;
 			config.enabled_categories[argv[++i]] = true;
 		}
 		else if (arg == "--skip" && i + 1 < argc)
@@ -308,6 +313,16 @@ int main(int argc, char **argv)
 	if (config.enabled_categories["redirect"])
 	{
 		run_redirect_test(config, stats);
+		if (config.stop_on_fail && stats.failed > 0)
+		{
+			print_summary(stats);
+			return 1;
+		}
+	}
+
+	if (config.enabled_categories["42-eval"])
+	{
+		run_42_evaluation_tests(config, stats);
 		if (config.stop_on_fail && stats.failed > 0)
 		{
 			print_summary(stats);

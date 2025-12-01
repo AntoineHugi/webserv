@@ -337,15 +337,15 @@ int Request::parse_json()
 
 int Request::treat_as_raw_body()
 {
-	const size_t CHUNK_SIZE = 5;
+	const size_t CHUNK_SIZE = 500000;
 
 	std::cout << "RAW BODYYY PROCESSING" << std::endl;
 	// First call - initialize
-	if (_body_parse_pos == 0)
-	{
-			_body_data.clear();  // Start fresh
-			_body_data.reserve(_body.size());
-	}
+	// if (_body_parse_pos == 0)
+	// {
+	// 		_body_data.clear();  // Start fresh
+	// 		_body_data.reserve(_body.size());
+	// }
 	size_t remaining = _body.size() - _body_parse_pos;
 	size_t to_process = std::min(CHUNK_SIZE, remaining);
 
@@ -361,10 +361,10 @@ int Request::treat_as_raw_body()
 			_body_data.erase(_body_data.end() - 2, _body_data.end());
 		// _body.clear();
 		// _body_parse_pos = 0;
-		return (0);  // Done
+		return (2);  // Done
 	}
 
-	return (2);  // More chunks to process
+	return (0);  // More chunks to process
 }
 
 

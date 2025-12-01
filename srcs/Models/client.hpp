@@ -27,6 +27,7 @@ class Client
 		enum State {
 			READING_HEADERS,
 			READING_BODY,
+			PARSING_BODY,
 			PROCESSING_REQUEST,
 			CREATING_RESPONSE,
 			WAITING_CGI,
@@ -78,6 +79,7 @@ class Client
 		enum State get_state() const { return _state; };
 		bool can_i_read_header() const { return _state == READING_HEADERS; };
 		bool can_i_read_body() const { return _state == READING_BODY; };
+		bool can_i_parse_body() const { return _state == PARSING_BODY; };
 		bool can_i_process_request() const { return _state == PROCESSING_REQUEST; };
 		bool can_i_create_response() const { return _state == CREATING_RESPONSE; };
 		bool am_i_waiting_cgi() const { return _state == WAITING_CGI; };
@@ -89,6 +91,7 @@ class Client
 		void set_status_code(int code) { _status_code = code; };
 		void set_read_header() { _state = READING_HEADERS; };
 		void set_read_body() { _state = READING_BODY; };
+		void set_parse_body() { _state = PARSING_BODY; };
 		void set_process_request() { _state = PROCESSING_REQUEST; };
 		void set_create_response() { _state = CREATING_RESPONSE; };
 		void set_wait_cgi() { _state = WAITING_CGI; };
@@ -102,9 +105,9 @@ class Client
 		int		handle_read();
 		int		read_to_buffer();
 		bool	try_parse_header();
-		bool	try_parse_body();
+		int	try_parse_body();
 		bool	chunked_body_finished() const;
-		bool	decode_chunked_body();
+		int	decode_chunked_body();
 		bool	validate_permissions();
 		int		find_best_route_index(std::vector<Route>& routes);
 		bool	cgi_matches(const std::string &uri, const std::string &route);

@@ -469,35 +469,42 @@ int Client::read_to_buffer()
 		return -1;
 }
 
-bool Client::decode_chunked_body()
+int Client::decode_chunked_body()
 {
 	std::string raw = _request.get_request_data();
 	size_t pos = 0;
-	_request.set_body("");
-
-	while (true)
+	size_t chunk_size = 0;
+	if (raw.empty())
+		return (2);
+	while (pos < 500000)
 	{
 		size_t size_end = raw.find("\r\n", pos);
 		if (size_end == std::string::npos)
-			return (false);
+			return (1);
 
 		std::string hexsize = raw.substr(pos, size_end - pos);
-		size_t chunk_size = strtoul(hexsize.c_str(), NULL, 16);
+		chunk_size = strtoul(hexsize.c_str(), NULL, 16);
 		pos = size_end + 2;
 
 		if (chunk_size == 0)
 			break;
 
 		if (raw.size() < pos + chunk_size + 2)
-			return (false);
+			return (1);
 
 		_request.set_body(_request.get_body().append(raw, pos, chunk_size));
 		pos += chunk_size + 2;
 	}
+	std::cout << "cleaning up chunked body, pos: " << pos << std::endl;
 	_request.set_request_data(_request.get_request_data().erase(0, pos));
-	if (!_request.get_request_data().empty())
-		_flags._leftover_chunk = true;
-	return (true);
+	if (chunk_size == 0)
+	{
+		_request.set_request_data(_request.get_request_data().erase(0, 2));
+		if (!_request.get_request_data().empty())
+			_flags._leftover_chunk = true;
+		return (2);
+	}
+	return (0);
 }
 
 bool Client::chunked_body_finished() const
@@ -507,62 +514,63 @@ bool Client::chunked_body_finished() const
 	return false;
 }
 
-bool Client::try_parse_body()
+int Client::try_parse_body()
 {
 	/* send to chunked version */
 	if (DEBUG)
 	{
-		std::cout << "Body size: " << _request.get_request_data().size() << " bytes" << std::endl;
+		std::cout << "Request Data size: " << _request.get_request_data().size() << " bytes" << std::endl;
+		std::cout << "Body size: " << _request.get_body().size() << " bytes" << std::endl;
+		std::cout << "Body_data size: " << _request._body_data.size() << " bytes" << std::endl;
 		std::cout << "Header size: " << _request.get_header().size() << " bytes" << std::endl;
 		std::cout << "Max client body size: " << _request.get_client_max_body_size() << " bytes" << std::endl;
 	}
 
 	if (is_body_chunked())
 	{
-		// std::cout << "body is chunked" << std::endl;
-		if (chunked_body_finished())
+		std::cout << "body is chunked" << std::endl;
+		std::cout << "chunked_body_finished" << std::endl;
+
+		int check_decoded = decode_chunked_body();
+		std::cout << "check_decoded: " << check_decoded << std::endl;
+		if (check_decoded == 1)
 		{
-			if (!decode_chunked_body())
+			_status_code = 400;
+			set_create_response();
+			return (1);
+		}
+		else if(check_decoded == 0)
+			return (0);
+		else if(check_decoded == 2)
+		{
+			if (_request.get_body().size() > _request.get_client_max_body_size())
+			{
+				_status_code = 413;
+				set_create_response();
+				return (1);
+			}
+			int check = _request.parse_body();
+			std::cout << "check: " << check << std::endl;
+			if (check == 1)
 			{
 				_status_code = 400;
 				set_create_response();
 				return (1);
 			}
-			else
-			{
-				if (_request.get_body().size() > _request.get_client_max_body_size())
-				{
-					_status_code = 413;
-					set_create_response();
-					return (1);
-				}
-				int check = _request.parse_body();
-				std::cout << "check: " << check << std::endl;
-				if (check == 1)
-				{
-					_status_code = 400;
-					set_create_response();
-					return (1);
-				}
-				else if (check == 2)
-					return (0);
-
-				for (size_t i = 0; i < _request._body_data.size(); i++)
-				{
-					std::cout << _request._body_data[i] << std::endl;
-				}
-
-				print_yellow("----- Chunked body fully parsed -----\n", DEBUG);
-				set_process_request();
+			else if (check == 0)
 				return (0);
-			}
+
+			// for (size_t i = 0; i < _request._body_data.size(); i++)
+			// {
+			// 	std::cout << _request._body_data[i] << std::endl;
+			// }
+
+			print_yellow("----- Chunked body fully parsed -----\n", DEBUG);
+			set_process_request();
+			return (2);
 		}
 		return (0);
 	}
-
-	/* if we didn't get the get the whole data yet, skip for another turn of reading */
-	if (_request.get_request_data().size() < _request.get_content_length())
-		return (0);
 
 	/* once we have everything, dump it into request._body */
 	_request.set_body(_request.get_request_data().substr(0, _request.get_content_length()));
@@ -580,7 +588,7 @@ bool Client::try_parse_body()
 		set_create_response();
 		return (1);
 	}
-	else if (check == 2)
+	else if (check == 0)
 		return (0);
 
 	for (size_t i = 0; i < _request._body_data.size(); i++)
@@ -598,13 +606,13 @@ bool Client::try_parse_body()
 		_flags._leftover_chunk = true;
 	else
 		_flags._leftover_chunk = false;
-	return (0);
+	return (2);
 }
 
 bool Client::try_parse_header()
 {
 	/* Checking if we're exceeding the size and if the end of header indicator has been found */
-	// std::cout << "Header size: " << _request._request_data.size() << " bytes" << std::endl;
+	// std::cout << "Header size: " << _request.get_request_data().size() << " bytes" << std::endl;
 
 	size_t pos = _request.get_request_data().find("\r\n\r\n");
 	if (pos == std::string::npos)

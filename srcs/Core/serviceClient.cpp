@@ -26,7 +26,22 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 	Client &client = clients[poll_fds[i].fd];
 
 	client.update_last_interaction();
-	if (client._request._is_cgi() && client.get_status_code() < 300)
+	if (client.can_i_parse_body() == true)
+	{
+		int check = client.try_parse_body();
+		if (check == 1)
+		{
+			if (client.can_i_create_response())
+				return;
+			else
+				handle_connection(poll_fds, i);
+		}
+		else if (check == 2)
+			client.set_process_request();
+		else
+			return;
+	}
+	else if (client._request._is_cgi() && client.get_status_code() < 300)
 	{
 		print_white(">>> This client will create CGI processes and wait", DEBUG);
 		if (client.can_i_process_request())

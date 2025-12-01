@@ -164,6 +164,7 @@ int Request::parse_body()
 {
 	print_blue("----- Parsing body... -----", DEBUG);
 	std::string content_type = _header_kv["content-type"];
+	std::cout << "Content-Type: " << content_type << std::endl;
 	if (content_type == "application/x-www-form-urlencoded")
 		return (parse_url_encoded());
 	else if (content_type.find("multipart/form-data") != std::string::npos)

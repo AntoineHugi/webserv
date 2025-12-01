@@ -116,14 +116,29 @@ int Client::handle_read()
 
 	if (can_i_read_body())
 	{
-		if (try_parse_body() == 1)
-			return 1;
-		else
+		if (is_body_chunked())
 		{
-			if (can_i_process_request())
-				return (2);
+			if(chunked_body_finished() == true)
+			{
+				set_parse_body();
+				return 2;
+			}
+		}
+		else if (_request.get_request_data().size() >= _request.get_content_length())
+		{
+			set_parse_body();
+			return 2;
 		}
 	}
+
+	// 	if (try_parse_body() == 1)
+	// 		return 1;
+	// 	else
+	// 	{
+	// 		if (can_i_process_request())
+	// 			return (2);
+	// 	}
+	// }
 	return 0;
 }
 
