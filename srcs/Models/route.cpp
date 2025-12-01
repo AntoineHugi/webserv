@@ -62,7 +62,6 @@ void Route::set_client_max_body_size(const std::string &max)
 {
 	if (max.empty())
 		throw(std::runtime_error("Invalid max client body size - empty string"));
-	errno = 0;
 	char *last;
 	unsigned long value = std::strtoul(max.c_str(), &last, 10);
 	if (*last != '\0')
