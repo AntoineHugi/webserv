@@ -67,7 +67,7 @@ int Client::handle_read()
 	{
 		std::cout << "@@@@@@  IMPOSSIBLE >>>>>>>>>> Client not in a reading state!" << std::endl;
 		_status_code = 500;
-		set_create_response();
+		set_process_request();
 		return 1;
 	}
 
@@ -77,7 +77,7 @@ int Client::handle_read()
 		if (read_result == -1)
 		{
 			_status_code = 500;
-			set_create_response();
+			set_process_request();
 			return 1;
 		}
 
@@ -94,19 +94,7 @@ int Client::handle_read()
 	if (can_i_read_header())
 	{
 		if (try_parse_header() == 1)
-		{
-			if (get_status_code() > 400)
-			{
-				int status_code = get_status_code();
-				if (!get_server()->get_error_page().empty() && !get_server()->get_error_page()[status_code].empty())
-				{
-					//Method::get_file(*this, get_server()->get_error_page()[status_code]);
-					set_status_code(status_code);
-				}
-			}
 			return (1);
-		}
-
 		else
 		{
 			if (can_i_process_request())
@@ -161,6 +149,7 @@ int Client::handle_write()
 	{
 		std::cout << "@@@@@@  IMPOSSIBLE >>>>>>>>>> Client not geting a reponse!" << std::endl;
 		_status_code = 500;
+		create_default_error();
 		set_create_response();
 		return 1;
 	}

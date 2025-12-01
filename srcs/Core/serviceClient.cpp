@@ -11,7 +11,7 @@ void Service::service_reading(std::vector<struct pollfd> &poll_fds, int i)
 		return;
 	else if (read_status == 1)
 	{
-		if (client.can_i_create_response())
+		if (client.can_i_create_response() || client.can_i_process_request() || client.am_i_waiting_file())
 			poll_fds[i].events = POLLOUT;
 		else
 			handle_connection(poll_fds, i);
@@ -26,7 +26,30 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 	Client &client = clients[poll_fds[i].fd];
 
 	client.update_last_interaction();
-	if (client._request._isCGI && client.get_status_code() < 300)
+	if (client.get_status_code() >= 400)
+	{
+		int status_code = client.get_status_code();
+		if (!client.get_server()->get_error_page().empty() && !client.get_server()->get_error_page()[status_code].empty())
+		{
+			int fd = Method::get_file(client, client.get_server()->get_error_page()[status_code]);
+			if (fd > 0)
+			{
+				add_poll_to_vectors(fd, (POLLIN | POLLOUT), "files_fds");
+				files_fds.insert(std::make_pair(fd, &client));
+				client.set_wait_file();
+				return;
+			}
+		}
+		client.create_default_error();
+		client.set_create_response();
+		return ;
+	}
+	else if (client.get_status_code() == 301 || client.get_status_code() == 302)
+	{
+		client.set_create_response();
+		return;
+	}
+	else if (client._request._isCGI && client.get_status_code() < 300)
 	{
 		print_white(">>> This client will create CGI processes and wait", DEBUG);
 		if (client.can_i_process_request())
@@ -42,18 +65,15 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 		return;
 	}
 	else if (client.am_i_waiting_file())
-	{
-		
-		std::cout << "am I waiting, statu :" << std::endl;
 		return;
-	}
 	else
 	{
 		int fd = client.process_request();
-		std::cout << "fd is : " << fd << std::endl;
 
-		if (fd <= -1)
-			client.set_create_response();
+		if (fd == -1)
+			client.set_process_request();
+		
+		/* no file need, just continue (ex: delete request, or get directory) */
 		else if (fd == 0)
 			client.set_create_response();
 		else

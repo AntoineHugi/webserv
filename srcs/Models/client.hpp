@@ -136,6 +136,7 @@ class Client
 		bool	should_keep_alive() const { return _flags._should_keep_alive; };
 		bool	leftover_chunk() const { return _flags._leftover_chunk; };
 		bool	request_complete() const { return _state == PROCESSING_REQUEST; };
+		void	create_default_error();
 };
 
 

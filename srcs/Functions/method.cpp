@@ -135,7 +135,6 @@ int Method::handle_get(Client &client)
 		{
 			DIR *dir = opendir(client._request._fullPathURI.c_str());
 			get_directory(client, dir);
-
 		}
 		else
 			client.set_status_code(404);
@@ -214,49 +213,43 @@ int Method::input_data(Client &client)
 	return 0;
 }
 
-void Method::handle_post(Client &client)
+int Method::handle_post(Client &client)
 {
 	if (DEBUG)
 		std::cout << "content-type: " << client._request._header_kv["content-type"] << std::endl;
 	if (client._request._header_kv["content-type"] == "application/x-www-form-urlencoded")
 	{
 		if (input_data(client))
-			return;
+			return (-1);
 		client.set_status_code(204);
-		return;
 	}
 	else if (client._request._header_kv["content-type"].find("multipart/form-data") != std::string::npos)
 	{
 		if (save_uploaded_files(client, client._request._multiparts, client._request._fullPathURI) == 1)
 		{
 			client.set_status_code(500);
-			return;
+			return (-1);
 		}
 		client.set_status_code(201);
-		return;
-	}
-	else if (client._request._header_kv["content-type"].empty())
-	{
-		client.set_status_code(200);
-		return;
 	}
 	else
-	{
 		client.set_status_code(200);
-		return;
-	}
-	return;
+	return (0);
 }
 
-void Method::handle_delete(Client &client)
+int Method::handle_delete(Client &client)
 {
 	if (S_ISREG(client._request._stat.st_mode))
 	{
 		if (std::remove(client._request._fullPathURI.c_str()) != 0)
 			client.set_status_code(500);
 		else
+		{
 			client.set_status_code(204);
+			return (0);
+		}
 	}
 	else
 		client.set_status_code(500);
+	return (-1);
 }

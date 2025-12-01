@@ -35,13 +35,13 @@ class Method
 		static void	get_directory(Client &client, DIR* directory);
 
 		/* POST method */
-		static void	handle_post(Client& client);
+		static int	handle_post(Client& client);
 		static int	input_data(Client& client);
 		static std::string	double_quote_handling(const std::string& string);
 		static int	save_uploaded_files(Client& client, std::vector<MultiPart>& parts, const std::string& upload_directory);
 
 		/* DELETE method */
-		static void	handle_delete(Client& client);
+		static int	handle_delete(Client& client);
 };
 
 #endif

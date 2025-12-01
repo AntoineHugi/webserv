@@ -97,16 +97,13 @@ void Service::poll_service()
 					std::ostringstream ss;
 					ss << (this->fds["poll_fds"].size() - this->fds["server_fds"].size());
 					std::string msg = "New client connected. Total clients: " + ss.str();
-					print_cyan(msg, DEBUG);
+					print_cyan(msg, true);
 				}
 			}
 			else if (cgi_fd_if_cgi != -1)
 				cgi_handler(i);
 			else if (file_fd_if_files != -1)
-			{
-				std::cout << "file triggered, fd : " << file_fd_if_files << std::endl;
 				file_handler(file_fd_if_files);
-			}
 			else
 			{
 				Client &client = clients[this->fds["poll_fds"][i].fd];

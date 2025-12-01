@@ -37,3 +37,10 @@ void Client::refresh_client()
 	_flags._body_chunked = false;
 	_status_code = 200;
 }
+
+void	Client::create_default_error()
+{
+	std::string msg = "<!DOCTYPE html><html><head><title>404 Not Found</title></head><body>  <h1>404 Not Found</h1>  <p>The requested resource was not found on this server.</p></body></html>";
+	_response.set_content_type("text/html");
+	_response.set_body(msg);
+}

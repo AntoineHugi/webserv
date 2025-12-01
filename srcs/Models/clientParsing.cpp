@@ -75,7 +75,7 @@ bool Client::check_subnet(const std::string &rule_target, const std::string &cli
 		if (prefix < 0 || prefix > 32)
 		{
 			set_status_code(500);
-			set_create_response();
+			set_process_request();
 			return false;
 		}
 
@@ -83,7 +83,7 @@ bool Client::check_subnet(const std::string &rule_target, const std::string &cli
 		if (inet_pton(AF_INET, client_ip.c_str(), &addr) != 1)
 		{
 			set_status_code(500);
-			set_create_response();
+			set_process_request();
 			return (false);
 		}
 		uint32_t client = ntohl(addr.s_addr);
@@ -91,7 +91,7 @@ bool Client::check_subnet(const std::string &rule_target, const std::string &cli
 		if (inet_pton(AF_INET, network.c_str(), &addr) != 1)
 		{
 			set_status_code(500);
-			set_create_response();
+			set_process_request();
 			return (false);
 		}
 		uint32_t net = ntohl(addr.s_addr);
@@ -524,7 +524,7 @@ bool Client::try_parse_body()
 			if (!decode_chunked_body())
 			{
 				_status_code = 400;
-				set_create_response();
+				set_process_request();
 				return (1);
 			}
 			else
@@ -532,13 +532,13 @@ bool Client::try_parse_body()
 				if (_request._body.size() > _request._client_max_body_size)
 				{
 					_status_code = 413;
-					set_create_response();
+					set_process_request();
 					return (1);
 				}
 				if (_request.parse_body())
 				{
 					_status_code = 400;
-					set_create_response();
+					set_process_request();
 					return (1);
 				}
 				print_yellow("----- Chunked body fully parsed -----\n", DEBUG);
@@ -558,13 +558,13 @@ bool Client::try_parse_body()
 	if (_request._body.size() > _request._client_max_body_size)
 	{
 		_status_code = 413;
-		set_create_response();
+		set_process_request();
 		return (1);
 	}
 	if (_request.parse_body())
 	{
 		_status_code = 400;
-		set_create_response();
+		set_process_request();
 		return (1);
 	}
 
@@ -592,14 +592,14 @@ bool Client::try_parse_header()
 	if (_request.parse_header() != 0)
 	{
 		_status_code = 400;
-		set_create_response();
+		set_process_request();
 		return (1);
 	}
 	_request._request_data.erase(0, pos + 4);
 	if (_request._header.size() > 32768)
 	{
 		_status_code = 431;
-		set_create_response();
+		set_process_request();
 		return (1);
 	}
 	set_flags();
@@ -608,18 +608,18 @@ bool Client::try_parse_header()
 	if (static_cast<unsigned long>(_request._content_length) > _server->get_client_max_body_size())
 	{
 		_status_code = 413;
-		set_create_response();
+		set_process_request();
 		return (1);
 	}
 	if ((_status_code = _request.http_requirements_met()) != 200)
 	{
-		set_create_response();
+		set_process_request();
 		print_red("Error: failed requirements", DEBUG);
 		return (1);
 	}
 	if (!validate_permissions())
 	{
-		set_create_response();
+		set_process_request();
 		if (_request._content_length > 0)
 			_request._request_data.erase(0, std::min(_request._content_length, _request._request_data.size()));
 		print_red("Error: failed permissions", DEBUG);
