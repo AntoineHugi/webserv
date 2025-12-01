@@ -1,6 +1,41 @@
 #include "service.hpp"
 #include <cmath>
 
+void free_env(char **envp)
+{
+	if (envp == NULL)
+		return;
+	for (int i = 0; envp[i] != NULL; i++)
+		free(envp[i]);
+	delete[] envp;
+}
+
+void Service::cleanup_cgi_process(int cgi_fd)
+{
+	if (cgi_processes.find(cgi_fd) == cgi_processes.end())
+		return;
+
+	CGIProcess *cgi = cgi_processes[cgi_fd];
+	cgi_processes.erase(cgi_fd);
+
+	// Check if any OTHER fd still references this pointer
+	// (both pipe_to_cgi and pipe_from_cgi can point to same CGIProcess)
+	bool is_still_referenced = false;
+	for (std::map<int, CGIProcess *>::iterator it = cgi_processes.begin();
+		 it != cgi_processes.end(); ++it)
+	{
+		if (it->second == cgi)
+		{
+			is_still_referenced = true;
+			break;
+		}
+	}
+
+	// Only delete if no other fd references this pointer
+	if (!is_still_referenced && cgi != NULL)
+		delete cgi;
+}
+
 char **setup_env(std::map<int, Client> clients, int fd)
 {
 	std::ostringstream ss;
@@ -82,13 +117,14 @@ void Service::cgi_handler(int i)
 			int exit_code = WEXITSTATUS(status);
 			print_red("CGI exited with code: " + convert_to_string(exit_code), true);
 
-			client.set_status_code(500);
-			client.set_flags_error();
-			client.set_process_request();
-			remove_fd(cgi.get_pipe_to_cgi());
-			remove_fd(cgi.get_pipe_from_cgi());
-			delete &cgi;
-			return;
+		client.set_status_code(500);
+		client.set_flags_error();
+		client.set_process_request();
+		remove_fd(cgi.get_pipe_to_cgi());
+		remove_fd(cgi.get_pipe_from_cgi());
+		cleanup_cgi_process(cgi.get_pipe_to_cgi());
+		cleanup_cgi_process(cgi.get_pipe_from_cgi());
+		return;
 		}
 		else if (bytes_sent == 0)
 		{
@@ -156,21 +192,23 @@ void Service::cgi_handler(int i)
 					std::cerr << "CGI failed with exit code " << exit_code << std::endl;
 					client.set_status_code(500);
 				}
-			}
-			remove_fd(cgi.get_pipe_from_cgi());
-			delete &cgi;
-			client.set_create_response();
 		}
-		else
-		{
-			std::cerr << "Read error from CGI: " << strerror(errno) << std::endl;
-			kill(cgi.get_pid(), SIGKILL);
-			waitpid(cgi.get_pid(), NULL, 0);
-			remove_fd(cgi.get_pipe_from_cgi());
-			delete &cgi;
-			client.set_status_code(500);
-			client.set_process_request();
-		}
+		int pipe_fd = cgi.get_pipe_from_cgi();
+		remove_fd(pipe_fd);
+		cleanup_cgi_process(pipe_fd);
+		client.set_create_response();
+	}
+	else
+	{
+		std::cerr << "Read error from CGI: " << strerror(errno) << std::endl;
+		kill(cgi.get_pid(), SIGKILL);
+		waitpid(cgi.get_pid(), NULL, 0);
+		int pipe_fd = cgi.get_pipe_from_cgi();
+		remove_fd(pipe_fd);
+		cleanup_cgi_process(pipe_fd);
+		client.set_status_code(500);
+		client.set_process_request();
+	}
 	}
 	return;
 }
@@ -235,8 +273,12 @@ void Service::setup_cgi_request(int i)
 
 		execve(argv[0], argv, envp);
 
+		// If execve fails, clean up before exit
 		if (DEBUG)
 			std::cerr << "execve failed: " << strerror(errno) << std::endl;
+		free_env(envp);
+		free(argv[0]);
+		free(argv[1]);
 		exit(1);
 	}
 	else
