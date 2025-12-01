@@ -47,6 +47,10 @@ class Request
 		std::vector<MultiPart> _multiparts;
 		std::vector<char> _body_data;
 
+		/* for GET */
+		std::vector<char> _request_file_data;
+		std::string	_filepath;
+
 		Request();
 		Request(const Request &other);
 		Request &operator=(const Request &other);

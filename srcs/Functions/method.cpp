@@ -102,7 +102,7 @@ void Method::determine_content_type(Client &client, std::string filepath)
 	return;
 }
 
-void Method::get_file(Client &client, std::string filepath)
+int Method::get_file(Client &client, std::string filepath)
 {
 	int fd = open(filepath.c_str(), O_RDONLY);
 	if (fd == -1)
@@ -110,28 +110,15 @@ void Method::get_file(Client &client, std::string filepath)
 		if (DEBUG)
 			std::cout << "Error opening requested file" << std::endl;
 		client.set_status_code(500);
-		return;
+		return (-1);
 	}
-	char buffer[1024];
-	ssize_t bytes;
-	std::string body = client._response.get_body();
-	while ((bytes = read(fd, buffer, sizeof(buffer))) > 0)
-		body.append(buffer, bytes);
-	if (bytes == -1)
-	{
-		if (DEBUG)
-			std::cout << "Error reading request target" << std::endl;
-		client.set_status_code(500);
-		close(fd);
-		return;
-	}
-	client._response.set_body(body);
-	close(fd);
-	determine_content_type(client, filepath);
-	client.set_status_code(200);
+
+	client.set_wait_file();
+	client._request._filepath = filepath;
+	return (fd);
 }
 
-void Method::handle_get(Client &client)
+int Method::handle_get(Client &client)
 {
 	if (client._request._isDirectory)
 	{
@@ -141,26 +128,21 @@ void Method::handle_get(Client &client)
 		{
 			std::string attempt = client._request._fullPathURI + "/" + indices[i];
 			if (access(attempt.c_str(), R_OK) == 0)
-			{
-				get_file(client, attempt);
-				return;
-			}
+				return(Method::get_file(client, attempt));
 		}
 		/* if not, then serves the directory list if autoindex is on */
 		if (client._request._autoindex)
 		{
 			DIR *dir = opendir(client._request._fullPathURI.c_str());
 			get_directory(client, dir);
+
 		}
 		else
-		{
 			client.set_status_code(404);
-			return;
-		}
 	}
 	else
-		Method::get_file(client, client._request._fullPathURI);
-	return;
+		return(Method::get_file(client, client._request._fullPathURI));
+	return (0);
 }
 
 int Method::save_uploaded_files(Client &client, std::vector<MultiPart> &parts, const std::string &upload_directory)

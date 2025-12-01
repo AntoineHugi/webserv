@@ -1,8 +1,9 @@
 #include "service.hpp"
-#include "serviceUtils.cpp"
-#include "serviceClient.cpp"
 #include "serviceCGI.cpp"
+#include "serviceClient.cpp"
+#include "serviceFile.cpp"
 #include "serviceHandleConnection.cpp"
+#include "serviceUtils.cpp"
 
 #include <iostream>
 #include <sys/socket.h>
@@ -86,6 +87,7 @@ void Service::poll_service()
 
 			int server_fd_if_new_client = server_fd_for_new_client(this->fds["poll_fds"][i].fd, this->fds["server_fds"]);
 			int cgi_fd_if_cgi = cgi_fd_for_cgi(this->fds["poll_fds"][i].fd, this->fds["cgi_fds"]);
+			int file_fd_if_files = cgi_fd_for_cgi(this->fds["poll_fds"][i].fd, this->fds["files_fds"]);
 
 			if (server_fd_if_new_client != -1)
 			{
@@ -100,6 +102,11 @@ void Service::poll_service()
 			}
 			else if (cgi_fd_if_cgi != -1)
 				cgi_handler(i);
+			else if (file_fd_if_files != -1)
+			{
+				std::cout << "file triggered, fd : " << file_fd_if_files << std::endl;
+				file_handler(file_fd_if_files);
+			}
 			else
 			{
 				Client &client = clients[this->fds["poll_fds"][i].fd];
@@ -115,7 +122,7 @@ void Service::poll_service()
 				}
 				if ((this->fds["poll_fds"][i].revents & POLLIN || client.leftover_chunk()) && (client.can_i_read_header() == true || client.can_i_read_body() == true))
 					service_reading(this->fds["poll_fds"], i);
-				if (i < (int)this->fds["poll_fds"].size() && (this->fds["poll_fds"][i].revents & POLLOUT) && client.can_i_process_request() == true)
+				if (i < (int)this->fds["poll_fds"].size() && (this->fds["poll_fds"][i].revents & POLLOUT) && (client.can_i_process_request() == true || client.am_i_waiting_file() == true))
 					service_processing(this->fds["poll_fds"], i);
 				if (i < (int)this->fds["poll_fds"].size() && (this->fds["poll_fds"][i].revents & POLLOUT) && (client.can_i_create_response() == true || client.can_i_send_response() == true))
 					service_writing(this->fds["poll_fds"], i);

@@ -2,7 +2,7 @@
 
 void Service::add_client_to_polls(std::map<int, Client> &clients, int fd, Server &server)
 {
-	print_header("ADDING CGI");
+	print_header("ADDING CLIENTS TO POLL");
 	print_green("New connection!", DEBUG);
 
 	struct sockaddr_in client_addr;
@@ -36,10 +36,13 @@ void Service::set_polls()
 	std::vector<struct pollfd> poll_fds;
 	std::vector<struct pollfd> server_fds;
 	std::vector<struct pollfd> cgi_fds;
+	std::vector<struct pollfd> files_fds;
+
 
 	this->fds.insert(std::pair<std::string, std::vector<struct pollfd> >("poll_fds", poll_fds));
 	this->fds.insert(std::pair<std::string, std::vector<struct pollfd> >("server_fds", server_fds));
 	this->fds.insert(std::pair<std::string, std::vector<struct pollfd> >("cgi_fds", cgi_fds));
+	this->fds.insert(std::pair<std::string, std::vector<struct pollfd> >("files_fds", files_fds));
 
 	for (size_t i = 0; i < this->servers.size(); i++)
 		add_poll_to_vectors(servers[i].get_sock(), POLLIN, "server_fds");
@@ -78,14 +81,26 @@ void Service::remove_fd(int fd)
 {
 	close(fd);
 	print_yellow(" // Removing fds //", DEBUG);
+
+	
 	int index = find_fd_index_in_vector(fd, this->fds["poll_fds"]);
+	print_yellow(" Index is: " + convert_to_string(index), DEBUG);
 	if (index != -1)
 		this->fds["poll_fds"].erase(this->fds["poll_fds"].begin() + index);
+
 	index = find_fd_index_in_vector(fd, this->fds["cgi_fds"]);
+	print_yellow(" Index is: " + convert_to_string(index), DEBUG);
 	if (index != -1)
 		this->fds["cgi_fds"].erase(this->fds["cgi_fds"].begin() + index);
+
+	index = find_fd_index_in_vector(fd, this->fds["files_fds"]);
+	print_yellow(" Index is: " + convert_to_string(index), DEBUG);
+	if (index != -1)
+		this->fds["files_fds"].erase(this->fds["files_fds"].begin() + index);
+
 	clients.erase(fd);
 	cgi_processes.erase(fd);
+	files_fds.erase(fd);
 }
 
 void Service::add_poll_to_vectors(int fd, int events, std::string additional_poll)
@@ -99,5 +114,7 @@ void Service::add_poll_to_vectors(int fd, int events, std::string additional_pol
 		this->fds["cgi_fds"].push_back(ptc);
 	if (additional_poll == "server_fds")
 		this->fds["server_fds"].push_back(ptc);
+	if (additional_poll == "files_fds")
+		this->fds["files_fds"].push_back(ptc);
 	return;
 }

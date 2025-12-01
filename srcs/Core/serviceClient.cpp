@@ -41,10 +41,27 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 		}
 		return;
 	}
+	else if (client.am_i_waiting_file())
+	{
+		
+		std::cout << "am I waiting, statu :" << std::endl;
+		return;
+	}
 	else
 	{
-		client.process_request();
-		client.set_create_response();
+		int fd = client.process_request();
+		std::cout << "fd is : " << fd << std::endl;
+
+		if (fd <= -1)
+			client.set_create_response();
+		else if (fd == 0)
+			client.set_create_response();
+		else
+		{
+			add_poll_to_vectors(fd, (POLLIN | POLLOUT), "files_fds");
+			files_fds.insert(std::make_pair(fd, &client));
+			client.set_wait_file();
+		}
 	}
 
 }

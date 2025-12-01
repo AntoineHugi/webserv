@@ -1,7 +1,7 @@
 #include "./Functions/parserConfig.hpp"
 #include "./Core/debugPrinting.hpp"
 
-bool DEBUG = false;
+bool DEBUG = true;
 const size_t BUFFER_SIZE = 1048576;
 int CLIENT_TIMEOUT_MS = 60000;
 

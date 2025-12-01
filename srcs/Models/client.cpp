@@ -100,7 +100,7 @@ int Client::handle_read()
 				int status_code = get_status_code();
 				if (!get_server()->get_error_page().empty() && !get_server()->get_error_page()[status_code].empty())
 				{
-					Method::get_file(*this, get_server()->get_error_page()[status_code]);
+					//Method::get_file(*this, get_server()->get_error_page()[status_code]);
 					set_status_code(status_code);
 				}
 			}
@@ -127,7 +127,7 @@ int Client::handle_read()
 	return 0;
 }
 
-void Client::process_request()
+int Client::process_request()
 {
 	std::string methods[3] = {"GET", "POST", "DELETE"};
 	int field = -1;
@@ -139,8 +139,7 @@ void Client::process_request()
 	switch (field)
 	{
 	case 0:
-		Method::handle_get(*this);
-		break;
+		return (Method::handle_get(*this));
 	case 1:
 		Method::handle_post(*this);
 		break;
@@ -151,8 +150,9 @@ void Client::process_request()
 		if (DEBUG)
 			std::cout << "Error processing request, method is = " << _request._method << std::endl;
 		set_status_code(500);
-		return;
+		return (-1);
 	}
+	return (0);
 }
 
 int Client::handle_write()

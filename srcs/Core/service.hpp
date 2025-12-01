@@ -5,13 +5,13 @@
 # include <vector>
 # include <iostream>
 # include "debugPrinting.hpp"
-extern bool DEBUG;
-extern const size_t BUFFER_SIZE;
-extern int CLIENT_TIMEOUT_MS;
-
 # include "../Models/server.hpp"
 # include "../Models/client.hpp"
 # include "../Models/CGIProcess.hpp"
+
+extern bool DEBUG;
+extern const size_t BUFFER_SIZE;
+extern int CLIENT_TIMEOUT_MS;
 
 class Service
 {
@@ -22,6 +22,7 @@ class Service
 		std::vector<Server> servers;
 		std::map<int, Client> clients;
 		std::map<int, CGIProcess * > cgi_processes;
+		std::map<int, Client *> files_fds;
 		Service();
 		Service(const Service& other);
 		Service& operator=(const Service& other);
@@ -39,6 +40,7 @@ class Service
 		int		server_fd_for_new_client(int fd, std::vector<struct pollfd> &fds_vector);
 		int		cgi_fd_for_cgi(int fd, std::vector<struct pollfd> &fds_vector);
 
+		void	file_handler(int i);
 		void	cgi_handler(int i);
 		void 	remove_fd(int fd);
 		void	setup_cgi_request(int i);

@@ -11,7 +11,8 @@
 # include <fcntl.h>
 # include <stdlib.h>
 
-# include "../Models/client.hpp"
+#include "../Models/client.hpp"
+
 extern bool DEBUG;
 extern const size_t BUFFER_SIZE;
 extern int CLIENT_TIMEOUT_MS;
@@ -28,8 +29,8 @@ class Method
 		~Method();
 
 		/* GET method */
-		static void	handle_get(Client& client);
-		static void	get_file(Client &client, std::string filepath);
+		static int	handle_get(Client& client);
+		static int	get_file(Client &client, std::string filepath);
 		static void	determine_content_type(Client &client, std::string filepath);
 		static void	get_directory(Client &client, DIR* directory);
 
