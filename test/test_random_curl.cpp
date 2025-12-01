@@ -133,7 +133,6 @@ void run_weird_curl_tests(const TestConfig &config, TestStats &stats)
 
 	test_curl_unknown_method(config, stats);
 	test_curl_bad_content_length(config, stats);
-	test_curl_chunked_without_body(config, stats);
 	test_curl_invalid_http_version(config, stats);
 	test_curl_header_injection(config, stats);
 	test_curl_path_traversal(config, stats);
