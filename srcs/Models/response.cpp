@@ -4,6 +4,7 @@ Response::Response() :
 	_header(""),
 	_content_length(0),
 	_bytes_sent(0),
+	_response_buffer(""),
 	_response_data(""),
 	_body(""),
 	_allowedMethods(),
@@ -50,6 +51,7 @@ void Response::flush_response_data()
 	_header.clear();
 	_content_length = 0;
 	_bytes_sent = 0;
+	_response_buffer.clear();
 	_response_data.clear();
 	_body.clear();
 	_allowedMethods.clear();

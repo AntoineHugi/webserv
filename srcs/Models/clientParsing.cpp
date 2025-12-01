@@ -551,7 +551,11 @@ bool Client::try_parse_body()
 
 	/* if we didn't get the get the whole data yet, skip for another turn of reading */
 	if (_request._request_data.size() < _request._content_length)
+	{
+		std::cout << "leaving because data is less than length" << std::endl;
 		return (0);
+	}
+		
 
 	/* once we have everything, dump it into request._body */
 	_request._body = _request._request_data.substr(0, _request._content_length);

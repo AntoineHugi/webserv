@@ -104,12 +104,37 @@ void Service::cgi_handler(int i)
 	else if (fds["poll_fds"][i].fd == cgi.get_pipe_from_cgi() && (fds["poll_fds"][i].revents & (POLLIN | POLLHUP)))
 	{
 		print_header("CGI REQUEST - Reading from CGI");
-		char buffer[BUFFER_SIZE];
-		ssize_t n = read(cgi.get_pipe_from_cgi(), buffer, sizeof(buffer));
+		char read_buffer[BUFFER_SIZE];
+		ssize_t n = read(cgi.get_pipe_from_cgi(), read_buffer, BUFFER_SIZE);
 		if (n > 0)
 		{
+			client._response.get_body().append(read_buffer, n);
+			if (client._response.get_header().empty())
+			{
+				size_t blank_line = client._response.get_body().find("\r\n\r\n");
+				size_t header_end_offset = 4;
+				if(blank_line == std::string::npos)
+				{
+					blank_line = client._response.get_body().find("\n\n");
+					header_end_offset = 2;
+					if(blank_line == std::string::npos)
+					{
+						blank_line = 0;
+						header_end_offset = 0;
+					}
+				}
+
+				if (header_end_offset != 0)
+				{
+					client._response.set_header(client._response.get_body().substr(0, blank_line));
+					client._response.get_body().erase(0, blank_line + header_end_offset);
+					std::cout << "header = " << client._response.get_header() << "| body = " << client._response.get_body() << std::endl;
+				}
+
+			}
+			else
+				client._response.set_body(client._response.get_body().append(client._response.get_response_buffer()));
 			print_cyan("Reading from CGI sucessful : " + convert_to_string(n), DEBUG);
-			cgi.append_to_output(buffer, n);
 		}
 		else if (n == 0)
 		{
@@ -121,23 +146,8 @@ void Service::cgi_handler(int i)
 				print_blue("CGI exit code: " + convert_to_string(exit_code), DEBUG);
 				if (exit_code == 0)
 				{
-					std::string output = cgi.get_output_buffer();
-					print_cyan("CGI Buffer init: " + output.substr(0, 1024), DEBUG);
-					print_cyan("CGI output (" + convert_to_string(output.size()) + " bytes)", DEBUG);
-
-					size_t blank_line = output.find("\r\n\r\n");
-					size_t header_end_offset = 4;
-					if (blank_line == std::string::npos)
-					{
-						blank_line = output.find("\n\n");
-						header_end_offset = 2;
-					}
-					if (blank_line != std::string::npos)
-					{
-						client._response.set_header(output.substr(0, blank_line));
-						output = output.substr(blank_line + header_end_offset);
-					}
-					client._response.set_body(output);
+					print_yellow(client._response.get_header(), DEBUG);
+				//	print_cyan("CGI output (" + convert_to_string(output.size()) + " bytes)", DEBUG);
 				}
 				else
 				{

@@ -48,7 +48,6 @@ class Request
 		std::vector<char> _body_data;
 
 		/* for GET */
-		std::vector<char> _request_file_data;
 		std::string	_filepath;
 
 		Request();

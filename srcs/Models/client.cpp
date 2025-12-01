@@ -83,9 +83,7 @@ int Client::handle_read()
 
 		/* proceed to next step if we received data */
 		if (read_result == 0)
-		{
 			return 1;
-		}
 	}
 	else
 		_flags._leftover_chunk = false;
