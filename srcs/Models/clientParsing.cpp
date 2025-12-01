@@ -536,12 +536,22 @@ bool Client::try_parse_body()
 					set_create_response();
 					return (1);
 				}
-				if (_request.parse_body())
+				int check = _request.parse_body();
+				std::cout << "check: " << check << std::endl;
+				if (check == 1)
 				{
 					_status_code = 400;
 					set_create_response();
 					return (1);
 				}
+				else if (check == 2)
+					return (0);
+
+				for (size_t i = 0; i < _request._body_data.size(); i++)
+				{
+					std::cout << _request._body_data[i] << std::endl;
+				}
+
 				print_yellow("----- Chunked body fully parsed -----\n", DEBUG);
 				set_process_request();
 				return (0);
@@ -562,12 +572,22 @@ bool Client::try_parse_body()
 		set_create_response();
 		return (1);
 	}
-	if (_request.parse_body())
+	int check = _request.parse_body();
+	std::cout << "check: " << check << std::endl;
+	if (check == 1)
 	{
 		_status_code = 400;
 		set_create_response();
 		return (1);
 	}
+	else if (check == 2)
+		return (0);
+
+	for (size_t i = 0; i < _request._body_data.size(); i++)
+	{
+		std::cout << _request._body_data[i];
+	}
+	std::cout << std::endl;
 
 	print_blue("----- Body parsed and validated! -----\n", DEBUG);
 	_request.set_request_data(_request.get_request_data().erase(0, _request.get_content_length()));

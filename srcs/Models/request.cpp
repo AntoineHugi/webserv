@@ -17,7 +17,8 @@ _autoindex(false),
 _cgi_path(""),
 _client_max_body_size(0),
 _body(""),
-	_header_kv(),
+_body_parse_pos(0),
+_header_kv(),
 	_stat(),
 	_index(),
 	_body_kv(),
@@ -41,7 +42,8 @@ _autoindex(other._autoindex),
 _cgi_path(other._cgi_path),
 _client_max_body_size(other._client_max_body_size),
 _body(other._body),
-	_header_kv(other._header_kv),
+_body_parse_pos(other._body_parse_pos),
+_header_kv(other._header_kv),
 	_stat(other._stat),
 	_index(other._index),
 	_body_kv(other._body_kv),
@@ -68,6 +70,7 @@ Request &Request::operator=(const Request &other)
 		_cgi_path = other._cgi_path;
 		_client_max_body_size = other._client_max_body_size;
 		_body = other._body;
+		_body_parse_pos = other._body_parse_pos;
 		_header_kv = other._header_kv;
 		_stat = other._stat;
 		_index = other._index;

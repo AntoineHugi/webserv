@@ -1,7 +1,7 @@
 #include "service.hpp"
 #include <cmath>
 
-char **setup_env(std::map<int, Client> clients, int fd)
+char **setup_env(std::map<int, Client>& clients, int fd)
 {
 	std::ostringstream ss;
 	std::vector<std::string> env_strings;
@@ -58,15 +58,6 @@ char **setup_env(std::map<int, Client> clients, int fd)
 	print_cyan(" =================================", DEBUG);
 
 	envp[env_strings.size()] = NULL;
-
-	// if (DEBUG)
-	// {
-	// 	std::cout << "\n\033[34m=== CGI Environment Variables ===" << std::endl;
-	// 	for (size_t i = 0; i < env_strings.size(); i++)
-	// 		std::cout << envp[i] << std::endl;
-	// 	std::cout << "=================================\033[0m" << std::endl;
-	// }
-
 	return envp;
 }
 
@@ -76,20 +67,15 @@ void Service::cgi_handler(int i)
 	Client &client = clients[cgi.get_client_fd()];
 	client.update_last_interaction();
 
-	// std::cout << "==> fds['poll_fds'][i].fd: " << fds["poll_fds"][i].fd << std::endl;
-	// std::cout << "==> cgi.get_pipe_to_cgi(): " << cgi.get_pipe_to_cgi() << std::endl;
-	// std::cout << "==> cgi.get_pipe_from_cgi(): " << cgi.get_pipe_from_cgi() << std::endl;
-	// std::cout << "==> cgi.can_i_read(): " << cgi.can_i_read() << std::endl;
-	// std::cout << "==> cgi.can_i_process_and_write(): " << cgi.can_i_process_and_write() << std::endl;
-	// std::cout << "==> fds['poll_fds'][i].revents & (POLLOUT | POLLHUP): " << (fds["poll_fds"][i].revents & (POLLOUT | POLLHUP)) << std::endl;
-	// std::cout << "==> fds['poll_fds'][i].revents & (POLLIN | POLLHUP): " << (fds["poll_fds"][i].revents & (POLLIN | POLLHUP)) << std::endl;
-	// std::cout << "==> fds['poll_fds'][i].revents : " << fds["poll_fds"][i].revents << std::endl;
-
 	if (fds["poll_fds"][i].fd == cgi.get_pipe_to_cgi() && (fds["poll_fds"][i].revents & (POLLOUT | POLLHUP)))
 	{
 		print_header("CGI REQUEST - Writing to CGI");
-		std::string res = client._request.get_body().substr(cgi.get_bytes_written(), BUFFER_SIZE);
-		ssize_t bytes_sent = write(cgi.get_pipe_to_cgi(), res.c_str(), res.size());
+		const std::vector<char>& body = client._request._body_data;
+		size_t offset = cgi.get_bytes_written();
+		size_t to_write = std::min((size_t)BUFFER_SIZE, body.size() - offset);
+		ssize_t bytes_sent = write(cgi.get_pipe_to_cgi(), &body[offset], to_write);
+		// std::string res = client._request.get_body().substr(cgi.get_bytes_written(), BUFFER_SIZE);
+		// ssize_t bytes_sent = write(cgi.get_pipe_to_cgi(), res.c_str(), res.size());
 		if (bytes_sent == -1)
 		{
 			print_red("Error: Failed to send data to CGI", true);

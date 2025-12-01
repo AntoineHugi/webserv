@@ -35,6 +35,7 @@ class Request
 		std::string _cgi_path;
 		unsigned long	_client_max_body_size;
 		std::string _body;
+		size_t _body_parse_pos;
 
 	public:
 		std::map<std::string, std::string> _header_kv;
@@ -63,6 +64,7 @@ class Request
 		std::string	get_cgi_path() const { return _cgi_path; };
 		unsigned long	get_client_max_body_size() const { return _client_max_body_size; };
 		std::string	get_body() const { return _body; };
+		size_t		get_body_parse_pos() const { return _body_parse_pos; };
 
 		bool _is_directory() const { return _isDirectory; };
 		bool _is_cgi() const { return _isCGI; };
@@ -85,7 +87,7 @@ class Request
 		void set_cgi_path(const std::string &cgi_path) { _cgi_path = cgi_path; };
 		void set_client_max_body_size(unsigned long size) { _client_max_body_size = size; };
 		void set_body(const std::string &body) { _body = body; };
-
+		void set_body_parse_pos(size_t pos) { _body_parse_pos = pos; };
 
 		void	flush_request_data();
 

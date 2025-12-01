@@ -290,11 +290,93 @@ int Request::parse_json()
 	return (0);
 }
 
+// int Request::treat_as_raw_body()
+// {
+// 	const size_t CHUNK_SIZE = 8192;
+
+// 	std::cout << "RAW BODYYY PROCESSING" << std::endl;
+// 	// First call - initialize
+// 	if (_body_parse_pos == 0)
+// 	{
+// 			_body_data.clear();  // Start fresh
+// 			_body_data.reserve(_body.size());
+// 	}
+
+// 	size_t remaining = _body.size() - _body_parse_pos;
+// 	size_t to_process = std::min(CHUNK_SIZE, remaining);
+
+// 	// Append chunk to _body_data
+// 	_body_data.insert(_body_data.end(), _body.begin() + _body_parse_pos, _body.begin() + _body_parse_pos + to_process);
+// 	_body_parse_pos += to_process;
+
+// 	for (size_t i = 0; i < _body_data.size(); i++)
+// 	{
+// 		std::cout << _body_data[i];
+// 	}
+// 	std::cout << std::endl;
+
+// 	// Last chunk - do the CRLF trimming
+// 	if (_body_parse_pos >= _body.size())
+// 	{
+// 			// Same trimming logic as original
+// 			if (_body_data.size() >= 2 && _body_data[_body_data.size() - 1] == '\n' && _body_data[_body_data.size() - 2] == '\r')
+// 					_body_data.erase(_body_data.end() - 2, _body_data.end());
+// 			_body.clear();
+// 			_body_parse_pos = 0;
+// 			return (0);  // Done - matches original return
+// 	}
+
+// 	for (size_t i = 0; i < _body_data.size(); i++)
+// 	{
+// 		std::cout << _body_data[i];
+// 	}
+// 	std::cout << std::endl;
+
+// 	return (2);  // More chunks to process
+// }
+
 int Request::treat_as_raw_body()
 {
-	std::vector<char> rawContent(_body.begin(), _body.end());
-	if (rawContent.size() >= 2 && rawContent[rawContent.size() - 1] == '\n' && rawContent[rawContent.size() - 2] == '\r')
-		rawContent.erase(rawContent.end() - 2, rawContent.end());
-	_body_data = rawContent;
-	return (0);
+	const size_t CHUNK_SIZE = 5;
+
+	std::cout << "RAW BODYYY PROCESSING" << std::endl;
+	// First call - initialize
+	if (_body_parse_pos == 0)
+	{
+			_body_data.clear();  // Start fresh
+			_body_data.reserve(_body.size());
+	}
+	size_t remaining = _body.size() - _body_parse_pos;
+	size_t to_process = std::min(CHUNK_SIZE, remaining);
+
+	// Append this chunk to _body_data (don't overwrite!)
+	for (size_t i = 0; i < to_process; i++)
+		_body_data.push_back(_body[_body_parse_pos + i]);
+	_body_parse_pos += to_process;
+
+	// Last chunk - trim CRLF
+	if (_body_parse_pos >= _body.size())
+	{
+		if (_body_data.size() >= 2 && _body_data[_body_data.size() - 1] == '\n' && _body_data[_body_data.size() - 2] == '\r')
+			_body_data.erase(_body_data.end() - 2, _body_data.end());
+		// _body.clear();
+		// _body_parse_pos = 0;
+		return (0);  // Done
+	}
+
+	return (2);  // More chunks to process
 }
+
+
+
+
+
+// int Request::treat_as_raw_body()
+// {
+
+// 	std::vector<char> rawContent(_body.begin(), _body.end());
+// 	if (rawContent.size() >= 2 && rawContent[rawContent.size() - 1] == '\n' && rawContent[rawContent.size() - 2] == '\r')
+// 		rawContent.erase(rawContent.end() - 2, rawContent.end());
+// 	_body_data = rawContent;
+// 	return (0);
+// }
