@@ -4,6 +4,10 @@
 # include <string>
 # include <vector>
 # include <iostream>
+# include <signal.h>
+# include <sys/wait.h>
+# include <unistd.h>
+# include <fcntl.h>
 # include "debugPrinting.hpp"
 # include "../Models/server.hpp"
 # include "../Models/client.hpp"
@@ -40,10 +44,11 @@ class Service
 		int		server_fd_for_new_client(int fd, std::vector<struct pollfd> &fds_vector);
 		int		cgi_fd_for_cgi(int fd, std::vector<struct pollfd> &fds_vector);
 
-		void	file_handler(int i);
-		void	cgi_handler(int i);
-		void 	remove_fd(int fd);
-		void	setup_cgi_request(int i);
+	void	file_handler(int i);
+	void	cgi_handler(int i);
+	void 	remove_fd(int fd);
+	void	cleanup_cgi_process(int cgi_fd);
+	void	setup_cgi_request(int i);
 		void	add_client_to_polls(std::map<int, Client> &clients, int fd, Server& server);
 		void	add_poll_to_vectors(int fd, int events, std::string additional_poll );
 
