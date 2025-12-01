@@ -81,6 +81,17 @@ void Service::poll_service()
 				else
 					++it;
 			}
+			for (std::map<int, CGIProcess *>::iterator it = cgi_processes.begin(); it != cgi_processes.end();)
+			{
+				if (it->second->is_inactive())
+				{
+					int fd = it->first;
+					++it;
+					handle_disconnection_by_fd(fd);
+				}
+				else
+					++it;
+			}
 		}
 		for (int i = this->fds["poll_fds"].size() - 1; i >= 0; i--)
 		{

@@ -69,6 +69,7 @@ void Service::cgi_handler(int i)
 
 	if (fds["poll_fds"][i].fd == cgi.get_pipe_to_cgi() && (fds["poll_fds"][i].revents & (POLLOUT | POLLHUP)))
 	{
+		cgi.update_last_interaction();
 		print_header("CGI REQUEST - Writing to CGI");
 		std::string res = client._request._body.substr(cgi.get_bytes_written(), BUFFER_SIZE);
 		ssize_t bytes_sent = write(cgi.get_pipe_to_cgi(), res.c_str(), res.size());
@@ -103,8 +104,9 @@ void Service::cgi_handler(int i)
 	}
 	else if (fds["poll_fds"][i].fd == cgi.get_pipe_from_cgi() && (fds["poll_fds"][i].revents & (POLLIN | POLLHUP)))
 	{
+		cgi.update_last_interaction();
 		print_header("CGI REQUEST - Reading from CGI");
-		char read_buffer[BUFFER_SIZE];
+		char read_buffer[1048576];
 		ssize_t n = read(cgi.get_pipe_from_cgi(), read_buffer, BUFFER_SIZE);
 		if (n > 0)
 		{
@@ -128,7 +130,6 @@ void Service::cgi_handler(int i)
 				{
 					client._response.set_header(client._response.get_body().substr(0, blank_line));
 					client._response.get_body().erase(0, blank_line + header_end_offset);
-					std::cout << "header = " << client._response.get_header() << "| body = " << client._response.get_body() << std::endl;
 				}
 
 			}

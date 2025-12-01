@@ -5,7 +5,7 @@ void Service::file_handler(int fd)
 	Client &client = *(this->files_fds[fd]);
 	client.update_last_interaction();
 
-	char buffer[BUFFER_SIZE];
+	char buffer[1048576];
 	ssize_t bytes;
 	std::string body = client._response.get_body();
 	bytes = read(fd, buffer, sizeof(buffer));

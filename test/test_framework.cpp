@@ -380,6 +380,23 @@ bool assert_status(const HttpResponse &resp, int expected_code, TestStats &stats
 	}
 }
 
+void assert_status_code(int actual, int expected, TestStats &stats)
+{
+	if (actual == expected)
+	{
+		stats.add_pass();
+		print_pass("Status " + int_to_string(actual));
+	}
+	else
+	{
+		stats.add_fail();
+		print_fail(
+			"Expected " + int_to_string(expected) +
+			", got " + int_to_string(actual)
+		);
+	}
+}
+
 bool assert_header(const HttpResponse &resp, const std::string &header,
 		   const std::string &expected_value, TestStats &stats)
 {

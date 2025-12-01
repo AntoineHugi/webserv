@@ -8,6 +8,10 @@
 # include <unistd.h>
 # include <iostream>
 
+extern bool DEBUG;
+extern const size_t BUFFER_SIZE;
+extern int CLIENT_TIMEOUT_MS;
+
 class CGIProcess
 {
 	private:
@@ -25,7 +29,7 @@ class CGIProcess
 		int _pipe_from_cgi;
 		std::string _output_buffer;
 		int _bytes_written;
-		time_t _start_time;
+		time_t _last_interaction;
 
 	public:
 		CGIProcess();
@@ -41,6 +45,8 @@ class CGIProcess
 		bool can_i_read() const { return _state == CGI_READING_DATA; };
 		bool can_i_process_and_write() const { return _state == CGI_PROCESSING_AND_WRITING_DATA; };
 		bool am_i_finish() const { return _state == FINISH; };
+		bool is_inactive() const { return std::time(0) - _last_interaction >= CLIENT_TIMEOUT_MS/1000; };
+		void update_last_interaction() { _last_interaction = std::time(0);}
 
 		void update_bytes_written(int res) { _bytes_written += res; };
 		void append_to_output(const std::string& buf, int n) { _output_buffer.append(buf, 0, n); };

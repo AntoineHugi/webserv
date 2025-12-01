@@ -49,7 +49,6 @@ void Request::flush_request_data()
 	_body_data.clear();
 }
 
-
 std::vector<std::string> Request::tokenise_url_encoded(std::string &str)
 {
 	std::vector<std::string> tokens;
@@ -81,27 +80,33 @@ std::vector<std::string> Request::tokenise_url_encoded(std::string &str)
 
 int Request::parse_url_encoded()
 {
+	if (_body.empty())
+		return 0;
+
 	std::vector<std::string> tokens = tokenise_url_encoded(_body);
-	for (size_t i = 0; i < tokens.size(); ++i)
+	size_t i = 0;
+
+	while (i < tokens.size())
 	{
-		if (i >= tokens.size() || tokens[i] == "=" || tokens[i] == "&")
-			return (1);
-		std::string key = tokens[i];
-		++i;
+		if (tokens[i] == "&" || tokens[i] == "=")
+		{
+			++i;
+			continue;
+		}
+		std::string key = tokens[i++];
 		if (i >= tokens.size() || tokens[i] != "=")
-			return (1);
+			break;
 		++i;
-		if (i >= tokens.size() || tokens[i] == "=" || tokens[i] == "&")
-			return (1);
-		std::string value = tokens[i];
+		if (i >= tokens.size() || tokens[i] == "&" || tokens[i] == "=")
+			break;
+		std::string value = tokens[i++];
+
 		_body_kv[key] = value;
-		++i;
-		if (i >= tokens.size())
-			return (0);
-		if (tokens[i] != "&")
-			return (1);
+
+		if (i < tokens.size() && tokens[i] == "&")
+			++i;
 	}
-	return (0);
+	return 0;
 }
 
 std::string Request::trimCRLF(const std::string &s)

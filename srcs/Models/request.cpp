@@ -94,6 +94,8 @@ int Request::parse_header()
 	std::string line;
 	std::istringstream stream(_header);
 
+	std::cout << "header = " << _header << std::endl;
+
 	std::getline(stream, line);
 	size_t first_space = line.find(" ");
 	size_t second_space = line.find(" ", first_space + 1);

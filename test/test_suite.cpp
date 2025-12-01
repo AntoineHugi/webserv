@@ -15,6 +15,7 @@ void run_post_delete(const TestConfig &config, TestStats &stats);
 void run_cgi_tests(const TestConfig &config, TestStats &stats);
 void run_cgi_env_tests(const TestConfig &config, TestStats &stats);
 void run_redirect_test(const TestConfig &config, TestStats &stats);
+void run_weird_curl_tests(const TestConfig &config, TestStats &stats);
 
 // ============================================================================
 // CONFIGURATION & COMMAND LINE PARSING
@@ -72,6 +73,7 @@ TestConfig parse_args(int argc, char **argv)
 	config.enabled_categories["cgi"] = true;
 	config.enabled_categories["cgi-env"] = true;
 	config.enabled_categories["redirect"] = true;
+	config.enabled_categories["curl"] = true;
 
 	for (int i = 1; i < argc; i++)
 	{
@@ -128,6 +130,7 @@ TestConfig parse_args(int argc, char **argv)
 			config.enabled_categories["cgi"] = false;
 			config.enabled_categories["cgi-env"] = false;
 			config.enabled_categories["redirect"] = false;
+			config.enabled_categories["curl"] = false;
 			config.enabled_categories[argv[++i]] = true;
 		}
 		else if (arg == "--skip" && i + 1 < argc)
@@ -308,6 +311,16 @@ int main(int argc, char **argv)
 	if (config.enabled_categories["redirect"])
 	{
 		run_redirect_test(config, stats);
+		if (config.stop_on_fail && stats.failed > 0)
+		{
+			print_summary(stats);
+			return 1;
+		}
+	}
+
+	if (config.enabled_categories["curl"])
+	{
+		run_weird_curl_tests(config, stats);
 		if (config.stop_on_fail && stats.failed > 0)
 		{
 			print_summary(stats);

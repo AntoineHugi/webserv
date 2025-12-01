@@ -1,6 +1,6 @@
 #include "client.hpp"
-#include "clientUtils.cpp"
 #include "clientParsing.cpp"
+#include "clientUtils.cpp"
 
 Client::Client() :
 	_state(READING_HEADERS),

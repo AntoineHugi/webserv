@@ -1,4 +1,3 @@
-
 #include "client.hpp"
 
 bool Client::validate_methods()
@@ -455,7 +454,7 @@ bool Client::validate_permissions()
 
 int Client::read_to_buffer()
 {
-	char buf[BUFFER_SIZE];
+	char buf[1048576];
 	ssize_t n = recv(_fd, buf, sizeof(buf), 0);
 
 	if (n > 0)

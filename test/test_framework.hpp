@@ -121,6 +121,7 @@ HttpResponse parse_response(const std::string &response);
 // ============================================================================
 
 bool assert_status(const HttpResponse &resp, int expected_code, TestStats &stats);
+void assert_status_code(int actual, int expected, TestStats &stats);
 bool assert_header(const HttpResponse &resp, const std::string &header, const std::string &expected_value, TestStats &stats);
 bool assert_header_exists(const HttpResponse &resp, const std::string &header, TestStats &stats);
 bool assert_body_contains(const HttpResponse &resp, const std::string &text, TestStats &stats);
