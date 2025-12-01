@@ -63,7 +63,7 @@ void Service::poll_service()
 		if (ret < 0)
 		{
 			if (errno == EINTR)
-				continue; // Interrupted, retry
+				continue;
 			perror("poll failed");
 			break;
 		}
@@ -95,7 +95,7 @@ void Service::poll_service()
 					std::ostringstream ss;
 					ss << (this->fds["poll_fds"].size() - this->fds["server_fds"].size());
 					std::string msg = "New client connected. Total clients: " + ss.str();
-					print_cyan(msg, true);
+					print_cyan(msg, DEBUG);
 				}
 			}
 			else if (cgi_fd_if_cgi != -1)

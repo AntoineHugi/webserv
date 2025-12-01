@@ -74,7 +74,7 @@ class Server
 		// Functions in cpp file
 		void	set_port(const std::string& port);
 		void	set_client_max_body_size(const std::string& max);
-		void	set_server();
+		int		set_server();
 };
 
 #endif

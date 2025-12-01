@@ -519,7 +519,6 @@ bool Client::try_parse_body()
 
 	if (is_body_chunked())
 	{
-		// std::cout << "body is chunked" << std::endl;
 		if (chunked_body_finished())
 		{
 			if (!decode_chunked_body())
@@ -583,9 +582,7 @@ bool Client::try_parse_body()
 
 bool Client::try_parse_header()
 {
-	/* Checking if we're exceeding the size and if the end of header indicator has been found */
-	// std::cout << "Header size: " << _request._request_data.size() << " bytes" << std::endl;
-
+	/* Checking if the end of header indicator has been found */
 	size_t pos = _request._request_data.find("\r\n\r\n");
 	if (pos == std::string::npos)
 		return (0);

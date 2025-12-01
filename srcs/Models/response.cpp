@@ -91,7 +91,7 @@ std::string Response::get_reason_phrase(int status_code)
 	return "Internal Server Error";
 }
 
-// Helper: Parse CGI headers into a map (lowercase keys for case-insensitive comparison)
+/* Helper: Parse CGI headers into a map (lowercase keys for case-insensitive comparison) */
 std::map<std::string, std::string> Response::parse_cgi_headers(const std::string &header_text)
 {
 	std::map<std::string, std::string> headers;
@@ -142,7 +142,7 @@ std::map<std::string, std::string> Response::parse_cgi_headers(const std::string
 	return headers;
 }
 
-// Helper: Capitalize header name for output (e.g., "content-type" -> "Content-Type")
+/* Helper: Capitalize header name for output (e.g., "content-type" -> "Content-Type") */
 std::string Response::capitalize_header(const std::string &name)
 {
 	std::string result = name;
@@ -161,9 +161,6 @@ std::string Response::capitalize_header(const std::string &name)
 	return result;
 }
 
-void Response::format_response(int status_code, bool should_keep_alive, std::string version)
-{
-
 /*
 
   | Header         | Priority      | Notes                            |
@@ -180,6 +177,8 @@ void Response::format_response(int status_code, bool should_keep_alive, std::str
 
 */
 
+void Response::format_response(int status_code, bool should_keep_alive, std::string version)
+{
 	std::ostringstream ss;
 
 	std::map<std::string, std::string> cgi_headers;
@@ -249,7 +248,7 @@ void Response::format_response(int status_code, bool should_keep_alive, std::str
 		_response_data += capitalize_header(header_name) + ": " + it->second + "\r\n";
 	}
 
-	// Add required headers if CGI didn't provide them
+	/* Add required headers if CGI didn't provide them */
 	if (cgi_headers.find("content-type") == cgi_headers.end() && !_body.empty())
 		_response_data += "Content-Type: " + _content_type + "\r\n";
 

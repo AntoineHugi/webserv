@@ -152,7 +152,7 @@ int Request::parse_header()
 	print_cyan("> 'host: '" + _host + "'", DEBUG);
 	std::map<std::string, std::string>::iterator it;
 	for (it = _header_kv.begin(); it != _header_kv.end(); ++it)
-		print_cyan("> '" + it->first + "': '" + it->second + "'", true);
+		print_cyan("> '" + it->first + "': '" + it->second + "'", DEBUG);
 	print_blue("----- Header parsed sucessfully! -----\n", DEBUG);
 	return (0);
 }
@@ -165,8 +165,6 @@ int Request::parse_body()
 		return (parse_url_encoded());
 	else if (content_type.find("multipart/form-data") != std::string::npos)
 		return (parse_multipart(content_type));
-	else if (content_type == "application/json")
-		return (parse_json());
 	else
 		return (treat_as_raw_body());
 }

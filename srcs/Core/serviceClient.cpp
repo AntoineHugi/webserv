@@ -26,7 +26,7 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 	Client &client = clients[poll_fds[i].fd];
 
 	client.update_last_interaction();
-	if (client._request._isCGI && client.get_status_code() < 300) // TODO: check status too otherwise infinite loop
+	if (client._request._isCGI && client.get_status_code() < 300)
 	{
 		print_white(">>> This client will create CGI processes and wait", DEBUG);
 		if (client.can_i_process_request())

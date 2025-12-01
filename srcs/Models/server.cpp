@@ -85,12 +85,12 @@ void	Server::set_client_max_body_size(const std::string& max)
 	this->_client_max_body_size = value;
 }
 
-void Server::set_server(){
+int Server::set_server(){
 
 	set_sock(socket(AF_INET, SOCK_STREAM, 0));
 	if (get_sock() < 0) {
 		perror("Socket creation failed");
-		return; // TODO: throw correct error
+		return (1);
 	}
 	print_cyan("socket: " + convert_to_string(get_sock()), true);
 
@@ -98,13 +98,13 @@ void Server::set_server(){
 	int check = setsockopt(get_sock(), SOL_SOCKET , SO_REUSEADDR , &optval, sizeof(optval));
 	if (check < 0) {
 		perror("Socket option failed");
-		return; // TODO: throw correct error
+		return (1);
 	}
 	int flags = fcntl(get_sock(), F_GETFL);
 	check = fcntl(get_sock(), F_SETFL, flags | O_NONBLOCK);
 	if (check < 0) {
 		perror("Socket flags failed");
-		return; // TODO: throw correct error
+		return (1);
 	}
 
 	struct sockaddr_in server_addr;
@@ -115,12 +115,13 @@ void Server::set_server(){
 	check = bind(get_sock(), (struct sockaddr *)&server_addr, sizeof(server_addr));
 	if (check < 0) {
 		perror("Bind failed");
-		return; // TODO: throw correct error
+		return (1);
 	}
 	check = listen(get_sock(), 128);
 	if (check < 0) {
 		perror("Listen failed");
-		return; // TODO: throw correct error
+		return (1);
 	}
 	print_cyan("Server listening on port: " + convert_to_string(get_port()), true);
+	return (0);
 }

@@ -1,6 +1,7 @@
 #include "parserConfig.hpp"
+#include "../Core/debugPrinting.hpp"
 
-bool Parser::assign_single_keyval_server(Server& server, std::string &key, std::string &value)
+bool Parser::assign_single_keyval_server(Server &server, std::string &key, std::string &value)
 {
 	std::string fields[5] = {"server_name", "listen", "host", "root", "client_max_body_size"};
 	int field = -1;
@@ -58,7 +59,10 @@ bool Parser::assign_single_keyval_server(Server& server, std::string &key, std::
 			std::cout << "Config file error: duplicate max body size" << std::endl;
 			return (false);
 		}
-		try { server.set_client_max_body_size(value); }
+		try
+		{
+			server.set_client_max_body_size(value);
+		}
 		catch (const std::exception &e)
 		{
 			std::cout << "Config file error: " << e.what() << std::endl;
@@ -66,7 +70,8 @@ bool Parser::assign_single_keyval_server(Server& server, std::string &key, std::
 		}
 		break;
 	default:
-		std::cout << "Config file error: field not valid : " << key << std::endl;
+		std::string message = "Config file error: field not valid : " + key;
+		print_red(message, true);
 		return (false);
 	}
 	return (true);
@@ -79,7 +84,8 @@ bool Parser::handle_server_keyval(Server &server, std::vector<std::string> &toke
 	if (i >= tokens.size() || tokens[i] == ";")
 	{
 		--i;
-		std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+		std::string message = "Config file error: unexpected element after " + tokens[i];
+		print_red(message, true);
 		return (false);
 	}
 	std::string value = tokens[i];
@@ -87,7 +93,8 @@ bool Parser::handle_server_keyval(Server &server, std::vector<std::string> &toke
 	if (i >= tokens.size() || tokens[i] != ";")
 	{
 		--i;
-		std::cout << "Config file error: expected ';' after " << tokens[i] << std::endl;
+		std::string message = "Config file error: expecting ';' after " + tokens[i];
+		print_red(message, true);
 		return (false);
 	}
 	if (!assign_single_keyval_server(server, key, value))
@@ -101,21 +108,24 @@ bool Parser::handle_server_error_page(Server &server, std::vector<std::string> &
 	if (i >= tokens.size() || tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
 	{
 		--i;
-		std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+		std::string message = "Config file error: unexpected token: " + tokens[i];
+		print_red(message, true);
 		return (false);
 	}
 	char *end;
 	int key = static_cast<int>(std::strtol(tokens[i].c_str(), &end, 10));
 	if (*end != '\0')
 	{
-		std::cout << "Config file error: invalid error code: " << tokens[i] << std::endl;
+		std::string message = "Config file error: invalid error code: " + tokens[i];
+		print_red(message, true);
 		return (false);
 	}
 	++i;
 	if (i >= tokens.size() || tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
 	{
 		--i;
-		std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+		std::string message = "Config file error: unexpected token: " + tokens[i];
+		print_red(message, true);
 		return (false);
 	}
 	std::string value = tokens[i];
@@ -124,7 +134,8 @@ bool Parser::handle_server_error_page(Server &server, std::vector<std::string> &
 	if (i >= tokens.size() || tokens[i] != ";")
 	{
 		--i;
-		std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+		std::string message = "Config file error: unexpected token: " + tokens[i];
+		print_red(message, true);
 		return (false);
 	}
 	return (true);
@@ -137,7 +148,8 @@ bool Parser::handle_server_allowance(Server &server, std::vector<std::string> &t
 	if (i >= tokens.size() || tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
 	{
 		--i;
-		std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+		std::string message = "Config file error: unexpected token: " + tokens[i];
+		print_red(message, true);
 		return (false);
 	}
 	std::string value = tokens[i];
@@ -145,7 +157,8 @@ bool Parser::handle_server_allowance(Server &server, std::vector<std::string> &t
 	if (i >= tokens.size() || tokens[i] != ";")
 	{
 		--i;
-		std::cout << "Config file error: expecting ';' after " << tokens[i] << std::endl;
+		std::string message = "Config file error: expecting ';' after " + tokens[i];
+		print_red(message, true);
 		return (false);
 	}
 	server.add_bouncer(key, value);
@@ -158,7 +171,8 @@ bool Parser::handle_server_index(Server &server, std::vector<std::string> &token
 	if (i >= tokens.size() || tokens[i] == ";" || tokens[i] == "{" || tokens[i] == "}")
 	{
 		--i;
-		std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+		std::string message = "Config file error: unexpected token: " + tokens[i];
+		print_red(message, true);
 		return (false);
 	}
 	std::vector<std::string> index;
@@ -172,20 +186,20 @@ bool Parser::handle_server_index(Server &server, std::vector<std::string> &token
 	if (i >= tokens.size() || tokens[i] != ";")
 	{
 		--i;
-		std::cout << "Config file error: expecting ';' after " << tokens[i] << std::endl;
+		std::string message = "Config file error: expecting ';' after " + tokens[i];
+		print_red(message, true);
 		return (false);
 	}
-
 	if (!server.get_index().empty())
 	{
-		std::cout << "Config file error: duplicate index line in server" << std::endl;
+		print_red("Config file error: duplicate index line in server", true);
 		return (false);
 	}
 	server.set_index(index);
 	return (true);
 }
 
-bool Parser::parse_config_file(std::vector<std::string>& tokens, Service &service)
+bool Parser::parse_config_file(std::vector<std::string> &tokens, Service &service)
 {
 	size_t i = 0;
 
@@ -195,7 +209,8 @@ bool Parser::parse_config_file(std::vector<std::string>& tokens, Service &servic
 		if (i >= tokens.size() || tokens[i] != "{")
 		{
 			--i;
-			std::cout << "Config file error: expecting '{' after " << tokens[i] << std::endl;
+			std::string message = "Config file error: expecting '{' after " + tokens[i];
+			print_red(message, true);
 			return (false);
 		}
 		++i;
@@ -205,7 +220,8 @@ bool Parser::parse_config_file(std::vector<std::string>& tokens, Service &servic
 			if (tokens[i] == ";" || tokens[i] == "{")
 			{
 				--i;
-				std::cout << "Config file error: unexpected element after " << tokens[i] << std::endl;
+				std::string message = "Config file error: unexpected token: " + tokens[i];
+				print_red(message, true);
 				return (false);
 			}
 			if (tokens[i] == "location")
@@ -238,17 +254,21 @@ bool Parser::parse_config_file(std::vector<std::string>& tokens, Service &servic
 		if (tokens[i] != "}")
 		{
 			--i;
-			std::cout << "Config file error: expecting '}' after " << tokens[i] << std::endl;
+			std::string message = "Config file error: expecting '}' after " + tokens[i];
+			print_red(message, true);
 			return (false);
 		}
 		++i;
 		if (!check_server(server))
 			return (false);
+		if (!check_existing(service, server))
+			return (false);
 		service.servers.push_back(server);
 	}
 	if (i < tokens.size())
 	{
-		std::cout << "Config file error: unexpected token: " << tokens[i] << std::endl;
+		std::string message = "Config file error: unexpected token: " + tokens[i];
+		print_red(message, true);
 		return (false);
 	}
 	return (true);
@@ -292,7 +312,7 @@ bool Parser::open_config_file(char *arg, Service &service)
 
 	if (filename.empty())
 	{
-		std::cout << "Config file error: no file name" << std::endl;
+		print_red("Config file error: no file name", true);
 		return (false);
 	}
 	std::ifstream file(filename.c_str());
@@ -303,7 +323,7 @@ bool Parser::open_config_file(char *arg, Service &service)
 		file.close();
 		if (config == "")
 		{
-			std::cout << "Config file error: file empty" << std::endl;
+			print_red("Config file error: file empty", true);
 			return (false);
 		}
 		else
@@ -317,14 +337,15 @@ bool Parser::open_config_file(char *arg, Service &service)
 	}
 	else
 	{
-		std::cout << "Config file error: couldn't open file" << std::endl;
+		print_red("Config file error: couldn't open file", true);
 		return (false);
 	}
 }
 
 bool Parser::missing_config(std::string missing)
 {
-	std::cout << "Config file error: " << missing << " missing" << std::endl;
+	std::string message = "Config file error: " + missing + " missing";
+	print_red(message, true);
 	return (false);
 }
 
@@ -342,8 +363,6 @@ bool Parser::check_server(Server &server)
 		server.set_root(server.get_root() + "/");
 	if (server.get_index().empty())
 		return (missing_config("index"));
-	/*if (server.get_error_page().empty())
-		return (missing_config("error page"));*/
 	if (server.get_client_max_body_size() == 0)
 		return (missing_config("max client body size"));
 	if (server.get_routes().empty())
@@ -354,6 +373,19 @@ bool Parser::check_server(Server &server)
 		methods.push_back("GET");
 		default_route.set_methods(methods);
 		server.get_routes().push_back(default_route);
+	}
+	return (true);
+}
+
+bool Parser::check_existing(Service &service, Server &server)
+{
+	for (size_t i = 0; i < service.servers.size(); ++i)
+	{
+		if (service.servers[i].get_port() == server.get_port())
+		{
+			print_red("Config file error: duplicate port combination", true);
+			return (false);
+		}
 	}
 	return (true);
 }

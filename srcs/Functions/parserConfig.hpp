@@ -3,6 +3,7 @@
 
 # include "../Core/service.hpp"
 # include "../Models/server.hpp"
+# include "../Core/debugPrinting.hpp"
 # include <iostream>
 # include <fstream>
 # include <sstream>
@@ -22,7 +23,8 @@ class Parser
 		static bool	handle_server_error_page(Server &server, std::vector<std::string> &tokens, size_t &i);
 		static bool	handle_server_keyval(Server &server, std::vector<std::string> &tokens, size_t &i);
 		static bool	assign_single_keyval_server(Server& server, std::string& key, std::string& value);
-		static bool	check_server(Server& server);
+		static bool	check_server(Server &server);
+		static bool	check_existing(Service &service, Server &server);
 		static bool	missing_config(std::string missing);
 
 		/* config file methods */ /* location */

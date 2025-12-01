@@ -6,7 +6,6 @@ void Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 	if (client.should_keep_alive() == true)
 	{
 		std::string save_buffer = "";
-		// Keep connection open for next request
 		poll_fds[i].events = POLLIN;
 		if (client.leftover_chunk() == true)
 		{
@@ -21,7 +20,6 @@ void Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 	}
 	else
 	{
-		// Close connection
 		if (DEBUG)
 			std::cout << "[Handle Conn] Closing connection (sent Connection: close)" << std::endl;
 		int fd = poll_fds[i].fd;
@@ -44,9 +42,9 @@ void Service::handle_disconnection(std::vector<struct pollfd> &poll_fds, const s
 	if (DEBUG)
 		std::cout << "[Handle Disconn] Handling disconnection for fd: " << fd << std::endl;
 
-	close(fd);			      // Close file descriptor
-	poll_fds.erase(poll_fds.begin() + i); // Remove from poll
-	clients.erase(fd);		      // Remove from map
+	close(fd);
+	poll_fds.erase(poll_fds.begin() + i);
+	clients.erase(fd);
 	if (DEBUG)
 		std::cout << "[Handle Disconn] Handling disconnection (error/hangup) for fd: " << fd << std::endl;
 }

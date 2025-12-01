@@ -19,18 +19,18 @@ char **setup_env(std::map<int, Client> clients, int fd)
 	env_strings.push_back("REQUEST_URI=" + clients[fd]._request._uri);
 	env_strings.push_back("PATH_INFO=" + clients[fd]._request._uri);
 
-	// Add all HTTP headers as HTTP_* environment variables
+	/* Add all HTTP headers as HTTP_* environment variables */
 	for (std::map<std::string, std::string>::const_iterator it = clients[fd]._request._header_kv.begin();
 	     it != clients[fd]._request._header_kv.end(); ++it)
 	{
 		std::string header_name = it->first;
 		std::string header_value = it->second;
 
-		// Skip Content-Type and Content-Length (already added above)
+		/* Skip Content-Type and Content-Length (already added above) */
 		if (header_name == "Content-Type" || header_name == "Content-Length")
 			continue;
 
-		// Convert header name to CGI format: "X-Secret-Header" -> "HTTP_X_SECRET_HEADER"
+		/* Convert header name to CGI format: "X-Secret-Header" -> "HTTP_X_SECRET_HEADER" */
 		std::string env_name = "HTTP_";
 		for (size_t i = 0; i < header_name.length(); i++)
 		{
@@ -58,15 +58,6 @@ char **setup_env(std::map<int, Client> clients, int fd)
 	print_cyan(" =================================", DEBUG);
 
 	envp[env_strings.size()] = NULL;
-
-	// if (DEBUG)
-	// {
-	// 	std::cout << "\n\033[34m=== CGI Environment Variables ===" << std::endl;
-	// 	for (size_t i = 0; i < env_strings.size(); i++)
-	// 		std::cout << envp[i] << std::endl;
-	// 	std::cout << "=================================\033[0m" << std::endl;
-	// }
-
 	return envp;
 }
 
@@ -75,15 +66,6 @@ void Service::cgi_handler(int i)
 	CGIProcess &cgi = (*cgi_processes[cgi_fd_for_cgi(fds["poll_fds"][i].fd, fds["cgi_fds"])]);
 	Client &client = clients[cgi.get_client_fd()];
 	client.update_last_interaction();
-
-	// std::cout << "==> fds['poll_fds'][i].fd: " << fds["poll_fds"][i].fd << std::endl;
-	// std::cout << "==> cgi.get_pipe_to_cgi(): " << cgi.get_pipe_to_cgi() << std::endl;
-	// std::cout << "==> cgi.get_pipe_from_cgi(): " << cgi.get_pipe_from_cgi() << std::endl;
-	// std::cout << "==> cgi.can_i_read(): " << cgi.can_i_read() << std::endl;
-	// std::cout << "==> cgi.can_i_process_and_write(): " << cgi.can_i_process_and_write() << std::endl;
-	// std::cout << "==> fds['poll_fds'][i].revents & (POLLOUT | POLLHUP): " << (fds["poll_fds"][i].revents & (POLLOUT | POLLHUP)) << std::endl;
-	// std::cout << "==> fds['poll_fds'][i].revents & (POLLIN | POLLHUP): " << (fds["poll_fds"][i].revents & (POLLIN | POLLHUP)) << std::endl;
-	// std::cout << "==> fds['poll_fds'][i].revents : " << fds["poll_fds"][i].revents << std::endl;
 
 	if (fds["poll_fds"][i].fd == cgi.get_pipe_to_cgi() && (fds["poll_fds"][i].revents & (POLLOUT | POLLHUP)))
 	{
@@ -129,7 +111,7 @@ void Service::cgi_handler(int i)
 			print_cyan("Reading from CGI sucessful : " + convert_to_string(n) , DEBUG);
 			cgi.append_to_output(buffer, n);
 		}
-		else if (n == 0) // EOF
+		else if (n == 0)
 		{
 			int status;
 			pid_t result = waitpid(cgi.get_pid(), &status, 0);
@@ -144,11 +126,11 @@ void Service::cgi_handler(int i)
 					print_cyan("CGI output (" + convert_to_string(output.size()) + " bytes)" , DEBUG);
 
 					size_t blank_line = output.find("\r\n\r\n");
-					size_t header_end_offset = 4; // Length of \r\n\r\n
+					size_t header_end_offset = 4;
 					if (blank_line == std::string::npos)
 					{
 						blank_line = output.find("\n\n");
-						header_end_offset = 2; // Length of \n\n
+						header_end_offset = 2;
 					}
 					if (blank_line != std::string::npos)
 					{

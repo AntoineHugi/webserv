@@ -224,7 +224,7 @@ int Request::parse_multipart(std::string content_type)
 	return (0);
 }
 
-std::vector<std::string> Request::tokenise_json(std::string &str)
+/*std::vector<std::string> Request::tokenise_json(std::string &str)
 {
 	std::vector<std::string> tokens;
 	size_t i = 0;
@@ -281,14 +281,14 @@ std::vector<std::string> Request::tokenise_json(std::string &str)
 			tokens.push_back(token);
 	}
 	return tokens;
-}
+}*/
 
-int Request::parse_json()
+/*int Request::parse_json()
 {
 	std::vector<std::string> tokens = tokenise_json(_body);
 	// may need quite a bit more implementation, optional
 	return (0);
-}
+}*/
 
 int Request::treat_as_raw_body()
 {

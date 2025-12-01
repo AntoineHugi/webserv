@@ -40,9 +40,6 @@ class Service
 		int		cgi_fd_for_cgi(int fd, std::vector<struct pollfd> &fds_vector);
 
 		void	cgi_handler(int i);
-		// void	new_client_handler(int fd);
-		void	client_handler();
-		CGIProcess	find_cgi_for_this_client(int i);
 		void 	remove_fd(int fd);
 		void	setup_cgi_request(int i);
 		void	add_client_to_polls(std::map<int, Client> &clients, int fd, Server& server);

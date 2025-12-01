@@ -22,7 +22,6 @@ class Request
 	private:
 		std::string _version;
 
-	// size_t _reading_lenght;
 	public:
 		/* header attributes */
 		std::string _request_data;

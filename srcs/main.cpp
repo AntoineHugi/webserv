@@ -1,7 +1,7 @@
 #include "./Functions/parserConfig.hpp"
 #include "./Core/debugPrinting.hpp"
 
-bool DEBUG = true;
+bool DEBUG = false;
 const size_t BUFFER_SIZE = 1048576;
 int CLIENT_TIMEOUT_MS = 60000;
 
@@ -16,15 +16,18 @@ int	main(int argc, char **argv)
 	{
 		Service	service;
 		if (!Parser::open_config_file(argv[1], service))
-		{
-			print_red("Error: Failed to open config file", DEBUG);
 			return (1);
-		}
 		else
 		{
 			while(i < service.servers.size())
 			{
-				service.servers[i].set_server();
+				if (service.servers[i].set_server() == 1)
+				{
+					for (size_t j = 0; j < i; j++)
+						close(service.servers[j].get_sock());
+					print_red("Error in while seting up one server, please check config file", true);
+					return (1);
+				}
 				std::ostringstream ss;
 				ss << service.servers[i].get_port();
 				std::string msg = "Server " + service.servers[i].get_name() + " configured on " + service.servers[i].get_host() + ":" + ss.str() + " starting ...";
