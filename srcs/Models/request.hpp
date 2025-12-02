@@ -79,12 +79,7 @@ class Request
 		std::string	find_boundary(std::string content_type);
 		std::vector<MultiPart>	generate_multipart(const std::string &boundary);
 		std::string	trimCRLF(const std::string &s);
-		int		parse_json();
-		std::vector<std::string>	tokenise_json(std::string &str);
 		int		treat_as_raw_body();
-
-		// size_t get_reading_length() const { return _reading_lenght; };
-		// void set_reading_length(size_t length) { _reading_lenght = length; };
 };
 
 #endif

@@ -113,6 +113,11 @@ int Request::parse_header()
 		if (colon_pos != std::string::npos)
 		{
 			std::string key = line.substr(0, colon_pos);
+			if (key.empty())
+			{
+				print_red("Error: empty key", DEBUG);
+				return (1);
+			}
 			key.erase(key.find_last_not_of(" ") + 1);
 			std::transform(key.begin(), key.end(), key.begin(), ::tolower);
 			std::string value = line.substr(colon_pos + 1);
@@ -121,6 +126,11 @@ int Request::parse_header()
 			if (!value.empty() && value.substr(value.size() - 1) == "\r")
 				value.erase(value.size() - 1);
 
+			if ((key.empty() && !value.empty()) || (!key.empty() && value.empty()))
+			{
+				print_red("Error: malformed header", DEBUG);
+				return (1);
+			}
 			if (!_header_kv.count(key))
 				_header_kv[key] = value;
 			else
@@ -129,6 +139,8 @@ int Request::parse_header()
 				return (1);
 			}
 		}
+		else
+			continue;
 	}
 
 	_host = _header_kv["host"];

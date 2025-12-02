@@ -11,6 +11,7 @@ class Client;
 #include <ctime>
 
 #include "request.hpp"
+#include "../Core/debugPrinting.hpp"
 
 extern bool DEBUG;
 extern const size_t BUFFER_SIZE;
@@ -58,7 +59,6 @@ class Response
 		void set_content_type(std::string content_type) { _content_type = content_type; };
 		void set_location(std::string& location) { _location = location; };
 
-		// Functions in cpp file
 		void flush_response_data();
 		std::string get_reason_phrase(int status_code);
 		std::map<std::string, std::string> parse_cgi_headers(const std::string &header_text);

@@ -272,7 +272,7 @@ void Response::format_response(int status_code, bool should_keep_alive, std::str
 	_response_data += "\r\n";
 	if (!_body.empty())
 		_response_data += _body;
-	//if (DEBUG)
-	std::cout << "status code sent : " << final_status << std::endl;
+
+	print_blue("status code sent : " + convert_to_string(final_status), DEBUG);
 	return;
 }

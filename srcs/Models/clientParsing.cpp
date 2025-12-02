@@ -411,41 +411,35 @@ bool Client::validate_permissions()
 	{
 		if (!check_uri_exists())
 		{
-			if (DEBUG)
-				std::cout << "failed existing uri" << std::endl;
+			print_red("failed existing uri", DEBUG);
 			return (false);
 		}
 	}
 	if (!bouncer_approval(route))
 	{
-		if (DEBUG)
-			std::cout << "failed bouncer" << std::endl;
+		print_red("failed bouncer", DEBUG);
 		set_status_code(403);
 		return (false);
 	}
 	if (!transversal_protection())
 	{
-		if (DEBUG)
-			std::cout << "failed transversal" << std::endl;
+		print_red("failed transversal", DEBUG);
 		set_status_code(403);
 		return (false);
 	}
 	if (!check_directory_rules(route))
 	{
-		if (DEBUG)
-			std::cout << "failed directory rules" << std::endl;
+		print_red("failed directory rules", DEBUG);
 		return (false);
 	}
 	if (!is_method_allowed(route))
 	{
-		if (DEBUG)
-			std::cout << "failed allowed methods" << std::endl;
+		print_red("failed allowed methods", DEBUG);
 		return (false);
 	}
 	if (!validate_methods())
 	{
-		if (DEBUG)
-			std::cout << "failed method validation" << std::endl;
+		print_red("failed method validation", DEBUG);
 		return (false);
 	}
 
@@ -550,10 +544,7 @@ bool Client::try_parse_body()
 
 	/* if we didn't get the get the whole data yet, skip for another turn of reading */
 	if (_request._request_data.size() < _request._content_length)
-	{
-		std::cout << "leaving because data is less than length" << std::endl;
 		return (0);
-	}
 		
 
 	/* once we have everything, dump it into request._body */

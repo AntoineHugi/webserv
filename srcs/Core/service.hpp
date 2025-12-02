@@ -52,10 +52,10 @@ class Service
 void handle_shutdown(int sig);
 int find_fd_index_in_vector(int fd, std::vector<struct pollfd> &fds_vector);
 
-// struct pollfd {
-//     int fd;        // File descriptor to monitor
-//     short events;  // What events you want to know about (POLLIN, POLLOUT)
-//     short revents; // What events actually happened (filled by poll)
-// };
+/* struct pollfd {
+     int fd;        // File descriptor to monitor
+     short events;  // What events you want to know about (POLLIN, POLLOUT)
+     short revents; // What events actually happened (filled by poll)
+ }; */
 
 #endif

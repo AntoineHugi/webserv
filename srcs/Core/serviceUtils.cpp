@@ -79,7 +79,9 @@ int find_fd_index_in_vector(int fd, std::vector<struct pollfd> &fds_vector)
 
 void Service::remove_fd(int fd)
 {
-	close(fd);
+	
+	if (close(fd) == -1)
+		print_red("error", DEBUG);
 	print_yellow(" // Removing fds //", DEBUG);
 
 	

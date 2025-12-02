@@ -95,8 +95,6 @@ void Service::poll_service()
 		}
 		for (int i = this->fds["poll_fds"].size() - 1; i >= 0; i--)
 		{
-			//std::cout << "POLL_TIMEOUT = " << POLL_TIMEOUT << std::endl;
-			//std::cout << "Fd: " << this->fds["poll_fds"][i].fd << " with REVENT: " << this->fds["poll_fds"][i].revents << " and client.can_i_read_body() = "<< clients[this->fds["poll_fds"][i].fd].can_i_read_body() << std::endl; 
 			int server_fd_if_new_client = server_fd_for_new_client(this->fds["poll_fds"][i].fd, this->fds["server_fds"]);
 			int cgi_fd_if_cgi = cgi_fd_for_cgi(this->fds["poll_fds"][i].fd, this->fds["cgi_fds"]);
 			int file_fd_if_files = cgi_fd_for_cgi(this->fds["poll_fds"][i].fd, this->fds["files_fds"]);
@@ -132,8 +130,6 @@ void Service::poll_service()
 				
 				if ((this->fds["poll_fds"][i].revents & POLLIN || client.leftover_chunk()) && (client.can_i_read_header() == true || client.can_i_read_body() == true))
 					service_reading(this->fds["poll_fds"], i);
-				/*if (i < (int)this->fds["poll_fds"].size() && (this->fds["poll_fds"][i].revents & POLLOUT) && (client.can_i_read_header() == true || client.can_i_read_body() == true))
-					client.set_process_request();*/
 				if (i < (int)this->fds["poll_fds"].size() && (this->fds["poll_fds"][i].revents & POLLOUT) && (client.can_i_process_request() == true || client.am_i_waiting_file() == true))
 					service_processing(this->fds["poll_fds"], i);
 				if (i < (int)this->fds["poll_fds"].size() && (this->fds["poll_fds"][i].revents & POLLOUT) && (client.can_i_create_response() == true || client.can_i_send_response() == true))

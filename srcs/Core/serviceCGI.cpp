@@ -146,10 +146,7 @@ void Service::cgi_handler(int i)
 				int exit_code = WEXITSTATUS(status);
 				print_blue("CGI exit code: " + convert_to_string(exit_code), DEBUG);
 				if (exit_code == 0)
-				{
 					print_yellow(client._response.get_header(), DEBUG);
-				//	print_cyan("CGI output (" + convert_to_string(output.size()) + " bytes)", DEBUG);
-				}
 				else
 				{
 					print_red("CGI failed", true);

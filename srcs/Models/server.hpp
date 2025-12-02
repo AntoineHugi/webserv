@@ -2,6 +2,7 @@
 # define SERVER_H
 
 # include "../Core/debugPrinting.hpp"
+
 extern bool DEBUG;
 extern const size_t BUFFER_SIZE;
 extern int CLIENT_TIMEOUT_MS;
@@ -71,7 +72,6 @@ class Server
 		void	add_bouncer(std::string& key, std::string& value) { _bouncer.insert(std::make_pair(key, value)); }
 		void	add_route(Route route) { _routes.push_back(route); }
 
-		// Functions in cpp file
 		void	set_port(const std::string& port);
 		void	set_client_max_body_size(const std::string& max);
 		int		set_server();

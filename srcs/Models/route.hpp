@@ -49,7 +49,6 @@ class Route
 		void set_cgi(bool cgi) { _cgi = cgi; }
 		void set_redirect(int key, std::string &value) { _redirect.insert(std::make_pair(key, value)); }
 
-		// Functions in cpp file
 		void set_autoindex(const std::string &autoindex);
 		void set_client_max_body_size(const std::string &max);
 		void set_methods(const std::vector<std::string> &methods);
