@@ -1,1 +1,19 @@
 https://docs.google.com/document/d/1eaw3kMkZOX3IUfJpUNYdt6cY6bBXRR8urW3qgp9yfVA/edit?usp=sharing
+
+Port
+~ curl --resolve example.com:8081:127.0.0.1 http://example.com:8081/
+
+
+
+Curl tests
+curl -v -X POST http://localhost:8080/upload-list -F "file=hello world;filename=hello.txt"
+curl -v -X POST http://localhost:8080/upload-list -F "file=@/home/ahugi/Documents/mygit42/webserv/test/test_suite.cpp"
+curl -v -X DELETE http://localhost:8080/upload-list/test_suite.cpp
+
+curl -v http://localhost:8080/old_upload 
+
+
+
+Siege
+ siege -b -c 100 -t 1m http://localhost:8080
+

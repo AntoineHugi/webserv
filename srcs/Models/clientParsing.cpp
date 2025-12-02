@@ -610,6 +610,13 @@ bool Client::try_parse_body()
 bool Client::try_parse_header()
 {
 	/* Checking if the end of header indicator has been found */
+	if (_request._request_data.size() >  5242880)
+	{
+		_status_code = 400;
+		set_process_request();
+		return (1);
+	}
+
 	size_t pos = _request._request_data.find("\r\n\r\n");
 	if (pos == std::string::npos)
 		return (0);
@@ -646,6 +653,7 @@ bool Client::try_parse_header()
 	}
 	if (!check_host())
 	{
+		set_status_code(400);
 		set_process_request();
 		print_red("Error: failed host", DEBUG);
 		return (1);
