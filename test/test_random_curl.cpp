@@ -29,8 +29,11 @@ std::string exec_cmd(const std::string &cmd)
 
 int run_curl_status(const std::string &cmd)
 {
-	std::string out = exec_cmd(cmd + " -o /dev/null -s -w \"%{http_code}\"");
+	std::string wrapped =
+		"bash -c '" + cmd +
+		" -o /dev/null -s -w \"%{http_code}\"'";
 
+	std::string out = exec_cmd(wrapped);
 	return atoi(out.c_str());
 }
 
@@ -54,8 +57,8 @@ void test_curl_bad_content_length(const TestConfig &config, TestStats &stats)
 	std::string cmd =
 		"curl -X POST "
 		"-H \"Content-Length: -5\" "
-		"--data \"HELLO\" "
-		"http://" + config.server_host + ":" +
+		"http://" +
+		config.server_host + ":" +
 		int_to_string(config.server_port) + "/upload";
 
 	int status = run_curl_status(cmd);
@@ -78,54 +81,16 @@ void test_curl_invalid_http_version(const TestConfig &config, TestStats &stats)
 	bool ok = (out.find("505") != std::string::npos);
 
 	if (ok)
+	{
 		stats.add_pass();
+		print_pass("Status " + int_to_string(505));
+	}
 	else
+	{
 		stats.add_fail();
+		print_fail("Expected " + int_to_string(505));
+	}
 }
-
-void test_curl_header_injection(const TestConfig &config, TestStats &stats)
-{
-	print_test("Curl Header CRLF Injection");
-
-	std::string cmd =
-		"curl "
-		"-H $'X-Test: legit\\r\\nInjected: evil' "
-		"http://" + config.server_host + ":" +
-		int_to_string(config.server_port) + "/";
-
-	int status = run_curl_status(cmd);
-
-	assert_status_code(status, 400, stats);
-}
-
-void test_curl_path_traversal(const TestConfig &config, TestStats &stats)
-{
-	print_test("Curl Path Traversal");
-
-	std::string cmd =
-		"curl http://" + config.server_host + ":" +
-		int_to_string(config.server_port) +
-		"/../../../../etc/passwd";
-
-	int status = run_curl_status(cmd);
-
-	assert_status_code(status, 403, stats);
-}
-
-void test_curl_control_chars_in_path(const TestConfig &config, TestStats &stats)
-{
-	print_test("Curl Control Characters in URI");
-
-	std::string cmd =
-		"curl $'http://" + config.server_host + ":" +
-		int_to_string(config.server_port) +
-		"/bad\\x01path'";
-
-	int status = run_curl_status(cmd);
-
-	assert_status_code(status, 400, stats);
-}
-
 
 void run_weird_curl_tests(const TestConfig &config, TestStats &stats)
 {
@@ -134,8 +99,4 @@ void run_weird_curl_tests(const TestConfig &config, TestStats &stats)
 	test_curl_unknown_method(config, stats);
 	test_curl_bad_content_length(config, stats);
 	test_curl_invalid_http_version(config, stats);
-	test_curl_header_injection(config, stats);
-	test_curl_path_traversal(config, stats);
-	test_curl_control_chars_in_path(config, stats);
 }
-

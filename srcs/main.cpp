@@ -3,7 +3,7 @@
 
 bool DEBUG = true;
 const size_t BUFFER_SIZE = 1048576;
-int CLIENT_TIMEOUT_MS = 60000;
+int CLIENT_TIMEOUT_MS = 20000;
 
 int	main(int argc, char **argv)
 {

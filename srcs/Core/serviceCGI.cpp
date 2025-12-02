@@ -106,7 +106,7 @@ void Service::cgi_handler(int i)
 	{
 		cgi.update_last_interaction();
 		print_header("CGI REQUEST - Reading from CGI");
-		char read_buffer[1048576];
+		char read_buffer[BUFFER_SIZE];
 		ssize_t n = read(cgi.get_pipe_from_cgi(), read_buffer, BUFFER_SIZE);
 		if (n > 0)
 		{

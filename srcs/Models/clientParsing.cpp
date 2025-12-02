@@ -454,7 +454,7 @@ bool Client::validate_permissions()
 
 int Client::read_to_buffer()
 {
-	char buf[1048576];
+	char buf[BUFFER_SIZE];
 	ssize_t n = recv(_fd, buf, sizeof(buf), 0);
 
 	if (n > 0)
