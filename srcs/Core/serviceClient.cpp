@@ -26,7 +26,7 @@ void Service::service_processing(std::vector<struct pollfd> &poll_fds, int i)
 	Client &client = clients[poll_fds[i].fd];
 
 	client.update_last_interaction();
-	if (client.get_status_code() >= 400)
+	if (client.get_status_code() >= 400 && !client.am_i_waiting_file())
 	{
 		int status_code = client.get_status_code();
 		if (!client.get_server()->get_error_page().empty() && !client.get_server()->get_error_page()[status_code].empty())
