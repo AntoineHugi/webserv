@@ -108,6 +108,7 @@ class Client
 		bool	try_parse_body();
 		bool	chunked_body_finished() const;
 		bool	decode_chunked_body();
+		bool	check_host();
 		bool	validate_permissions();
 		int		find_best_route_index(std::vector<Route>& routes);
 		bool	cgi_matches(const std::string &uri, const std::string &route);

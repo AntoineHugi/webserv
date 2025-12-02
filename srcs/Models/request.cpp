@@ -91,6 +91,9 @@ int Request::parse_header()
 
 	while (!_header.empty() && (_header[0] == '\r' || _header[0] == '\n'))
 		_header.erase(0, 1);
+
+	std::cout << " header is : " << _header << std::endl;
+
 	std::string line;
 	std::istringstream stream(_header);
 	std::getline(stream, line);
@@ -144,6 +147,7 @@ int Request::parse_header()
 	}
 
 	_host = _header_kv["host"];
+	_header_kv.erase("host");
 	if (!_header_kv.count("content-length"))
 		_content_length = 0;
 	else
@@ -157,7 +161,7 @@ int Request::parse_header()
 		}
 		if (val < 0)
 		{
-			print_red("Error: Bad formatting: content-length", DEBUG);
+			print_red("Error: Bad formatting: content-length negative", DEBUG);
 			return (1);
 		}
 		_content_length = val;

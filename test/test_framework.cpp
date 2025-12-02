@@ -187,7 +187,12 @@ std::string send_request(int sock, const std::string &method, const std::string 
 	// Build request
 	std::ostringstream request;
 	request << method << " " << path << " HTTP/1.1\r\n";
-	request << "Host: localhost:8080\r\n";
+
+	if (headers.find("Host") == headers.end())
+	{
+		request << "Host: localhost:8080";
+		request << "\r\n";
+	}
 
 	// Add custom headers
 	for (std::map<std::string, std::string>::const_iterator it = headers.begin();

@@ -19,7 +19,10 @@ CATEGORY_SRCS := test_basic.cpp \
 		test_redirect.cpp \
 		test_cgi.cpp \
 		test_cgi_env.cpp \
-		test_random_curl.cpp
+		test_random_curl.cpp \
+		test_42_evaluation.cpp
+
+
 MAIN_SRC := test_suite.cpp
 
 SRCS := $(FRAMEWORK_SRCS) $(CATEGORY_SRCS) $(MAIN_SRC)

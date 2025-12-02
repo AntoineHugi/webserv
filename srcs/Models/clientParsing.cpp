@@ -446,6 +446,39 @@ bool Client::validate_permissions()
 	return (true);
 }
 
+bool Client::check_host()
+{
+	std::string hostname;
+	std::string port;
+
+	size_t colon_pos = _request._host.find(':');
+	if (colon_pos != std::string::npos)
+	{
+		hostname = _request._host.substr(0, colon_pos);
+		port = _request._host.substr(colon_pos + 1);
+	}
+	else
+		return (false);
+
+	if (hostname == "127.0.0.1")
+		hostname = "localhost";
+
+	if (hostname != get_server()->get_host())
+		return false;
+
+
+	if (!port.empty())
+	{
+		char* endptr = 0;
+		if (std::strtol(port.c_str(), &endptr, 10) != get_server()->get_port())
+			return false;
+	}
+	else
+		return (false);
+
+	return true;
+}
+
 int Client::read_to_buffer()
 {
 	char buf[BUFFER_SIZE];
@@ -545,7 +578,6 @@ bool Client::try_parse_body()
 	/* if we didn't get the get the whole data yet, skip for another turn of reading */
 	if (_request._request_data.size() < _request._content_length)
 		return (0);
-		
 
 	/* once we have everything, dump it into request._body */
 	_request._body = _request._request_data.substr(0, _request._content_length);
@@ -609,6 +641,12 @@ bool Client::try_parse_header()
 	{
 		set_process_request();
 		print_red("Error: failed requirements", DEBUG);
+		return (1);
+	}
+	if (!check_host())
+	{
+		set_process_request();
+		print_red("Error: failed host", DEBUG);
 		return (1);
 	}
 	if (!validate_permissions())

@@ -16,6 +16,7 @@ void run_cgi_tests(const TestConfig &config, TestStats &stats);
 void run_cgi_env_tests(const TestConfig &config, TestStats &stats);
 void run_redirect_test(const TestConfig &config, TestStats &stats);
 void run_weird_curl_tests(const TestConfig &config, TestStats &stats);
+void run_42_evaluation_tests(const TestConfig& config, TestStats& stats);
 
 // ============================================================================
 // CONFIGURATION & COMMAND LINE PARSING
@@ -74,6 +75,8 @@ TestConfig parse_args(int argc, char **argv)
 	config.enabled_categories["cgi-env"] = true;
 	config.enabled_categories["redirect"] = true;
 	config.enabled_categories["curl"] = true;
+	config.enabled_categories["42"] = true;
+
 
 	for (int i = 1; i < argc; i++)
 	{
@@ -98,6 +101,8 @@ TestConfig parse_args(int argc, char **argv)
 			std::cout << "  - cgi\n";
 			std::cout << "  - cgi-env\n";
 			std::cout << "  - redirect\n";
+			std::cout << "  - curl\n";
+			std::cout << "  - 42\n";
 			exit(0);
 		}
 		else if (arg == "--host" && i + 1 < argc)
@@ -131,6 +136,7 @@ TestConfig parse_args(int argc, char **argv)
 			config.enabled_categories["cgi-env"] = false;
 			config.enabled_categories["redirect"] = false;
 			config.enabled_categories["curl"] = false;
+			config.enabled_categories["42"] = false;
 			config.enabled_categories[argv[++i]] = true;
 		}
 		else if (arg == "--skip" && i + 1 < argc)
@@ -321,6 +327,16 @@ int main(int argc, char **argv)
 	if (config.enabled_categories["curl"])
 	{
 		run_weird_curl_tests(config, stats);
+		if (config.stop_on_fail && stats.failed > 0)
+		{
+			print_summary(stats);
+			return 1;
+		}
+	}
+
+	if (config.enabled_categories["42"])
+	{
+		run_42_evaluation_tests(config, stats);
 		if (config.stop_on_fail && stats.failed > 0)
 		{
 			print_summary(stats);
