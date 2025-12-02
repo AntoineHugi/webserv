@@ -20,7 +20,6 @@ Method::~Method() {}
 /*####################################################################################################*/
 /*####################################################################################################*/
 
-
 void Method::get_directory(Client &client, DIR *directory)
 {
 	if (!directory)
@@ -128,7 +127,7 @@ int Method::handle_get(Client &client)
 		{
 			std::string attempt = client._request._fullPathURI + "/" + indices[i];
 			if (access(attempt.c_str(), R_OK) == 0)
-				return(Method::get_file(client, attempt));
+				return (Method::get_file(client, attempt));
 		}
 		/* if not, then serves the directory list if autoindex is on */
 		if (client._request._autoindex)
@@ -140,7 +139,7 @@ int Method::handle_get(Client &client)
 			client.set_status_code(404);
 	}
 	else
-		return(Method::get_file(client, client._request._fullPathURI));
+		return (Method::get_file(client, client._request._fullPathURI));
 	return (0);
 }
 
@@ -160,6 +159,8 @@ int Method::save_uploaded_files(Client &client, std::vector<MultiPart> &parts, c
 		}
 		const std::vector<char> &data = parts[i].get_file_data();
 		out.write(data.data(), data.size());
+		if (!out)
+			return (1);
 		out.close();
 		if (DEBUG)
 			std::cout << "Saved file: " << path << " to disc." << std::endl;

@@ -5,14 +5,6 @@
 #include "serviceHandleConnection.cpp"
 #include "serviceUtils.cpp"
 
-#include <iostream>
-#include <sys/socket.h>
-#include <cerrno>
-#include <poll.h>
-#include <cstring>
-#include <stdio.h>
-#include <errno.h>
-
 Service::Service() : servers() {}
 
 Service::Service(const Service &other)

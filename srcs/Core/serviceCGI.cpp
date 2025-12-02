@@ -76,7 +76,6 @@ void Service::cgi_handler(int i)
 		if (bytes_sent == -1)
 		{
 			print_red("Error: Failed to send data to CGI", true);
-			print_red("errno : " + convert_to_string(errno), true);
 			int status;
 			waitpid(cgi.get_pid(), &status, 0);
 			int exit_code = WEXITSTATUS(status);
@@ -160,7 +159,6 @@ void Service::cgi_handler(int i)
 		}
 		else
 		{
-			std::cerr << "Read error from CGI: " << strerror(errno) << std::endl;
 			kill(cgi.get_pid(), SIGKILL);
 			waitpid(cgi.get_pid(), NULL, 0);
 			remove_fd(cgi.get_pipe_from_cgi());
@@ -231,9 +229,6 @@ void Service::setup_cgi_request(int i)
 		close(pipe_from_cgi[1]);
 
 		execve(argv[0], argv, envp);
-
-		if (DEBUG)
-			std::cerr << "execve failed: " << strerror(errno) << std::endl;
 		exit(1);
 	}
 	else

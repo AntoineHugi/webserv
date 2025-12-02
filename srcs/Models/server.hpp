@@ -14,7 +14,6 @@ extern int CLIENT_TIMEOUT_MS;
 # include <cstdio>
 # include <unistd.h>
 # include <limits.h>
-# include <errno.h>
 # include <cstring>
 # include <iostream>
 # include <vector>

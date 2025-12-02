@@ -171,6 +171,7 @@ int Client::handle_write()
 		}
 	}
 
+	/* if it returns 0 the flow is unchaged, EOF reached */
 	ssize_t bytes_sent = send(_fd, res.c_str(), res.size(), 0);
 	if (bytes_sent == -1)
 	{

@@ -13,9 +13,7 @@
 # include <sys/socket.h>
 # include <poll.h>
 # include <cstring>
-# include <cerrno>
 # include <stdio.h>
-# include <errno.h>
 
 extern bool DEBUG;
 extern const size_t BUFFER_SIZE;
