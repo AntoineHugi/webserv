@@ -581,6 +581,7 @@ bool Client::try_parse_body()
 
 	/* once we have everything, dump it into request._body */
 	_request._body = _request._request_data.substr(0, _request._content_length);
+	std::cout << "request body = " << _request._body << " and max body  = " << _request._client_max_body_size << std::endl;
 	if (_request._body.size() > _request._client_max_body_size)
 	{
 		_status_code = 413;

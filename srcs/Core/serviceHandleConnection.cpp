@@ -25,7 +25,7 @@ void Service::handle_connection(std::vector<struct pollfd> &poll_fds, const size
 		int fd = poll_fds[i].fd;
 
 		remove_fd(fd);
-		if (DEBUG)
+		//if (DEBUG)
 			std::cout << "\033[32m [Handle Conn] Client " << fd << " disconnected. Total clients: " << (clients.size()) << "\033[0m" << std::endl;
 	}
 }

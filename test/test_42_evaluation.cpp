@@ -109,6 +109,7 @@ void test_42_client_body_limit(const TestConfig& config, TestStats& stats)
 	}
 
 	std::map<std::string, std::string> headers;
+	headers["Host"] = "localhost:9090";
 	headers["Content-Type"] = "text/plain";
 
 	// /post_body has client_max_body_size 100
@@ -149,6 +150,7 @@ void test_42_client_body_at_limit(const TestConfig& config, TestStats& stats)
 	}
 
 	std::map<std::string, std::string> headers;
+	headers["Host"] = "localhost:9090";
 	headers["Content-Type"] = "text/plain";
 
 	// Exactly 100 bytes - should be accepted
@@ -181,8 +183,11 @@ void test_42_route_to_directory(const TestConfig& config, TestStats& stats)
 		print_skip("Connection failed");
 		return;
 	}
-
+	
 	std::map<std::string, std::string> headers;
+	headers["Host"] = "localhost:9090";
+	
+
 	std::string response = send_request(sock, "GET", "/directory", headers);
 	HttpResponse resp = parse_response(response);
 
@@ -571,21 +576,34 @@ void run_42_evaluation_tests(const TestConfig& config, TestStats& stats)
 
 	// Configuration tests
 	test_42_multiple_servers_different_ports(config, stats);
+	//sleep(3);
 	test_42_custom_error_page(config, stats);
+	//sleep(3);
 	test_42_client_body_limit(config, stats);
+	//sleep(3);
 	test_42_client_body_at_limit(config, stats);
+	//sleep(3);
 	test_42_route_to_directory(config, stats);
+	//sleep(3);
 	test_42_default_file_for_directory(config, stats);
+	//sleep(3);
 	test_42_method_not_allowed(config, stats);
-
+	//sleep(3);
 	// Basic checks
+	
 	test_42_get_request(config, stats);
+	//sleep(3);
 	test_42_post_request(config, stats);
+	//sleep(3);
 	test_42_delete_request(config, stats);
+	//sleep(3);
 	test_42_unknown_method(config, stats);
+	//sleep(3);
 	test_42_upload_and_retrieve(config, stats);
-
-	// Stress tests (simplified)
+	//sleep(3);
+	
+	//Stress tests (simplified)
 	test_42_multiple_connections(config, stats);
+	//sleep(3);
 	test_42_no_hanging_connections(config, stats);
 }

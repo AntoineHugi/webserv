@@ -91,9 +91,6 @@ int Request::parse_header()
 
 	while (!_header.empty() && (_header[0] == '\r' || _header[0] == '\n'))
 		_header.erase(0, 1);
-
-	std::cout << " header is : " << _header << std::endl;
-
 	std::string line;
 	std::istringstream stream(_header);
 	std::getline(stream, line);
